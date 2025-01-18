@@ -6,6 +6,7 @@ import (
 	"math"
 	"testing"
 
+	stypes "cosmossdk.io/store/types"
 	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/stretchr/testify/require"
 
@@ -1479,7 +1480,7 @@ func TestSubmessageGasExceedingMessageGas(t *testing.T) {
 	defer func() {
 		r := recover()
 		require.NotNil(t, r)
-		_, ok := r.(sdk.ErrorOutOfGas)
+		_, ok := r.(stypes.ErrorOutOfGas)
 		require.True(t, ok, "%+v", r)
 	}()
 	_, _, _, _, _ = initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"measure_gas_for_submessage":{"id":0}}`, false, true, defaultGasForTests)
@@ -1491,7 +1492,7 @@ func TestReplyGasExceedingMessageGas(t *testing.T) {
 	defer func() {
 		r := recover()
 		require.NotNil(t, r)
-		_, ok := r.(sdk.ErrorOutOfGas)
+		_, ok := r.(stypes.ErrorOutOfGas)
 		require.True(t, ok, "%+v", r)
 	}()
 	_, _, _, _, _ = initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"measure_gas_for_submessage":{"id":2600}}`, false, true, defaultGasForTests)

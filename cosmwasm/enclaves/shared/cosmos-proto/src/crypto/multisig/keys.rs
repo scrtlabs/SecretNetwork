@@ -226,12 +226,13 @@ impl ::protobuf::reflect::ProtobufValue for LegacyAminoPubKey {
 
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n!cosmos/crypto/multisig/keys.proto\x12\x16cosmos.crypto.multisig\x1a\
-    \x14gogoproto/gogo.proto\x1a\x19google/protobuf/any.proto\"\xa3\x01\n\
-    \x11LegacyAminoPubKey\x122\n\tthreshold\x18\x01\x20\x01(\rR\tthresholdB\
-    \x14\xf2\xde\x1f\x10yaml:\"threshold\"\x12T\n\x0bpublic_keys\x18\x02\x20\
-    \x03(\x0b2\x14.google.protobuf.AnyR\npublicKeysB\x1d\xf2\xde\x1f\x0eyaml\
-    :\"pubkeys\"\xe2\xde\x1f\x07PubKeys:\x04\x88\xa0\x1f\0B3Z1github.com/cos\
-    mos/cosmos-sdk/crypto/keys/multisigb\x06proto3\
+    \x14gogoproto/gogo.proto\x1a\x19google/protobuf/any.proto\x1a\x11amino/a\
+    mino.proto\"\xc3\x01\n\x11LegacyAminoPubKey\x12\x1c\n\tthreshold\x18\x01\
+    \x20\x01(\rR\tthreshold\x12N\n\x0bpublic_keys\x18\x02\x20\x03(\x0b2\x14.\
+    google.protobuf.AnyR\npublicKeysB\x17\xe2\xde\x1f\x07PubKeys\xa2\xe7\xb0\
+    *\x07pubkeys:@\x88\xa0\x1f\0\x8a\xe7\xb0*\"tendermint/PubKeyMultisigThre\
+    shold\x92\xe7\xb0*\x10threshold_stringB3Z1github.com/cosmos/cosmos-sdk/c\
+    rypto/keys/multisigb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

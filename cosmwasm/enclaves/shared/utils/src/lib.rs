@@ -1,4 +1,5 @@
 #![feature(btree_drain_filter)]
+#![allow(unused_imports)]
 
 extern crate sgx_trts;
 extern crate sgx_types;

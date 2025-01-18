@@ -1,16 +1,17 @@
 package keeper
 
 import (
-	"github.com/cosmos/cosmos-sdk/store/prefix"
+	"cosmossdk.io/store/prefix"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 
 func (k Keeper) GetMasterKey(ctx sdk.Context, keyType string) *types.MasterKey {
-	store := ctx.KVStore(k.storeKey)
+	store := k.storeService.OpenKVStore(ctx)
 	var key types.MasterKey
-	certBz := store.Get(types.MasterKeyPrefix(keyType))
+	certBz, _ := store.Get(types.MasterKeyPrefix(keyType))
 	if certBz == nil {
 		return nil
 	}
@@ -20,9 +21,12 @@ func (k Keeper) GetMasterKey(ctx sdk.Context, keyType string) *types.MasterKey {
 }
 
 func (k Keeper) SetMasterKey(ctx sdk.Context, key types.MasterKey, keyType string) {
-	store := ctx.KVStore(k.storeKey)
+	store := k.storeService.OpenKVStore(ctx)
 
-	store.Set(types.MasterKeyPrefix(keyType), k.cdc.MustMarshal(&key))
+	err := store.Set(types.MasterKeyPrefix(keyType), k.cdc.MustMarshal(&key))
+	if err != nil {
+		ctx.Logger().Error("set master key", "store", err.Error())
+	}
 }
 
 func (k Keeper) isMasterCertificateDefined(ctx sdk.Context, keyType string) bool {
@@ -31,10 +35,9 @@ func (k Keeper) isMasterCertificateDefined(ctx sdk.Context, keyType string) bool
 }
 
 func (k Keeper) getRegistrationInfo(ctx sdk.Context, publicKey types.NodeID) *types.RegistrationNodeInfo {
-	store := ctx.KVStore(k.storeKey)
+	store := k.storeService.OpenKVStore(ctx)
 	var nodeInfo types.RegistrationNodeInfo
-	// fmt.Println("pubkey", hex.EncodeToString(publicKey))
-	certBz := store.Get(types.RegistrationKeyPrefix(publicKey))
+	certBz, _ := store.Get(types.RegistrationKeyPrefix(publicKey))
 
 	if certBz == nil {
 		return nil
@@ -45,7 +48,7 @@ func (k Keeper) getRegistrationInfo(ctx sdk.Context, publicKey types.NodeID) *ty
 }
 
 func (k Keeper) ListRegistrationInfo(ctx sdk.Context, cb func([]byte, types.RegistrationNodeInfo) bool) {
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.RegistrationStorePrefix)
+	prefixStore := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), types.RegistrationStorePrefix)
 	iter := prefixStore.Iterator(nil, nil)
 	for ; iter.Valid(); iter.Next() {
 		var regInfo types.RegistrationNodeInfo
@@ -57,18 +60,24 @@ func (k Keeper) ListRegistrationInfo(ctx sdk.Context, cb func([]byte, types.Regi
 	}
 }
 
-func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) {
+func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) error {
 	publicKey, err := ra.VerifyRaCert(certificate.Certificate)
 	if err != nil {
-		return
+		ctx.Logger().Error("verify reg/auth certificate", "verify", err.Error())
+		return err
 	}
 
-	k.SetRegistrationInfo_Verified(ctx, certificate, publicKey)
+	return k.SetRegistrationInfo_Verified(ctx, certificate, publicKey)
 }
 
-func (k Keeper) SetRegistrationInfo_Verified(ctx sdk.Context, certificate types.RegistrationNodeInfo, publicKey []byte) {
-	store := ctx.KVStore(k.storeKey)
-	store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshal(&certificate))
+func (k Keeper) SetRegistrationInfo_Verified(ctx sdk.Context, certificate types.RegistrationNodeInfo, publicKey []byte) error {
+	store := k.storeService.OpenKVStore(ctx)
+	err := store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshal(&certificate))
+	if err != nil {
+		ctx.Logger().Error("set registration info", "store", err.Error())
+		return err
+	}
+	return nil
 }
 
 func (k Keeper) isNodeAuthenticated(ctx sdk.Context, publicKey types.NodeID) (bool, error) {

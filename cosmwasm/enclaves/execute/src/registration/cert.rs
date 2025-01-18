@@ -276,7 +276,7 @@ pub fn verify_ra_cert(
 ) -> Result<Vec<u8>, NodeAuthResult> {
     let payload = get_netscape_comment(cert_der).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
-    let pk = base64::decode(&payload).map_err(|_err| NodeAuthResult::InvalidCert)?;
+    let pk = base64::decode(payload).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
     Ok(pk)
 }

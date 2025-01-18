@@ -16,7 +16,7 @@ pub fn parse_message(
     message: &[u8],
     handle_type: &HandleType,
 ) -> Result<ParsedMessage, EnclaveError> {
-    return match handle_type {
+    match handle_type {
         HandleType::HANDLE_TYPE_EXECUTE => parse_execute_message(message),
         HandleType::HANDLE_TYPE_REPLY => parse_reply_message(message),
         HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN
@@ -38,7 +38,7 @@ pub fn parse_message(
         | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
             parse_plaintext_ibc_validated_message(message)
         }
-    };
+    }
 }
 
 pub fn is_ibc_msg(handle_type: HandleType) -> bool {

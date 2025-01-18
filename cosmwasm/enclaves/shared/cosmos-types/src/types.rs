@@ -306,15 +306,15 @@ impl TxBody {
 pub enum AminoSdkMsg {
     #[serde(alias = "wasm/MsgExecuteContract")]
     Execute {
-        sender: HumanAddr,
-        contract: HumanAddr,
+        sender: CanonicalAddr,
+        contract: CanonicalAddr,
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
         msg: String,
         sent_funds: Vec<Coin>,
     },
     #[serde(alias = "wasm/MsgInstantiateContract")]
     Instantiate {
-        sender: HumanAddr,
+        sender: CanonicalAddr,
         code_id: String,
         init_msg: String,
         init_funds: Vec<Coin>,
@@ -393,10 +393,6 @@ impl AminoSdkMsg {
                 msg,
                 sent_funds,
             } => {
-                let sender = CanonicalAddr::from_human(&sender).map_err(|err| {
-                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
-                    EnclaveError::FailedToDeserialize
-                })?;
                 let msg = Binary::from_base64(&msg).map_err(|err| {
                     warn!(
                         "failed to parse base64 msg when parsing DirectSdkMsg: {:?}",
@@ -405,6 +401,11 @@ impl AminoSdkMsg {
                     EnclaveError::FailedToDeserialize
                 })?;
                 let msg = msg.0;
+
+                let contract = HumanAddr::from_canonical(&contract).map_err(|err| {
+                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
+                    EnclaveError::FailedToDeserialize
+                })?;
 
                 Ok(DirectSdkMsg::MsgExecuteContract {
                     sender,
@@ -421,10 +422,6 @@ impl AminoSdkMsg {
                 code_id,
                 admin,
             } => {
-                let sender = CanonicalAddr::from_human(&sender).map_err(|err| {
-                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
-                    EnclaveError::FailedToDeserialize
-                })?;
                 let init_msg = Binary::from_base64(&init_msg).map_err(|err| {
                     warn!(
                         "failed to parse base64 init_msg when parsing DirectSdkMsg: {:?}",

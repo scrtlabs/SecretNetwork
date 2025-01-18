@@ -7,9 +7,24 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 
+	errorsmod "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
+)
+
+const (
+	QueryListContractByCode       = "list-contracts-by-code"
+	QueryGetContract              = "contract-info"
+	QueryGetContractState         = "contract-state"
+	QueryGetCode                  = "code"
+	QueryListCode                 = "list-code"
+	QueryContractAddress          = "label"
+	QueryContractKey              = "contract-key"
+	QueryContractHash             = "contract-hash"
+	QueryContractHashByCodeID     = "contract-hash-by-id"
+	QueryMethodContractStateSmart = "smart"
 )
 
 var _ types.QueryServer = GrpcQuerier{} // type assertion
@@ -55,7 +70,7 @@ func (q GrpcQuerier) ContractInfo(c context.Context, req *types.QueryByContractA
 
 func (q GrpcQuerier) ContractsByCodeId(c context.Context, req *types.QueryByCodeIdRequest) (*types.QueryContractsByCodeIdResponse, error) {
 	if req.CodeId == 0 {
-		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
+		return nil, errorsmod.Wrap(types.ErrInvalid, "code id")
 	}
 
 	response, err := queryContractListByCode(sdk.UnwrapSDKContext(c), req.CodeId, q.keeper)
@@ -77,7 +92,7 @@ func (q GrpcQuerier) QuerySecretContract(c context.Context, req *types.QuerySecr
 		return nil, err
 	}
 
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(q.keeper.queryGasLimit))
 
 	response, err := q.keeper.QuerySmart(ctx, contractAddress, req.Query, false)
 	switch {
@@ -92,7 +107,7 @@ func (q GrpcQuerier) QuerySecretContract(c context.Context, req *types.QuerySecr
 
 func (q GrpcQuerier) Code(c context.Context, req *types.QueryByCodeIdRequest) (*types.QueryCodeResponse, error) {
 	if req.CodeId == 0 {
-		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
+		return nil, errorsmod.Wrap(types.ErrInvalid, "code id")
 	}
 
 	response, err := queryCode(sdk.UnwrapSDKContext(c), req.CodeId, q.keeper)
@@ -111,13 +126,12 @@ func (q GrpcQuerier) Code(c context.Context, req *types.QueryByCodeIdRequest) (*
 
 func (q GrpcQuerier) Codes(c context.Context, _ *empty.Empty) (*types.QueryCodesResponse, error) {
 	response, err := queryCodeList(sdk.UnwrapSDKContext(c), q.keeper)
-	switch {
-	case err != nil:
+	if err != nil {
 		return nil, err
-	case response == nil:
-		return nil, types.ErrNotFound
 	}
-
+	if response == nil {
+		response = make([]types.CodeInfoResponse, 0)
+	}
 	return &types.QueryCodesResponse{CodeInfos: response}, nil
 }
 
@@ -127,7 +141,7 @@ func (q GrpcQuerier) CodeHashByContractAddress(c context.Context, req *types.Que
 		return nil, err
 	}
 
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(q.keeper.queryGasLimit))
 
 	codeHashBz, err := queryCodeHashByAddress(ctx, contractAddress, q.keeper)
 	switch {
@@ -143,7 +157,7 @@ func (q GrpcQuerier) CodeHashByContractAddress(c context.Context, req *types.Que
 }
 
 func (q GrpcQuerier) CodeHashByCodeId(c context.Context, req *types.QueryByCodeIdRequest) (*types.QueryCodeHashResponse, error) {
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(q.keeper.queryGasLimit))
 
 	codeHashBz, err := queryCodeHashByCodeID(ctx, req.CodeId, q.keeper)
 	switch {
@@ -164,7 +178,7 @@ func (q GrpcQuerier) LabelByAddress(c context.Context, req *types.QueryByContrac
 		return nil, err
 	}
 
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(q.keeper.queryGasLimit))
 
 	response, err := queryContractInfo(ctx, contractAddress, q.keeper)
 	switch {
@@ -180,7 +194,7 @@ func (q GrpcQuerier) LabelByAddress(c context.Context, req *types.QueryByContrac
 }
 
 func (q GrpcQuerier) AddressByLabel(c context.Context, req *types.QueryByLabelRequest) (*types.QueryContractAddressResponse, error) {
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(q.keeper.queryGasLimit))
 
 	response, err := queryContractAddress(ctx, req.Label, q.keeper)
 	switch {
@@ -192,6 +206,13 @@ func (q GrpcQuerier) AddressByLabel(c context.Context, req *types.QueryByLabelRe
 
 	return &types.QueryContractAddressResponse{
 		ContractAddress: response.String(),
+	}, nil
+}
+
+func (q GrpcQuerier) Params(c context.Context, _ *types.ParamsRequest) (*types.ParamsResponse, error) {
+	params := q.keeper.GetParams(sdk.UnwrapSDKContext(c))
+	return &types.ParamsResponse{
+		Params: params,
 	}, nil
 }
 
@@ -257,7 +278,7 @@ func queryCode(ctx sdk.Context, codeId uint64, keeper Keeper) (*types.QueryCodeR
 
 	wasmBz, err := keeper.GetWasm(ctx, codeId)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "loading wasm code")
+		return nil, errorsmod.Wrap(err, "loading wasm code")
 	}
 
 	return &types.QueryCodeResponse{
@@ -284,7 +305,7 @@ func queryCodeList(ctx sdk.Context, keeper Keeper) ([]types.CodeInfoResponse, er
 func queryContractAddress(ctx sdk.Context, label string, keeper Keeper) (sdk.AccAddress, error) {
 	res := keeper.GetContractAddress(ctx, label)
 	if res == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, label)
+		return nil, sdkerrors.ErrUnknownAddress.Wrap(label)
 	}
 
 	return res, nil

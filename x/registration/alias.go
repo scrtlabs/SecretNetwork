@@ -17,8 +17,6 @@ const (
 	QuerierRoute               = types.QuerierRoute
 	RouterKey                  = types.RouterKey
 	EnclaveRegistrationKey     = types.EnclaveRegistrationKey
-	QueryEncryptedSeed         = keeper.QueryEncryptedSeed
-	QueryMasterKey             = keeper.QueryMasterKey
 	SecretNodeSeedLegacyConfig = types.SecretNodeSeedLegacyConfig
 	SecretNodeSeedNewConfig    = types.SecretNodeSeedNewConfig
 	SecretNodeCfgFolder        = types.SecretNodeCfgFolder
@@ -44,7 +42,6 @@ var (
 	ExportGenesis               = keeper.ExportGenesis
 	NewKeeper                   = keeper.NewKeeper
 	NewQuerier                  = keeper.NewQuerier
-	NewLegacyQuerier            = keeper.NewLegacyQuerier
 	GetGenesisStateFromAppState = keeper.GetGenesisStateFromAppState
 	IsHexString                 = keeper.IsHexString
 	GetApiKey                   = types.GetApiKey

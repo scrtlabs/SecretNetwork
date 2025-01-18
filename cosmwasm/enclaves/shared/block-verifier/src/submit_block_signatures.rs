@@ -11,6 +11,8 @@ use log::debug;
 
 use tendermint::validator::Set;
 
+use tendermint_proto::v0_38::types::ValidatorSet as RawValidatorSet;
+
 macro_rules! unwrap_or_return {
     ($result:expr) => {
         match $result {
@@ -70,7 +72,7 @@ pub unsafe fn submit_block_signatures_impl(
 
     let validator_set_for_height = unwrap_or_return!(get_validator_set_for_height());
 
-    let validator_set = unwrap_or_return!(Set::decode(
+    let validator_set = unwrap_or_return!(<Set as Protobuf::<RawValidatorSet>>::decode(
         validator_set_for_height.validator_set.as_slice()
     )
     .map_err(|e| {
@@ -96,7 +98,7 @@ pub unsafe fn submit_block_signatures_impl(
         message_verifier.clear();
     }
 
-    for tx in txs.tx.iter() {
+    for tx in txs.iter() {
         // doing this a different way makes the code unreadable or requires creating a copy of
 
         let parsed_tx = unwrap_or_return!(tx_from_bytes(tx.as_slice()).map_err(|_| {

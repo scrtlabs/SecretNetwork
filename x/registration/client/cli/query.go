@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -8,13 +9,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper"
 	flag "github.com/spf13/pflag"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 )
 
@@ -33,7 +35,6 @@ func GetQueryCmd() *cobra.Command {
 	return queryCmd
 }
 
-// GetCmdListCode lists all wasm code uploaded
 func GetCmdEncryptedSeed() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "seed [node-id]",
@@ -41,7 +42,7 @@ func GetCmdEncryptedSeed() *cobra.Command {
 		Long:  "Get encrypted seed for a node",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientQueryContext(cmd)
+			grpcCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -51,12 +52,23 @@ func GetCmdEncryptedSeed() *cobra.Command {
 				return fmt.Errorf("invalid Node ID format (req: hex string of length %d)", types.PublicKeyLength)
 			}
 
-			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed, nodeId)
-			res, _, err := clientCtx.Query(route)
+			pubKey, err := hex.DecodeString(nodeId)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to decode node id %s as string", nodeId)
 			}
-			fmt.Printf("0x%s\n", hex.EncodeToString(res))
+
+			queryClient := types.NewQueryClient(grpcCtx)
+			res, err := queryClient.EncryptedSeed(
+				context.Background(),
+				&types.QueryEncryptedSeedRequest{
+					PubKey: pubKey,
+				},
+			)
+			if err != nil {
+				return sdkerrors.ErrNotFound.Wrapf("Failed to query seed for %s. Error: %s", args[0], err)
+			}
+
+			fmt.Printf("0x%s\n", hex.EncodeToString(res.EncryptedSeed))
 			return nil
 		},
 	}
@@ -71,21 +83,24 @@ func GetCmdMasterParams() *cobra.Command {
 		Short: "Get parameters for the secret network",
 		Long:  "Get parameters for the secret network - writes the parameters to [master-cert.der] by default",
 		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientQueryContext(cmd)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			grpcCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterKey)
-			res, _, err := clientCtx.Query(route)
+			queryClient := types.NewQueryClient(grpcCtx)
+			res, err := queryClient.RegistrationKey(
+				context.Background(),
+				&emptypb.Empty{},
+			)
 			if err != nil {
-				return err
+				return sdkerrors.ErrNotFound.Wrapf("Failed to query master key. Error: %s", err)
 			}
 
 			var keys types.GenesisState
 
-			err = json.Unmarshal(res, &keys)
+			err = json.Unmarshal(res.Key, &keys)
 			if err != nil {
 				return err
 			}
@@ -99,6 +114,18 @@ func GetCmdMasterParams() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			report, _ := json.Marshal(
+				struct {
+					Io_exch   string `json:"io-X-master-key"`
+					Node_exch string `json:"node-X-master-key"`
+				}{
+					Io_exch:   base64.StdEncoding.EncodeToString(keys.IoMasterKey.Bytes),
+					Node_exch: base64.StdEncoding.EncodeToString(keys.NodeExchMasterKey.Bytes),
+				},
+			)
+
+			fmt.Printf("%s/n", string(report))
 
 			return nil
 		},

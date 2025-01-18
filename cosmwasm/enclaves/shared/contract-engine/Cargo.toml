@@ -53,15 +53,15 @@ pwasm-utils = { version = "0.12.0", default-features = false, optional = true }
 parity-wasm = { version = "0.45.0", default-features = false, optional = true, features = [
   "sign_ext"
 ] }
-wasm3 = { git = "https://github.com/scrtlabs/wasm3-rs", rev = "ad1c868" }
-walrus = { version = "0.19.0", git = "https://github.com/scrtlabs/walrus", rev = "c5777d4" }
+wasm3 = { git = "https://github.com/scrtlabs/wasm3-rs", tag = "v0.3.1-secret.1" }
+walrus = { version = "0.19.0", git = "https://github.com/scrtlabs/walrus", tag = "v0.19.0-secret.1" }
 lru = { version = "0.7", default-features = false }
 hex = "0.4.2"
 secp256k1 = { version = "0.24.2", features = ["recovery", "alloc"] }
 ed25519-zebra = { version = "=2.2.0", default-features = false }
 rand_core = "0.5.0"
 rand_chacha = { version = "0.2.1", default-features = false }
-bincode2 = { git = "https://github.com/scrtlabs/bincode2-sgx", rev = "bdf9f458eaf41778d64cb812ed8fcad64ffd72a9" }
+bincode2 = { git = "https://github.com/scrtlabs/bincode2-sgx", tag = "v2.0.1-secret.1" }
 block-verifier = { path = "../block-verifier", optional = true }
 
 [dependencies.wasmi]

@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	stypes "github.com/cosmos/cosmos-sdk/store/types"
+	stypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
@@ -67,7 +67,7 @@ func TestNewKeeper(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	_, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	require.NotNil(t, keepers.WasmKeeper)
 }
@@ -78,12 +78,12 @@ func TestCreate(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -103,12 +103,12 @@ func TestCreateDuplicate(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -138,7 +138,7 @@ func TestCreateWithSimulation(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -146,7 +146,7 @@ func TestCreateWithSimulation(t *testing.T) {
 		WithGasMeter(stypes.NewInfiniteGasMeter())
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -200,12 +200,12 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	wasmCode, err := os.ReadFile(filepath.Join(".", contractPath, "test_gzip_contract.wasm.gz"))
 	require.NoError(t, err)
@@ -237,12 +237,12 @@ func TestInstantiate(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	creator, privKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -285,7 +285,7 @@ func TestInstantiate(t *testing.T) {
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
 	}
-	tx := NewTestTx(&instantiateMsg, creatorAcc, privKey)
+	tx := NewTestTx(ctx, &instantiateMsg, creatorAcc, privKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -297,7 +297,7 @@ func TestInstantiate(t *testing.T) {
 	// create with no balance is also legal
 	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
 	require.NoError(t, err)
-	require.Equal(t, "secret1uhfqhj6cvt7983n6xdxkjhfvx9833qk5pmgfl4", contractAddr.String())
+	require.Equal(t, "secret1hqy37xwhgaj6dlnevnsr5q2077uv36ceqd74ec", contractAddr.String())
 
 	// gas can change +- 10% before we start failing, though maybe for consensus we should check a constant amount
 	gasAfter := ctx.GasMeter().GasConsumed()
@@ -345,9 +345,9 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			if spec.fundAddr {
 				funds = 200
 			}
-			bob, bobPriv := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", funds)))
+			bob, bobPriv, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", funds)))
 
-			fred, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+			fred, _, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 
 			initMsgBz, err := json.Marshal(InitMsg{Verifier: fred, Beneficiary: bob})
 			require.NoError(t, err)
@@ -378,12 +378,12 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	creator, privKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	const nonExistingCodeID = 9999
 
@@ -404,7 +404,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
 	}
-	tx := NewTestTx(&instantiateMsg, creatorAcc, privKey)
+	tx := NewTestTx(ctx, &instantiateMsg, creatorAcc, privKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -424,14 +424,14 @@ func TestExecute(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
-	fred, privFred := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	fred, privFred, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -467,7 +467,7 @@ func TestExecute(t *testing.T) {
 
 	require.NoError(t, err)
 
-	require.Equal(t, "secret12exhpaft5rv3t8lcw9nykudxaddq2nmtv4r3tl", addr.String())
+	require.Equal(t, "secret15epw6kku2uzeae27u9m6zh2q8z7ynvqrwnsxup", addr.String())
 
 	// ensure bob doesn't exist
 	bobAcct := accKeeper.GetAccount(ctx, bob)
@@ -487,7 +487,7 @@ func TestExecute(t *testing.T) {
 	assert.Equal(t, deposit, coins)
 
 	// unauthorized - trialCtx so we don't change state
-	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(sdk.MultiStore))
+	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(stypes.MultiStore))
 
 	_, _, _, _, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, creatorPrivKey, `{"release":{}}`, true, false, defaultGasForTests, 0)
 	require.Error(t, trialExecErr)
@@ -580,8 +580,8 @@ func TestExecuteWithDeposit(t *testing.T) {
 			if spec.fundAddr {
 				funds = 200
 			}
-			bob, bobPriv := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", funds)))
-			fred, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
+			bob, bobPriv, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", funds)))
+			fred, _, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 
 			initMsgBz, err := json.Marshal(InitMsg{Verifier: bob, Beneficiary: fred})
 			require.NoError(t, err)
@@ -616,12 +616,12 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	creator, privKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// unauthorized - trialCtx so we don't change state
 	nonExistingAddress := sdk.AccAddress([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
@@ -637,7 +637,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 		Msg:       msgBz,
 		SentFunds: nil,
 	}
-	tx := NewTestTx(&executeMsg, creatorAcc, privKey)
+	tx := NewTestTx(ctx, &executeMsg, creatorAcc, privKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -656,14 +656,14 @@ func TestExecuteWithPanic(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
-	fred, fredPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	fred, fredPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -693,7 +693,7 @@ func TestExecuteWithPanic(t *testing.T) {
 		Msg:       execMsgBz,
 		SentFunds: topUp,
 	}
-	tx := NewTestTx(&executeMsg, fredAcc, fredPrivKey)
+	tx := NewTestTx(ctx, &executeMsg, fredAcc, fredPrivKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -713,14 +713,14 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
-	fred, fredPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	fred, fredPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -759,7 +759,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 		InitMsg:   msgBz,
 		InitFunds: deposit,
 	}
-	tx := NewTestTx(&instantiateMsg, creatorAcc, creatorPrivKey)
+	tx := NewTestTx(ctx, &instantiateMsg, creatorAcc, creatorPrivKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -773,7 +773,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_000
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
+	ctx = ctx.WithGasMeter(stypes.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 	codeHash, err := keeper.GetContractHash(ctx, addr)
@@ -793,7 +793,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	defer func() {
 		r := recover()
 		require.NotNil(t, r)
-		_, ok := r.(sdk.ErrorOutOfGas)
+		_, ok := r.(stypes.ErrorOutOfGas)
 		require.True(t, ok, "%+v", r)
 	}()
 
@@ -806,7 +806,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 		Msg:       execMsgBz,
 		SentFunds: nil,
 	}
-	tx = NewTestTx(&executeMsg, fredAcc, fredPrivKey)
+	tx = NewTestTx(ctx, &executeMsg, fredAcc, fredPrivKey)
 
 	txBytes, err = tx.Marshal()
 	require.NoError(t, err)
@@ -829,14 +829,14 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
-	fred, fredPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	fred, fredPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -855,7 +855,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_002
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
+	ctx = ctx.WithGasMeter(stypes.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 	codeHash, err := keeper.GetContractHash(ctx, addr)
@@ -880,7 +880,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		Msg:       msgBz,
 		SentFunds: nil,
 	}
-	tx := NewTestTx(&executeMsg, fredAcc, fredPrivKey)
+	tx := NewTestTx(ctx, &executeMsg, fredAcc, fredPrivKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -895,7 +895,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	defer func() {
 		r := recover()
 		require.NotNil(t, r)
-		_, ok := r.(sdk.ErrorOutOfGas)
+		_, ok := r.(stypes.ErrorOutOfGas)
 		require.True(t, ok, "%+v", r)
 
 		diff := time.Since(start)

@@ -33,6 +33,7 @@ var (
 	TXCounterPrefix                                = []byte{0x08}
 	ContractCodeHistoryElementPrefix               = []byte{0x09}
 	ContractByCodeIDAndCreatedSecondaryIndexPrefix = []byte{0x0A}
+	ParamsKey                                      = []byte{0x0B}
 	RandomPrefix                                   = []byte{0xFF}
 
 	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)

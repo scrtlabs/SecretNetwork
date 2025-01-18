@@ -3,9 +3,10 @@ package keeper
 import (
 	"context"
 
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"cosmossdk.io/errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 )
 
@@ -24,11 +25,11 @@ func (m msgServer) ToggleIbcSwitch(goCtx context.Context, msg *types.MsgToggleIb
 
 	pauser := m.keeper.GetPauserAddress(ctx)
 	if pauser == "" {
-		return nil, sdkerrors.Wrap(types.ErrPauserUnset, "no address is currently approved to toggle emergency button")
+		return nil, errors.Wrap(types.ErrPauserUnset, "no address is currently approved to toggle emergency button")
 	}
 
 	if pauser != msg.GetSender() {
-		return nil, sdkerrors.Wrap(types.ErrUnauthorizedToggle, "this address is not allowed to toggle emergency button")
+		return nil, errors.Wrap(types.ErrUnauthorizedToggle, "this address is not allowed to toggle emergency button")
 	}
 
 	status := m.keeper.GetSwitchStatus(ctx)
@@ -42,4 +43,17 @@ func (m msgServer) ToggleIbcSwitch(goCtx context.Context, msg *types.MsgToggleIb
 	// todo maybe emit event here?
 
 	return &types.MsgToggleIbcSwitchResponse{}, nil
+}
+
+func (m msgServer) UpdateParams(goCtx context.Context, req *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
+	if m.keeper.authority != req.Authority {
+		return nil, errors.Wrapf(govtypes.ErrInvalidSigner, "invalid authority; expected %s, got %s", m.keeper.authority, req.Authority)
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	if err := m.keeper.SetParams(ctx, req.Params); err != nil {
+		return nil, err
+	}
+
+	return &types.MsgUpdateParamsResponse{}, nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -50,9 +51,8 @@ func AuthenticateNodeCmd() *cobra.Command {
 			}
 			err = msg.ValidateBasic()
 			if err != nil {
-				return err
+				return xerrors.Errorf("Validtaion on input has failed: %v", err)
 			}
-
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
 		},
 	}

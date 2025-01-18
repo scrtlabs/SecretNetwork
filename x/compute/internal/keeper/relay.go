@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
@@ -78,9 +78,9 @@ func (k Keeper) parseThenHandleIBCBasicContractResponse(ctx sdk.Context,
 			return k.handleIBCBasicContractResponse(ctx, contractAddress, contractInfo.IBCPortID, inputMsg, resp)
 		}
 
-		return sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("null pointer IBCBasicResponse: %+v", res))
+		return errorsmod.Wrap(types.ErrExecuteFailed, fmt.Sprintf("null pointer IBCBasicResponse: %+v", res))
 	default:
-		return sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot cast res to IBCBasicResponse: %+v", res))
+		return errorsmod.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot cast res to IBCBasicResponse: %+v", res))
 	}
 }
 
@@ -100,19 +100,19 @@ func (k Keeper) OnOpenChannel(
 
 	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return "", sdkerrors.Wrap(err, "ibc-open-channel")
+		return "", errorsmod.Wrap(err, "ibc-open-channel")
 	}
 
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcChannelOpen)
 	if err != nil {
-		return "", sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
+		return "", errorsmod.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
 	switch resp := res.(type) {
 	case *string:
 		return *resp, nil
 	default:
-		return "", sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-open-channel: cannot cast res to IBC3ChannelOpenResponse: %+v", res))
+		return "", errorsmod.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-open-channel: cannot cast res to IBC3ChannelOpenResponse: %+v", res))
 	}
 }
 
@@ -134,16 +134,16 @@ func (k Keeper) OnConnectChannel(
 
 	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return sdkerrors.Wrap(err, "ibc-connect-channel")
+		return errorsmod.Wrap(err, "ibc-connect-channel")
 	}
 
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcChannelConnect)
 	if err != nil {
-		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
+		return errorsmod.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
-		return sdkerrors.Wrap(err, "ibc-connect-channel")
+		return errorsmod.Wrap(err, "ibc-connect-channel")
 	}
 	return nil
 }
@@ -165,17 +165,17 @@ func (k Keeper) OnCloseChannel(
 
 	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return sdkerrors.Wrap(err, "ibc-close-channel")
+		return errorsmod.Wrap(err, "ibc-close-channel")
 	}
 
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcChannelClose)
 	if err != nil {
-		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
+		return errorsmod.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
 	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
-		return sdkerrors.Wrap(err, "ibc-close-channel")
+		return errorsmod.Wrap(err, "ibc-close-channel")
 	}
 	return nil
 }
@@ -197,7 +197,7 @@ func (k Keeper) OnRecvPacket(
 
 	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "ibc-recv-packet")
+		return nil, errorsmod.Wrap(err, "ibc-recv-packet")
 	}
 
 	if ctx.IsCheckTx() || ctx.IsReCheckTx() {
@@ -212,7 +212,7 @@ func (k Keeper) OnRecvPacket(
 
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketReceive)
 	if err != nil {
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
+		return nil, errorsmod.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
 	switch resp := res.(type) {
@@ -238,9 +238,9 @@ func (k Keeper) OnRecvPacket(
 
 		// should never get here as it's already checked in
 		// https://github.com/scrtlabs/SecretNetwork/blob/bd46776c/go-cosmwasm/lib.go#L358
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-recv-packet: null pointer IBCReceiveResponse: %+v", res))
+		return nil, errorsmod.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-recv-packet: null pointer IBCReceiveResponse: %+v", res))
 	default:
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-recv-packet: cannot cast res to IBCReceiveResponse: %+v", res))
+		return nil, errorsmod.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-recv-packet: cannot cast res to IBCReceiveResponse: %+v", res))
 	}
 }
 
@@ -262,7 +262,7 @@ func (k Keeper) OnAckPacket(
 
 	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return sdkerrors.Wrap(err, "ibc-ack-packet")
+		return errorsmod.Wrap(err, "ibc-ack-packet")
 	}
 
 	if ctx.IsCheckTx() || ctx.IsReCheckTx() {
@@ -277,12 +277,12 @@ func (k Keeper) OnAckPacket(
 
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketAck)
 	if err != nil {
-		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
+		return errorsmod.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
 	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
-		return sdkerrors.Wrap(err, "ibc-ack-packet")
+		return errorsmod.Wrap(err, "ibc-ack-packet")
 	}
 	return nil
 }
@@ -301,7 +301,7 @@ func (k Keeper) OnTimeoutPacket(
 
 	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return sdkerrors.Wrap(err, "ibc-timeout-packet")
+		return errorsmod.Wrap(err, "ibc-timeout-packet")
 	}
 
 	if ctx.IsCheckTx() || ctx.IsReCheckTx() {
@@ -316,12 +316,12 @@ func (k Keeper) OnTimeoutPacket(
 
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketTimeout)
 	if err != nil {
-		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
+		return errorsmod.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
 	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
-		return sdkerrors.Wrap(err, "ibc-timeout-packet")
+		return errorsmod.Wrap(err, "ibc-timeout-packet")
 	}
 	return nil
 }

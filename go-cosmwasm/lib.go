@@ -40,14 +40,16 @@ type Wasmer struct {
 // cacheSize sets the size of an optional in-memory LRU cache for prepared VMs.
 // They allow popular contracts to be executed very rapidly (no loading overhead),
 // but require ~32-64MB each in memory usage.
-func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64, moduleCacheSize uint16) (*Wasmer, error) {
+func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64, moduleCacheSize uint16, initEnclave bool) (*Wasmer, error) {
 	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize)
 	if err != nil {
 		return nil, err
 	}
-	err = api.InitEnclaveRuntime(moduleCacheSize)
-	if err != nil {
-		return nil, err
+	if initEnclave {
+		err = api.InitEnclaveRuntime(moduleCacheSize)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Wasmer{cache: cache}, nil
@@ -270,7 +272,7 @@ func (w *Wasmer) Execute(
 
 	// handle v0.10 response
 	if resp.V010 != nil {
-		if resp.V010.Err != nil { //nolint:gocritic
+		if resp.V010.Err != nil {
 			return v1types.DataWithInternalReplyInfo{
 				InternalMsgId:          resp.InternalMsgId,
 				InternaReplyEnclaveSig: resp.InternaReplyEnclaveSig,
@@ -284,14 +286,13 @@ func (w *Wasmer) Execute(
 				}
 			}
 			return resp.V010.Ok, gasUsed, nil
-		} else {
-			return nil, gasUsed, fmt.Errorf("cannot parse v0.10 handle response: %+v", resp)
 		}
+		return nil, gasUsed, fmt.Errorf("cannot parse v0.10 handle response: %+v", resp)
 	}
 
 	// handle v1 response
 	if resp.V1 != nil {
-		if resp.V1.Err != nil { //nolint:gocritic
+		if resp.V1.Err != nil {
 			return v1types.DataWithInternalReplyInfo{
 				InternalMsgId:          resp.InternalMsgId,
 				InternaReplyEnclaveSig: resp.InternaReplyEnclaveSig,
@@ -305,40 +306,36 @@ func (w *Wasmer) Execute(
 				}
 			}
 			return resp.V1.Ok, gasUsed, nil
-		} else {
-			return nil, gasUsed, fmt.Errorf("cannot parse v1 handle response: %+v", resp)
 		}
+		return nil, gasUsed, fmt.Errorf("cannot parse v1 handle response: %+v", resp)
 	}
 
 	if resp.IBCBasic != nil {
-		if resp.IBCBasic.Err != nil { //nolint:gocritic
+		if resp.IBCBasic.Err != nil {
 			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCBasic.Err)
 		} else if resp.IBCBasic.Ok != nil {
 			return resp.IBCBasic.Ok, gasUsed, nil
-		} else {
-			return nil, gasUsed, fmt.Errorf("cannot parse IBCBasic response: %+v", resp)
 		}
+		return nil, gasUsed, fmt.Errorf("cannot parse IBCBasic response: %+v", resp)
 	}
 
 	if resp.IBCPacketReceive != nil {
-		if resp.IBCPacketReceive.Err != nil { //nolint:gocritic
+		if resp.IBCPacketReceive.Err != nil {
 			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCPacketReceive.Err)
 		} else if resp.IBCPacketReceive.Ok != nil {
 			return resp.IBCPacketReceive.Ok, gasUsed, nil
-		} else {
-			return nil, gasUsed, fmt.Errorf("cannot parse IBCPacketReceive response: %+v", resp)
 		}
+		return nil, gasUsed, fmt.Errorf("cannot parse IBCPacketReceive response: %+v", resp)
 	}
 
 	if resp.IBCChannelOpen != nil {
-		if resp.IBCChannelOpen.Err != nil { //nolint:gocritic
+		if resp.IBCChannelOpen.Err != nil {
 			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCChannelOpen.Err)
 		} else if resp.IBCChannelOpen.Ok != nil {
 			// ibc_channel_open actually returns no data
 			return resp.IBCChannelOpen.Ok, gasUsed, nil
-		} else {
-			return nil, gasUsed, fmt.Errorf("cannot parse IBCChannelOpen response: %+v", resp)
 		}
+		return nil, gasUsed, fmt.Errorf("cannot parse IBCChannelOpen response: %+v", resp)
 	}
 
 	return nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1)")

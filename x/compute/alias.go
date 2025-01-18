@@ -61,18 +61,11 @@ var (
 	EncodeWasmMsg             = keeper.EncodeWasmMsg
 	NewKeeper                 = keeper.NewKeeper
 	NewQuerier                = keeper.NewGrpcQuerier
-	NewLegacyQuerier          = keeper.NewLegacyQuerier
 	DefaultQueryPlugins       = keeper.DefaultQueryPlugins
 	BankQuerier               = keeper.BankQuerier
 	NoCustomQuerier           = keeper.NoCustomQuerier
 	StakingQuerier            = keeper.StakingQuerier
 	WasmQuerier               = keeper.WasmQuerier
-	MakeTestCodec             = keeper.MakeTestCodec
-	CreateTestInput           = keeper.CreateTestInput
-	CreateFakeFundedAccount   = keeper.CreateFakeFundedAccount
-	TestHandler               = keeper.TestHandler
-	PrepareInitSignedTx       = keeper.PrepareInitSignedTx
-	PrepareExecSignedTx       = keeper.PrepareExecSignedTx
 	NewWasmSnapshotter        = keeper.NewWasmSnapshotter
 	ContractFromPortID        = keeper.ContractFromPortID
 	NewCountTXDecorator       = keeper.NewCountTXDecorator
@@ -99,7 +92,6 @@ var (
 )
 
 type (
-	// ProposalType            = types.ProposalType
 	GenesisState               = types.GenesisState
 	Code                       = types.Code
 	Contract                   = types.Contract

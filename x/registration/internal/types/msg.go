@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
+	"golang.org/x/xerrors"
 )
 
 type PublicKey []byte
@@ -22,7 +23,7 @@ func (msg RaAuthenticate) ValidateBasic() error {
 	}
 
 	if len(msg.Certificate) == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "Authenticating certificate cannot be empty")
+		return sdkerrors.ErrInvalidRequest.Wrap("Authenticating certificate cannot be empty")
 	}
 
 	return validateCertificate(msg.Certificate)
@@ -40,7 +41,7 @@ func validateCertificate(cert ra.Certificate) error {
 	// todo: add public key verification
 	_, err := ra.VerifyCombinedCert(cert)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Certificate validation failed: %v", err)
 	}
 
 	return nil

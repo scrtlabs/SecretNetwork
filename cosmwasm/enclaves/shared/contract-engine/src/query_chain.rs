@@ -319,7 +319,7 @@ fn decrypt_query_response(
         WasmEngineError::DecryptionError
     })?;
 
-    base64::decode(&b64_decrypted).map_err(|err| {
+    base64::decode(b64_decrypted).map_err(|err| {
         debug!(
             "encrypt_and_query_chain() got an answer, managed to decrypt it, then tried to decode the output from base64 to bytes and failed: {:?}",
             err

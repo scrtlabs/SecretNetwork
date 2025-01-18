@@ -32,7 +32,7 @@ func toggleIbcSwitchCmd() *cobra.Command {
 		Short: "Toggle the ibc switch on or off",
 		Long:  "Toggle the ibc switch on or off. Only a gov-approved address can do this.",
 		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err

@@ -12,6 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/pkg/errors"
+	"golang.org/x/xerrors"
 )
 
 type CombinedHdr struct {
@@ -90,13 +91,13 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 
 	pubK, payload, err := unmarshalCert(rawCert)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf("Unmarshal certificate failed: %v", err)
 	}
 
 	if !isSgxHardwareMode() {
 		pk, err := base64.StdEncoding.DecodeString(string(payload))
 		if err != nil {
-			return nil, err
+			return nil, xerrors.Errorf("Decode certificate failed: %v", err)
 		}
 
 		return pk, nil
@@ -105,13 +106,13 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	// Load Intel CA, Verify Cert and Signature
 	attnReportRaw, err := verifyCert(payload)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf("Intel verification failed: %v", err)
 	}
 
 	// Verify attestation report
 	pubK, err = verifyAttReport(attnReportRaw, pubK)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf("Attestation report failed: %v", err)
 	}
 	// verifyAttReport returns all the report_data field, which is 64 bytes - we just want the first 32 of them (rest are 0)
 	return pubK[0:32], nil

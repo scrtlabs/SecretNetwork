@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/store/prefix"
+	"cosmossdk.io/store/prefix"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"golang.org/x/text/language"
@@ -22,9 +23,9 @@ func NewMigrator(keeper Keeper) Migrator {
 }
 
 func v1GetContractKey(ctx sdk.Context, k Keeper, contractAddress sdk.AccAddress) []byte {
-	store := ctx.KVStore(k.storeKey)
+	store := k.storeService.OpenKVStore(ctx)
 
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	contractKey, _ := store.Get(types.GetContractEnclaveKey(contractAddress))
 
 	return contractKey
 }
@@ -37,7 +38,7 @@ func v1GetContractKey(ctx sdk.Context, k Keeper, contractAddress sdk.AccAddress)
 //		CurrentContractKeyProof []byte
 //	}
 func (m Migrator) Migrate1to2(ctx sdk.Context) error {
-	iter := prefix.NewStore(ctx.KVStore(m.keeper.storeKey), types.ContractKeyPrefix).Iterator(nil, nil)
+	iter := prefix.NewStore(runtime.KVStoreAdapter(m.keeper.storeService.OpenKVStore(ctx)), types.ContractKeyPrefix).Iterator(nil, nil)
 	for ; iter.Valid(); iter.Next() {
 		var contractAddress sdk.AccAddress = iter.Key()
 
@@ -86,7 +87,7 @@ func (m Migrator) Migrate3to4(_ sdk.Context) error {
 }
 
 func (m Migrator) Migrate4to5(ctx sdk.Context) error {
-	store := prefix.NewStore(ctx.KVStore(m.keeper.storeKey), types.ContractKeyPrefix)
+	store := prefix.NewStore(runtime.KVStoreAdapter(m.keeper.storeService.OpenKVStore(ctx)), types.ContractKeyPrefix)
 	iter := store.Iterator(nil, nil)
 	defer iter.Close()
 
@@ -132,6 +133,18 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 		previousTime = time.Now().UnixNano()
 	}
 	return nil
+}
+
+func (m Migrator) Migrate5to6(ctx sdk.Context) error {
+	store := m.keeper.storeService.OpenKVStore(ctx)
+	defaultParams := types.DefaultParams()
+	bz, err := m.keeper.cdc.Marshal(&defaultParams)
+	if err != nil {
+		return err
+	}
+	err = store.Set(types.ParamsKey, bz)
+
+	return err
 }
 
 const progressPartSize = 1000

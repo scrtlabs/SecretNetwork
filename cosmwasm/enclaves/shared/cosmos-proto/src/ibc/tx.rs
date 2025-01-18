@@ -927,6 +927,7 @@ impl ::protobuf::reflect::ProtobufValue for MsgChannelOpenTry {
 pub struct MsgChannelOpenTryResponse {
     // message fields
     pub version: ::std::string::String,
+    pub channel_id: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -968,6 +969,32 @@ impl MsgChannelOpenTryResponse {
     pub fn take_version(&mut self) -> ::std::string::String {
         ::std::mem::replace(&mut self.version, ::std::string::String::new())
     }
+
+    // string channel_id = 2;
+
+
+    pub fn get_channel_id(&self) -> &str {
+        &self.channel_id
+    }
+    pub fn clear_channel_id(&mut self) {
+        self.channel_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_channel_id(&mut self, v: ::std::string::String) {
+        self.channel_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_channel_id(&mut self) -> &mut ::std::string::String {
+        &mut self.channel_id
+    }
+
+    // Take field
+    pub fn take_channel_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.channel_id, ::std::string::String::new())
+    }
 }
 
 impl ::protobuf::Message for MsgChannelOpenTryResponse {
@@ -981,6 +1008,9 @@ impl ::protobuf::Message for MsgChannelOpenTryResponse {
             match field_number {
                 1 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.version)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.channel_id)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -997,6 +1027,9 @@ impl ::protobuf::Message for MsgChannelOpenTryResponse {
         if !self.version.is_empty() {
             my_size += ::protobuf::rt::string_size(1, &self.version);
         }
+        if !self.channel_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.channel_id);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -1005,6 +1038,9 @@ impl ::protobuf::Message for MsgChannelOpenTryResponse {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
         if !self.version.is_empty() {
             os.write_string(1, &self.version)?;
+        }
+        if !self.channel_id.is_empty() {
+            os.write_string(2, &self.channel_id)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1049,6 +1085,11 @@ impl ::protobuf::Message for MsgChannelOpenTryResponse {
                 |m: &MsgChannelOpenTryResponse| { &m.version },
                 |m: &mut MsgChannelOpenTryResponse| { &mut m.version },
             ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "channel_id",
+                |m: &MsgChannelOpenTryResponse| { &m.channel_id },
+                |m: &mut MsgChannelOpenTryResponse| { &mut m.channel_id },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelOpenTryResponse>(
                 "MsgChannelOpenTryResponse",
                 fields,
@@ -1066,6 +1107,7 @@ impl ::protobuf::Message for MsgChannelOpenTryResponse {
 impl ::protobuf::Clear for MsgChannelOpenTryResponse {
     fn clear(&mut self) {
         self.version.clear();
+        self.channel_id.clear();
         self.unknown_fields.clear();
     }
 }
@@ -2449,6 +2491,7 @@ pub struct MsgChannelCloseConfirm {
     pub proof_init: ::std::vec::Vec<u8>,
     pub proof_height: ::protobuf::SingularPtrField<super::client::Height>,
     pub signer: ::std::string::String,
+    pub counterparty_upgrade_sequence: u64,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -2601,6 +2644,21 @@ impl MsgChannelCloseConfirm {
     pub fn take_signer(&mut self) -> ::std::string::String {
         ::std::mem::replace(&mut self.signer, ::std::string::String::new())
     }
+
+    // uint64 counterparty_upgrade_sequence = 6;
+
+
+    pub fn get_counterparty_upgrade_sequence(&self) -> u64 {
+        self.counterparty_upgrade_sequence
+    }
+    pub fn clear_counterparty_upgrade_sequence(&mut self) {
+        self.counterparty_upgrade_sequence = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_counterparty_upgrade_sequence(&mut self, v: u64) {
+        self.counterparty_upgrade_sequence = v;
+    }
 }
 
 impl ::protobuf::Message for MsgChannelCloseConfirm {
@@ -2632,6 +2690,13 @@ impl ::protobuf::Message for MsgChannelCloseConfirm {
                 5 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.signer)?;
                 },
+                6 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.counterparty_upgrade_sequence = tmp;
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -2660,6 +2725,9 @@ impl ::protobuf::Message for MsgChannelCloseConfirm {
         if !self.signer.is_empty() {
             my_size += ::protobuf::rt::string_size(5, &self.signer);
         }
+        if self.counterparty_upgrade_sequence != 0 {
+            my_size += ::protobuf::rt::value_size(6, self.counterparty_upgrade_sequence, ::protobuf::wire_format::WireTypeVarint);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -2682,6 +2750,9 @@ impl ::protobuf::Message for MsgChannelCloseConfirm {
         }
         if !self.signer.is_empty() {
             os.write_string(5, &self.signer)?;
+        }
+        if self.counterparty_upgrade_sequence != 0 {
+            os.write_uint64(6, self.counterparty_upgrade_sequence)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -2746,6 +2817,11 @@ impl ::protobuf::Message for MsgChannelCloseConfirm {
                 |m: &MsgChannelCloseConfirm| { &m.signer },
                 |m: &mut MsgChannelCloseConfirm| { &mut m.signer },
             ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "counterparty_upgrade_sequence",
+                |m: &MsgChannelCloseConfirm| { &m.counterparty_upgrade_sequence },
+                |m: &mut MsgChannelCloseConfirm| { &mut m.counterparty_upgrade_sequence },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelCloseConfirm>(
                 "MsgChannelCloseConfirm",
                 fields,
@@ -2767,6 +2843,7 @@ impl ::protobuf::Clear for MsgChannelCloseConfirm {
         self.proof_init.clear();
         self.proof_height.clear();
         self.signer.clear();
+        self.counterparty_upgrade_sequence = 0;
         self.unknown_fields.clear();
     }
 }
@@ -3869,6 +3946,7 @@ pub struct MsgTimeoutOnClose {
     pub proof_height: ::protobuf::SingularPtrField<super::client::Height>,
     pub next_sequence_recv: u64,
     pub signer: ::std::string::String,
+    pub counterparty_upgrade_sequence: u64,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -4043,6 +4121,21 @@ impl MsgTimeoutOnClose {
     pub fn take_signer(&mut self) -> ::std::string::String {
         ::std::mem::replace(&mut self.signer, ::std::string::String::new())
     }
+
+    // uint64 counterparty_upgrade_sequence = 7;
+
+
+    pub fn get_counterparty_upgrade_sequence(&self) -> u64 {
+        self.counterparty_upgrade_sequence
+    }
+    pub fn clear_counterparty_upgrade_sequence(&mut self) {
+        self.counterparty_upgrade_sequence = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_counterparty_upgrade_sequence(&mut self, v: u64) {
+        self.counterparty_upgrade_sequence = v;
+    }
 }
 
 impl ::protobuf::Message for MsgTimeoutOnClose {
@@ -4086,6 +4179,13 @@ impl ::protobuf::Message for MsgTimeoutOnClose {
                 6 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.signer)?;
                 },
+                7 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.counterparty_upgrade_sequence = tmp;
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -4118,6 +4218,9 @@ impl ::protobuf::Message for MsgTimeoutOnClose {
         if !self.signer.is_empty() {
             my_size += ::protobuf::rt::string_size(6, &self.signer);
         }
+        if self.counterparty_upgrade_sequence != 0 {
+            my_size += ::protobuf::rt::value_size(7, self.counterparty_upgrade_sequence, ::protobuf::wire_format::WireTypeVarint);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -4145,6 +4248,9 @@ impl ::protobuf::Message for MsgTimeoutOnClose {
         }
         if !self.signer.is_empty() {
             os.write_string(6, &self.signer)?;
+        }
+        if self.counterparty_upgrade_sequence != 0 {
+            os.write_uint64(7, self.counterparty_upgrade_sequence)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -4214,6 +4320,11 @@ impl ::protobuf::Message for MsgTimeoutOnClose {
                 |m: &MsgTimeoutOnClose| { &m.signer },
                 |m: &mut MsgTimeoutOnClose| { &mut m.signer },
             ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "counterparty_upgrade_sequence",
+                |m: &MsgTimeoutOnClose| { &m.counterparty_upgrade_sequence },
+                |m: &mut MsgTimeoutOnClose| { &mut m.counterparty_upgrade_sequence },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgTimeoutOnClose>(
                 "MsgTimeoutOnClose",
                 fields,
@@ -4236,6 +4347,7 @@ impl ::protobuf::Clear for MsgTimeoutOnClose {
         self.proof_height.clear();
         self.next_sequence_recv = 0;
         self.signer.clear();
+        self.counterparty_upgrade_sequence = 0;
         self.unknown_fields.clear();
     }
 }
@@ -4905,11 +5017,4838 @@ impl ::protobuf::reflect::ProtobufValue for MsgAcknowledgementResponse {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeInit {
+    // message fields
+    pub port_id: ::std::string::String,
+    pub channel_id: ::std::string::String,
+    pub fields: ::protobuf::SingularPtrField<super::channel_upgrade::UpgradeFields>,
+    pub signer: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeInit {
+    fn default() -> &'a MsgChannelUpgradeInit {
+        <MsgChannelUpgradeInit as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeInit {
+    pub fn new() -> MsgChannelUpgradeInit {
+        ::std::default::Default::default()
+    }
+
+    // string port_id = 1;
+
+
+    pub fn get_port_id(&self) -> &str {
+        &self.port_id
+    }
+    pub fn clear_port_id(&mut self) {
+        self.port_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_port_id(&mut self, v: ::std::string::String) {
+        self.port_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_port_id(&mut self) -> &mut ::std::string::String {
+        &mut self.port_id
+    }
+
+    // Take field
+    pub fn take_port_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.port_id, ::std::string::String::new())
+    }
+
+    // string channel_id = 2;
+
+
+    pub fn get_channel_id(&self) -> &str {
+        &self.channel_id
+    }
+    pub fn clear_channel_id(&mut self) {
+        self.channel_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_channel_id(&mut self, v: ::std::string::String) {
+        self.channel_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_channel_id(&mut self) -> &mut ::std::string::String {
+        &mut self.channel_id
+    }
+
+    // Take field
+    pub fn take_channel_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.channel_id, ::std::string::String::new())
+    }
+
+    // .ibc.core.channel.v1.UpgradeFields fields = 3;
+
+
+    pub fn get_fields(&self) -> &super::channel_upgrade::UpgradeFields {
+        self.fields.as_ref().unwrap_or_else(|| <super::channel_upgrade::UpgradeFields as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_fields(&mut self) {
+        self.fields.clear();
+    }
+
+    pub fn has_fields(&self) -> bool {
+        self.fields.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_fields(&mut self, v: super::channel_upgrade::UpgradeFields) {
+        self.fields = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_fields(&mut self) -> &mut super::channel_upgrade::UpgradeFields {
+        if self.fields.is_none() {
+            self.fields.set_default();
+        }
+        self.fields.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_fields(&mut self) -> super::channel_upgrade::UpgradeFields {
+        self.fields.take().unwrap_or_else(|| super::channel_upgrade::UpgradeFields::new())
+    }
+
+    // string signer = 4;
+
+
+    pub fn get_signer(&self) -> &str {
+        &self.signer
+    }
+    pub fn clear_signer(&mut self) {
+        self.signer.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_signer(&mut self, v: ::std::string::String) {
+        self.signer = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_signer(&mut self) -> &mut ::std::string::String {
+        &mut self.signer
+    }
+
+    // Take field
+    pub fn take_signer(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.signer, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeInit {
+    fn is_initialized(&self) -> bool {
+        for v in &self.fields {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.port_id)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.channel_id)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.fields)?;
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.signer)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.port_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.port_id);
+        }
+        if !self.channel_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.channel_id);
+        }
+        if let Some(ref v) = self.fields.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.signer.is_empty() {
+            my_size += ::protobuf::rt::string_size(4, &self.signer);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.port_id.is_empty() {
+            os.write_string(1, &self.port_id)?;
+        }
+        if !self.channel_id.is_empty() {
+            os.write_string(2, &self.channel_id)?;
+        }
+        if let Some(ref v) = self.fields.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.signer.is_empty() {
+            os.write_string(4, &self.signer)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeInit {
+        MsgChannelUpgradeInit::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "port_id",
+                |m: &MsgChannelUpgradeInit| { &m.port_id },
+                |m: &mut MsgChannelUpgradeInit| { &mut m.port_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "channel_id",
+                |m: &MsgChannelUpgradeInit| { &m.channel_id },
+                |m: &mut MsgChannelUpgradeInit| { &mut m.channel_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::channel_upgrade::UpgradeFields>>(
+                "fields",
+                |m: &MsgChannelUpgradeInit| { &m.fields },
+                |m: &mut MsgChannelUpgradeInit| { &mut m.fields },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "signer",
+                |m: &MsgChannelUpgradeInit| { &m.signer },
+                |m: &mut MsgChannelUpgradeInit| { &mut m.signer },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeInit>(
+                "MsgChannelUpgradeInit",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeInit {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeInit> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeInit::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeInit {
+    fn clear(&mut self) {
+        self.port_id.clear();
+        self.channel_id.clear();
+        self.fields.clear();
+        self.signer.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeInit {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeInit {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeInitResponse {
+    // message fields
+    pub upgrade: ::protobuf::SingularPtrField<super::channel_upgrade::Upgrade>,
+    pub upgrade_sequence: u64,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeInitResponse {
+    fn default() -> &'a MsgChannelUpgradeInitResponse {
+        <MsgChannelUpgradeInitResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeInitResponse {
+    pub fn new() -> MsgChannelUpgradeInitResponse {
+        ::std::default::Default::default()
+    }
+
+    // .ibc.core.channel.v1.Upgrade upgrade = 1;
+
+
+    pub fn get_upgrade(&self) -> &super::channel_upgrade::Upgrade {
+        self.upgrade.as_ref().unwrap_or_else(|| <super::channel_upgrade::Upgrade as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_upgrade(&mut self) {
+        self.upgrade.clear();
+    }
+
+    pub fn has_upgrade(&self) -> bool {
+        self.upgrade.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_upgrade(&mut self, v: super::channel_upgrade::Upgrade) {
+        self.upgrade = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_upgrade(&mut self) -> &mut super::channel_upgrade::Upgrade {
+        if self.upgrade.is_none() {
+            self.upgrade.set_default();
+        }
+        self.upgrade.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_upgrade(&mut self) -> super::channel_upgrade::Upgrade {
+        self.upgrade.take().unwrap_or_else(|| super::channel_upgrade::Upgrade::new())
+    }
+
+    // uint64 upgrade_sequence = 2;
+
+
+    pub fn get_upgrade_sequence(&self) -> u64 {
+        self.upgrade_sequence
+    }
+    pub fn clear_upgrade_sequence(&mut self) {
+        self.upgrade_sequence = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_upgrade_sequence(&mut self, v: u64) {
+        self.upgrade_sequence = v;
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeInitResponse {
+    fn is_initialized(&self) -> bool {
+        for v in &self.upgrade {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.upgrade)?;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.upgrade_sequence = tmp;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if let Some(ref v) = self.upgrade.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if self.upgrade_sequence != 0 {
+            my_size += ::protobuf::rt::value_size(2, self.upgrade_sequence, ::protobuf::wire_format::WireTypeVarint);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if let Some(ref v) = self.upgrade.as_ref() {
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if self.upgrade_sequence != 0 {
+            os.write_uint64(2, self.upgrade_sequence)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeInitResponse {
+        MsgChannelUpgradeInitResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::channel_upgrade::Upgrade>>(
+                "upgrade",
+                |m: &MsgChannelUpgradeInitResponse| { &m.upgrade },
+                |m: &mut MsgChannelUpgradeInitResponse| { &mut m.upgrade },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "upgrade_sequence",
+                |m: &MsgChannelUpgradeInitResponse| { &m.upgrade_sequence },
+                |m: &mut MsgChannelUpgradeInitResponse| { &mut m.upgrade_sequence },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeInitResponse>(
+                "MsgChannelUpgradeInitResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeInitResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeInitResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeInitResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeInitResponse {
+    fn clear(&mut self) {
+        self.upgrade.clear();
+        self.upgrade_sequence = 0;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeInitResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeInitResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeTry {
+    // message fields
+    pub port_id: ::std::string::String,
+    pub channel_id: ::std::string::String,
+    pub proposed_upgrade_connection_hops: ::protobuf::RepeatedField<::std::string::String>,
+    pub counterparty_upgrade_fields: ::protobuf::SingularPtrField<super::channel_upgrade::UpgradeFields>,
+    pub counterparty_upgrade_sequence: u64,
+    pub proof_channel: ::std::vec::Vec<u8>,
+    pub proof_upgrade: ::std::vec::Vec<u8>,
+    pub proof_height: ::protobuf::SingularPtrField<super::client::Height>,
+    pub signer: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeTry {
+    fn default() -> &'a MsgChannelUpgradeTry {
+        <MsgChannelUpgradeTry as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeTry {
+    pub fn new() -> MsgChannelUpgradeTry {
+        ::std::default::Default::default()
+    }
+
+    // string port_id = 1;
+
+
+    pub fn get_port_id(&self) -> &str {
+        &self.port_id
+    }
+    pub fn clear_port_id(&mut self) {
+        self.port_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_port_id(&mut self, v: ::std::string::String) {
+        self.port_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_port_id(&mut self) -> &mut ::std::string::String {
+        &mut self.port_id
+    }
+
+    // Take field
+    pub fn take_port_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.port_id, ::std::string::String::new())
+    }
+
+    // string channel_id = 2;
+
+
+    pub fn get_channel_id(&self) -> &str {
+        &self.channel_id
+    }
+    pub fn clear_channel_id(&mut self) {
+        self.channel_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_channel_id(&mut self, v: ::std::string::String) {
+        self.channel_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_channel_id(&mut self) -> &mut ::std::string::String {
+        &mut self.channel_id
+    }
+
+    // Take field
+    pub fn take_channel_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.channel_id, ::std::string::String::new())
+    }
+
+    // repeated string proposed_upgrade_connection_hops = 3;
+
+
+    pub fn get_proposed_upgrade_connection_hops(&self) -> &[::std::string::String] {
+        &self.proposed_upgrade_connection_hops
+    }
+    pub fn clear_proposed_upgrade_connection_hops(&mut self) {
+        self.proposed_upgrade_connection_hops.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proposed_upgrade_connection_hops(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
+        self.proposed_upgrade_connection_hops = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_proposed_upgrade_connection_hops(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
+        &mut self.proposed_upgrade_connection_hops
+    }
+
+    // Take field
+    pub fn take_proposed_upgrade_connection_hops(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
+        ::std::mem::replace(&mut self.proposed_upgrade_connection_hops, ::protobuf::RepeatedField::new())
+    }
+
+    // .ibc.core.channel.v1.UpgradeFields counterparty_upgrade_fields = 4;
+
+
+    pub fn get_counterparty_upgrade_fields(&self) -> &super::channel_upgrade::UpgradeFields {
+        self.counterparty_upgrade_fields.as_ref().unwrap_or_else(|| <super::channel_upgrade::UpgradeFields as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_counterparty_upgrade_fields(&mut self) {
+        self.counterparty_upgrade_fields.clear();
+    }
+
+    pub fn has_counterparty_upgrade_fields(&self) -> bool {
+        self.counterparty_upgrade_fields.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_counterparty_upgrade_fields(&mut self, v: super::channel_upgrade::UpgradeFields) {
+        self.counterparty_upgrade_fields = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_counterparty_upgrade_fields(&mut self) -> &mut super::channel_upgrade::UpgradeFields {
+        if self.counterparty_upgrade_fields.is_none() {
+            self.counterparty_upgrade_fields.set_default();
+        }
+        self.counterparty_upgrade_fields.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_counterparty_upgrade_fields(&mut self) -> super::channel_upgrade::UpgradeFields {
+        self.counterparty_upgrade_fields.take().unwrap_or_else(|| super::channel_upgrade::UpgradeFields::new())
+    }
+
+    // uint64 counterparty_upgrade_sequence = 5;
+
+
+    pub fn get_counterparty_upgrade_sequence(&self) -> u64 {
+        self.counterparty_upgrade_sequence
+    }
+    pub fn clear_counterparty_upgrade_sequence(&mut self) {
+        self.counterparty_upgrade_sequence = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_counterparty_upgrade_sequence(&mut self, v: u64) {
+        self.counterparty_upgrade_sequence = v;
+    }
+
+    // bytes proof_channel = 6;
+
+
+    pub fn get_proof_channel(&self) -> &[u8] {
+        &self.proof_channel
+    }
+    pub fn clear_proof_channel(&mut self) {
+        self.proof_channel.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_channel(&mut self, v: ::std::vec::Vec<u8>) {
+        self.proof_channel = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_channel(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.proof_channel
+    }
+
+    // Take field
+    pub fn take_proof_channel(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.proof_channel, ::std::vec::Vec::new())
+    }
+
+    // bytes proof_upgrade = 7;
+
+
+    pub fn get_proof_upgrade(&self) -> &[u8] {
+        &self.proof_upgrade
+    }
+    pub fn clear_proof_upgrade(&mut self) {
+        self.proof_upgrade.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_upgrade(&mut self, v: ::std::vec::Vec<u8>) {
+        self.proof_upgrade = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_upgrade(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.proof_upgrade
+    }
+
+    // Take field
+    pub fn take_proof_upgrade(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.proof_upgrade, ::std::vec::Vec::new())
+    }
+
+    // .ibc.core.client.v1.Height proof_height = 8;
+
+
+    pub fn get_proof_height(&self) -> &super::client::Height {
+        self.proof_height.as_ref().unwrap_or_else(|| <super::client::Height as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_proof_height(&mut self) {
+        self.proof_height.clear();
+    }
+
+    pub fn has_proof_height(&self) -> bool {
+        self.proof_height.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_height(&mut self, v: super::client::Height) {
+        self.proof_height = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_height(&mut self) -> &mut super::client::Height {
+        if self.proof_height.is_none() {
+            self.proof_height.set_default();
+        }
+        self.proof_height.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_proof_height(&mut self) -> super::client::Height {
+        self.proof_height.take().unwrap_or_else(|| super::client::Height::new())
+    }
+
+    // string signer = 9;
+
+
+    pub fn get_signer(&self) -> &str {
+        &self.signer
+    }
+    pub fn clear_signer(&mut self) {
+        self.signer.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_signer(&mut self, v: ::std::string::String) {
+        self.signer = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_signer(&mut self) -> &mut ::std::string::String {
+        &mut self.signer
+    }
+
+    // Take field
+    pub fn take_signer(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.signer, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeTry {
+    fn is_initialized(&self) -> bool {
+        for v in &self.counterparty_upgrade_fields {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.proof_height {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.port_id)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.channel_id)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.proposed_upgrade_connection_hops)?;
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.counterparty_upgrade_fields)?;
+                },
+                5 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.counterparty_upgrade_sequence = tmp;
+                },
+                6 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.proof_channel)?;
+                },
+                7 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.proof_upgrade)?;
+                },
+                8 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.proof_height)?;
+                },
+                9 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.signer)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.port_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.port_id);
+        }
+        if !self.channel_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.channel_id);
+        }
+        for value in &self.proposed_upgrade_connection_hops {
+            my_size += ::protobuf::rt::string_size(3, &value);
+        };
+        if let Some(ref v) = self.counterparty_upgrade_fields.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if self.counterparty_upgrade_sequence != 0 {
+            my_size += ::protobuf::rt::value_size(5, self.counterparty_upgrade_sequence, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if !self.proof_channel.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(6, &self.proof_channel);
+        }
+        if !self.proof_upgrade.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(7, &self.proof_upgrade);
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.signer.is_empty() {
+            my_size += ::protobuf::rt::string_size(9, &self.signer);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.port_id.is_empty() {
+            os.write_string(1, &self.port_id)?;
+        }
+        if !self.channel_id.is_empty() {
+            os.write_string(2, &self.channel_id)?;
+        }
+        for v in &self.proposed_upgrade_connection_hops {
+            os.write_string(3, &v)?;
+        };
+        if let Some(ref v) = self.counterparty_upgrade_fields.as_ref() {
+            os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if self.counterparty_upgrade_sequence != 0 {
+            os.write_uint64(5, self.counterparty_upgrade_sequence)?;
+        }
+        if !self.proof_channel.is_empty() {
+            os.write_bytes(6, &self.proof_channel)?;
+        }
+        if !self.proof_upgrade.is_empty() {
+            os.write_bytes(7, &self.proof_upgrade)?;
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            os.write_tag(8, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.signer.is_empty() {
+            os.write_string(9, &self.signer)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeTry {
+        MsgChannelUpgradeTry::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "port_id",
+                |m: &MsgChannelUpgradeTry| { &m.port_id },
+                |m: &mut MsgChannelUpgradeTry| { &mut m.port_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "channel_id",
+                |m: &MsgChannelUpgradeTry| { &m.channel_id },
+                |m: &mut MsgChannelUpgradeTry| { &mut m.channel_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "proposed_upgrade_connection_hops",
+                |m: &MsgChannelUpgradeTry| { &m.proposed_upgrade_connection_hops },
+                |m: &mut MsgChannelUpgradeTry| { &mut m.proposed_upgrade_connection_hops },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::channel_upgrade::UpgradeFields>>(
+                "counterparty_upgrade_fields",
+                |m: &MsgChannelUpgradeTry| { &m.counterparty_upgrade_fields },
+                |m: &mut MsgChannelUpgradeTry| { &mut m.counterparty_upgrade_fields },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "counterparty_upgrade_sequence",
+                |m: &MsgChannelUpgradeTry| { &m.counterparty_upgrade_sequence },
+                |m: &mut MsgChannelUpgradeTry| { &mut m.counterparty_upgrade_sequence },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "proof_channel",
+                |m: &MsgChannelUpgradeTry| { &m.proof_channel },
+                |m: &mut MsgChannelUpgradeTry| { &mut m.proof_channel },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "proof_upgrade",
+                |m: &MsgChannelUpgradeTry| { &m.proof_upgrade },
+                |m: &mut MsgChannelUpgradeTry| { &mut m.proof_upgrade },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::client::Height>>(
+                "proof_height",
+                |m: &MsgChannelUpgradeTry| { &m.proof_height },
+                |m: &mut MsgChannelUpgradeTry| { &mut m.proof_height },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "signer",
+                |m: &MsgChannelUpgradeTry| { &m.signer },
+                |m: &mut MsgChannelUpgradeTry| { &mut m.signer },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeTry>(
+                "MsgChannelUpgradeTry",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeTry {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeTry> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeTry::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeTry {
+    fn clear(&mut self) {
+        self.port_id.clear();
+        self.channel_id.clear();
+        self.proposed_upgrade_connection_hops.clear();
+        self.counterparty_upgrade_fields.clear();
+        self.counterparty_upgrade_sequence = 0;
+        self.proof_channel.clear();
+        self.proof_upgrade.clear();
+        self.proof_height.clear();
+        self.signer.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeTry {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeTry {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeTryResponse {
+    // message fields
+    pub upgrade: ::protobuf::SingularPtrField<super::channel_upgrade::Upgrade>,
+    pub upgrade_sequence: u64,
+    pub result: ResponseResultType,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeTryResponse {
+    fn default() -> &'a MsgChannelUpgradeTryResponse {
+        <MsgChannelUpgradeTryResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeTryResponse {
+    pub fn new() -> MsgChannelUpgradeTryResponse {
+        ::std::default::Default::default()
+    }
+
+    // .ibc.core.channel.v1.Upgrade upgrade = 1;
+
+
+    pub fn get_upgrade(&self) -> &super::channel_upgrade::Upgrade {
+        self.upgrade.as_ref().unwrap_or_else(|| <super::channel_upgrade::Upgrade as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_upgrade(&mut self) {
+        self.upgrade.clear();
+    }
+
+    pub fn has_upgrade(&self) -> bool {
+        self.upgrade.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_upgrade(&mut self, v: super::channel_upgrade::Upgrade) {
+        self.upgrade = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_upgrade(&mut self) -> &mut super::channel_upgrade::Upgrade {
+        if self.upgrade.is_none() {
+            self.upgrade.set_default();
+        }
+        self.upgrade.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_upgrade(&mut self) -> super::channel_upgrade::Upgrade {
+        self.upgrade.take().unwrap_or_else(|| super::channel_upgrade::Upgrade::new())
+    }
+
+    // uint64 upgrade_sequence = 2;
+
+
+    pub fn get_upgrade_sequence(&self) -> u64 {
+        self.upgrade_sequence
+    }
+    pub fn clear_upgrade_sequence(&mut self) {
+        self.upgrade_sequence = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_upgrade_sequence(&mut self, v: u64) {
+        self.upgrade_sequence = v;
+    }
+
+    // .ibc.core.channel.v1.ResponseResultType result = 3;
+
+
+    pub fn get_result(&self) -> ResponseResultType {
+        self.result
+    }
+    pub fn clear_result(&mut self) {
+        self.result = ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_result(&mut self, v: ResponseResultType) {
+        self.result = v;
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeTryResponse {
+    fn is_initialized(&self) -> bool {
+        for v in &self.upgrade {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.upgrade)?;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.upgrade_sequence = tmp;
+                },
+                3 => {
+                    ::protobuf::rt::read_proto3_enum_with_unknown_fields_into(wire_type, is, &mut self.result, 3, &mut self.unknown_fields)?
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if let Some(ref v) = self.upgrade.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if self.upgrade_sequence != 0 {
+            my_size += ::protobuf::rt::value_size(2, self.upgrade_sequence, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if self.result != ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED {
+            my_size += ::protobuf::rt::enum_size(3, self.result);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if let Some(ref v) = self.upgrade.as_ref() {
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if self.upgrade_sequence != 0 {
+            os.write_uint64(2, self.upgrade_sequence)?;
+        }
+        if self.result != ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED {
+            os.write_enum(3, ::protobuf::ProtobufEnum::value(&self.result))?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeTryResponse {
+        MsgChannelUpgradeTryResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::channel_upgrade::Upgrade>>(
+                "upgrade",
+                |m: &MsgChannelUpgradeTryResponse| { &m.upgrade },
+                |m: &mut MsgChannelUpgradeTryResponse| { &mut m.upgrade },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "upgrade_sequence",
+                |m: &MsgChannelUpgradeTryResponse| { &m.upgrade_sequence },
+                |m: &mut MsgChannelUpgradeTryResponse| { &mut m.upgrade_sequence },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<ResponseResultType>>(
+                "result",
+                |m: &MsgChannelUpgradeTryResponse| { &m.result },
+                |m: &mut MsgChannelUpgradeTryResponse| { &mut m.result },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeTryResponse>(
+                "MsgChannelUpgradeTryResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeTryResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeTryResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeTryResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeTryResponse {
+    fn clear(&mut self) {
+        self.upgrade.clear();
+        self.upgrade_sequence = 0;
+        self.result = ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeTryResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeTryResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeAck {
+    // message fields
+    pub port_id: ::std::string::String,
+    pub channel_id: ::std::string::String,
+    pub counterparty_upgrade: ::protobuf::SingularPtrField<super::channel_upgrade::Upgrade>,
+    pub proof_channel: ::std::vec::Vec<u8>,
+    pub proof_upgrade: ::std::vec::Vec<u8>,
+    pub proof_height: ::protobuf::SingularPtrField<super::client::Height>,
+    pub signer: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeAck {
+    fn default() -> &'a MsgChannelUpgradeAck {
+        <MsgChannelUpgradeAck as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeAck {
+    pub fn new() -> MsgChannelUpgradeAck {
+        ::std::default::Default::default()
+    }
+
+    // string port_id = 1;
+
+
+    pub fn get_port_id(&self) -> &str {
+        &self.port_id
+    }
+    pub fn clear_port_id(&mut self) {
+        self.port_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_port_id(&mut self, v: ::std::string::String) {
+        self.port_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_port_id(&mut self) -> &mut ::std::string::String {
+        &mut self.port_id
+    }
+
+    // Take field
+    pub fn take_port_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.port_id, ::std::string::String::new())
+    }
+
+    // string channel_id = 2;
+
+
+    pub fn get_channel_id(&self) -> &str {
+        &self.channel_id
+    }
+    pub fn clear_channel_id(&mut self) {
+        self.channel_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_channel_id(&mut self, v: ::std::string::String) {
+        self.channel_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_channel_id(&mut self) -> &mut ::std::string::String {
+        &mut self.channel_id
+    }
+
+    // Take field
+    pub fn take_channel_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.channel_id, ::std::string::String::new())
+    }
+
+    // .ibc.core.channel.v1.Upgrade counterparty_upgrade = 3;
+
+
+    pub fn get_counterparty_upgrade(&self) -> &super::channel_upgrade::Upgrade {
+        self.counterparty_upgrade.as_ref().unwrap_or_else(|| <super::channel_upgrade::Upgrade as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_counterparty_upgrade(&mut self) {
+        self.counterparty_upgrade.clear();
+    }
+
+    pub fn has_counterparty_upgrade(&self) -> bool {
+        self.counterparty_upgrade.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_counterparty_upgrade(&mut self, v: super::channel_upgrade::Upgrade) {
+        self.counterparty_upgrade = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_counterparty_upgrade(&mut self) -> &mut super::channel_upgrade::Upgrade {
+        if self.counterparty_upgrade.is_none() {
+            self.counterparty_upgrade.set_default();
+        }
+        self.counterparty_upgrade.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_counterparty_upgrade(&mut self) -> super::channel_upgrade::Upgrade {
+        self.counterparty_upgrade.take().unwrap_or_else(|| super::channel_upgrade::Upgrade::new())
+    }
+
+    // bytes proof_channel = 4;
+
+
+    pub fn get_proof_channel(&self) -> &[u8] {
+        &self.proof_channel
+    }
+    pub fn clear_proof_channel(&mut self) {
+        self.proof_channel.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_channel(&mut self, v: ::std::vec::Vec<u8>) {
+        self.proof_channel = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_channel(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.proof_channel
+    }
+
+    // Take field
+    pub fn take_proof_channel(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.proof_channel, ::std::vec::Vec::new())
+    }
+
+    // bytes proof_upgrade = 5;
+
+
+    pub fn get_proof_upgrade(&self) -> &[u8] {
+        &self.proof_upgrade
+    }
+    pub fn clear_proof_upgrade(&mut self) {
+        self.proof_upgrade.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_upgrade(&mut self, v: ::std::vec::Vec<u8>) {
+        self.proof_upgrade = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_upgrade(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.proof_upgrade
+    }
+
+    // Take field
+    pub fn take_proof_upgrade(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.proof_upgrade, ::std::vec::Vec::new())
+    }
+
+    // .ibc.core.client.v1.Height proof_height = 6;
+
+
+    pub fn get_proof_height(&self) -> &super::client::Height {
+        self.proof_height.as_ref().unwrap_or_else(|| <super::client::Height as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_proof_height(&mut self) {
+        self.proof_height.clear();
+    }
+
+    pub fn has_proof_height(&self) -> bool {
+        self.proof_height.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_height(&mut self, v: super::client::Height) {
+        self.proof_height = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_height(&mut self) -> &mut super::client::Height {
+        if self.proof_height.is_none() {
+            self.proof_height.set_default();
+        }
+        self.proof_height.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_proof_height(&mut self) -> super::client::Height {
+        self.proof_height.take().unwrap_or_else(|| super::client::Height::new())
+    }
+
+    // string signer = 7;
+
+
+    pub fn get_signer(&self) -> &str {
+        &self.signer
+    }
+    pub fn clear_signer(&mut self) {
+        self.signer.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_signer(&mut self, v: ::std::string::String) {
+        self.signer = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_signer(&mut self) -> &mut ::std::string::String {
+        &mut self.signer
+    }
+
+    // Take field
+    pub fn take_signer(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.signer, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeAck {
+    fn is_initialized(&self) -> bool {
+        for v in &self.counterparty_upgrade {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.proof_height {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.port_id)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.channel_id)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.counterparty_upgrade)?;
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.proof_channel)?;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.proof_upgrade)?;
+                },
+                6 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.proof_height)?;
+                },
+                7 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.signer)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.port_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.port_id);
+        }
+        if !self.channel_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.channel_id);
+        }
+        if let Some(ref v) = self.counterparty_upgrade.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.proof_channel.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(4, &self.proof_channel);
+        }
+        if !self.proof_upgrade.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(5, &self.proof_upgrade);
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.signer.is_empty() {
+            my_size += ::protobuf::rt::string_size(7, &self.signer);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.port_id.is_empty() {
+            os.write_string(1, &self.port_id)?;
+        }
+        if !self.channel_id.is_empty() {
+            os.write_string(2, &self.channel_id)?;
+        }
+        if let Some(ref v) = self.counterparty_upgrade.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.proof_channel.is_empty() {
+            os.write_bytes(4, &self.proof_channel)?;
+        }
+        if !self.proof_upgrade.is_empty() {
+            os.write_bytes(5, &self.proof_upgrade)?;
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            os.write_tag(6, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.signer.is_empty() {
+            os.write_string(7, &self.signer)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeAck {
+        MsgChannelUpgradeAck::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "port_id",
+                |m: &MsgChannelUpgradeAck| { &m.port_id },
+                |m: &mut MsgChannelUpgradeAck| { &mut m.port_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "channel_id",
+                |m: &MsgChannelUpgradeAck| { &m.channel_id },
+                |m: &mut MsgChannelUpgradeAck| { &mut m.channel_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::channel_upgrade::Upgrade>>(
+                "counterparty_upgrade",
+                |m: &MsgChannelUpgradeAck| { &m.counterparty_upgrade },
+                |m: &mut MsgChannelUpgradeAck| { &mut m.counterparty_upgrade },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "proof_channel",
+                |m: &MsgChannelUpgradeAck| { &m.proof_channel },
+                |m: &mut MsgChannelUpgradeAck| { &mut m.proof_channel },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "proof_upgrade",
+                |m: &MsgChannelUpgradeAck| { &m.proof_upgrade },
+                |m: &mut MsgChannelUpgradeAck| { &mut m.proof_upgrade },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::client::Height>>(
+                "proof_height",
+                |m: &MsgChannelUpgradeAck| { &m.proof_height },
+                |m: &mut MsgChannelUpgradeAck| { &mut m.proof_height },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "signer",
+                |m: &MsgChannelUpgradeAck| { &m.signer },
+                |m: &mut MsgChannelUpgradeAck| { &mut m.signer },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeAck>(
+                "MsgChannelUpgradeAck",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeAck {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeAck> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeAck::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeAck {
+    fn clear(&mut self) {
+        self.port_id.clear();
+        self.channel_id.clear();
+        self.counterparty_upgrade.clear();
+        self.proof_channel.clear();
+        self.proof_upgrade.clear();
+        self.proof_height.clear();
+        self.signer.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeAck {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeAck {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeAckResponse {
+    // message fields
+    pub result: ResponseResultType,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeAckResponse {
+    fn default() -> &'a MsgChannelUpgradeAckResponse {
+        <MsgChannelUpgradeAckResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeAckResponse {
+    pub fn new() -> MsgChannelUpgradeAckResponse {
+        ::std::default::Default::default()
+    }
+
+    // .ibc.core.channel.v1.ResponseResultType result = 1;
+
+
+    pub fn get_result(&self) -> ResponseResultType {
+        self.result
+    }
+    pub fn clear_result(&mut self) {
+        self.result = ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_result(&mut self, v: ResponseResultType) {
+        self.result = v;
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeAckResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_proto3_enum_with_unknown_fields_into(wire_type, is, &mut self.result, 1, &mut self.unknown_fields)?
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if self.result != ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED {
+            my_size += ::protobuf::rt::enum_size(1, self.result);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if self.result != ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED {
+            os.write_enum(1, ::protobuf::ProtobufEnum::value(&self.result))?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeAckResponse {
+        MsgChannelUpgradeAckResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<ResponseResultType>>(
+                "result",
+                |m: &MsgChannelUpgradeAckResponse| { &m.result },
+                |m: &mut MsgChannelUpgradeAckResponse| { &mut m.result },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeAckResponse>(
+                "MsgChannelUpgradeAckResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeAckResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeAckResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeAckResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeAckResponse {
+    fn clear(&mut self) {
+        self.result = ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeAckResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeAckResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeConfirm {
+    // message fields
+    pub port_id: ::std::string::String,
+    pub channel_id: ::std::string::String,
+    pub counterparty_channel_state: super::channel::State,
+    pub counterparty_upgrade: ::protobuf::SingularPtrField<super::channel_upgrade::Upgrade>,
+    pub proof_channel: ::std::vec::Vec<u8>,
+    pub proof_upgrade: ::std::vec::Vec<u8>,
+    pub proof_height: ::protobuf::SingularPtrField<super::client::Height>,
+    pub signer: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeConfirm {
+    fn default() -> &'a MsgChannelUpgradeConfirm {
+        <MsgChannelUpgradeConfirm as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeConfirm {
+    pub fn new() -> MsgChannelUpgradeConfirm {
+        ::std::default::Default::default()
+    }
+
+    // string port_id = 1;
+
+
+    pub fn get_port_id(&self) -> &str {
+        &self.port_id
+    }
+    pub fn clear_port_id(&mut self) {
+        self.port_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_port_id(&mut self, v: ::std::string::String) {
+        self.port_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_port_id(&mut self) -> &mut ::std::string::String {
+        &mut self.port_id
+    }
+
+    // Take field
+    pub fn take_port_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.port_id, ::std::string::String::new())
+    }
+
+    // string channel_id = 2;
+
+
+    pub fn get_channel_id(&self) -> &str {
+        &self.channel_id
+    }
+    pub fn clear_channel_id(&mut self) {
+        self.channel_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_channel_id(&mut self, v: ::std::string::String) {
+        self.channel_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_channel_id(&mut self) -> &mut ::std::string::String {
+        &mut self.channel_id
+    }
+
+    // Take field
+    pub fn take_channel_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.channel_id, ::std::string::String::new())
+    }
+
+    // .ibc.core.channel.v1.State counterparty_channel_state = 3;
+
+
+    pub fn get_counterparty_channel_state(&self) -> super::channel::State {
+        self.counterparty_channel_state
+    }
+    pub fn clear_counterparty_channel_state(&mut self) {
+        self.counterparty_channel_state = super::channel::State::STATE_UNINITIALIZED_UNSPECIFIED;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_counterparty_channel_state(&mut self, v: super::channel::State) {
+        self.counterparty_channel_state = v;
+    }
+
+    // .ibc.core.channel.v1.Upgrade counterparty_upgrade = 4;
+
+
+    pub fn get_counterparty_upgrade(&self) -> &super::channel_upgrade::Upgrade {
+        self.counterparty_upgrade.as_ref().unwrap_or_else(|| <super::channel_upgrade::Upgrade as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_counterparty_upgrade(&mut self) {
+        self.counterparty_upgrade.clear();
+    }
+
+    pub fn has_counterparty_upgrade(&self) -> bool {
+        self.counterparty_upgrade.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_counterparty_upgrade(&mut self, v: super::channel_upgrade::Upgrade) {
+        self.counterparty_upgrade = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_counterparty_upgrade(&mut self) -> &mut super::channel_upgrade::Upgrade {
+        if self.counterparty_upgrade.is_none() {
+            self.counterparty_upgrade.set_default();
+        }
+        self.counterparty_upgrade.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_counterparty_upgrade(&mut self) -> super::channel_upgrade::Upgrade {
+        self.counterparty_upgrade.take().unwrap_or_else(|| super::channel_upgrade::Upgrade::new())
+    }
+
+    // bytes proof_channel = 5;
+
+
+    pub fn get_proof_channel(&self) -> &[u8] {
+        &self.proof_channel
+    }
+    pub fn clear_proof_channel(&mut self) {
+        self.proof_channel.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_channel(&mut self, v: ::std::vec::Vec<u8>) {
+        self.proof_channel = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_channel(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.proof_channel
+    }
+
+    // Take field
+    pub fn take_proof_channel(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.proof_channel, ::std::vec::Vec::new())
+    }
+
+    // bytes proof_upgrade = 6;
+
+
+    pub fn get_proof_upgrade(&self) -> &[u8] {
+        &self.proof_upgrade
+    }
+    pub fn clear_proof_upgrade(&mut self) {
+        self.proof_upgrade.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_upgrade(&mut self, v: ::std::vec::Vec<u8>) {
+        self.proof_upgrade = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_upgrade(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.proof_upgrade
+    }
+
+    // Take field
+    pub fn take_proof_upgrade(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.proof_upgrade, ::std::vec::Vec::new())
+    }
+
+    // .ibc.core.client.v1.Height proof_height = 7;
+
+
+    pub fn get_proof_height(&self) -> &super::client::Height {
+        self.proof_height.as_ref().unwrap_or_else(|| <super::client::Height as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_proof_height(&mut self) {
+        self.proof_height.clear();
+    }
+
+    pub fn has_proof_height(&self) -> bool {
+        self.proof_height.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_height(&mut self, v: super::client::Height) {
+        self.proof_height = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_height(&mut self) -> &mut super::client::Height {
+        if self.proof_height.is_none() {
+            self.proof_height.set_default();
+        }
+        self.proof_height.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_proof_height(&mut self) -> super::client::Height {
+        self.proof_height.take().unwrap_or_else(|| super::client::Height::new())
+    }
+
+    // string signer = 8;
+
+
+    pub fn get_signer(&self) -> &str {
+        &self.signer
+    }
+    pub fn clear_signer(&mut self) {
+        self.signer.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_signer(&mut self, v: ::std::string::String) {
+        self.signer = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_signer(&mut self) -> &mut ::std::string::String {
+        &mut self.signer
+    }
+
+    // Take field
+    pub fn take_signer(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.signer, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeConfirm {
+    fn is_initialized(&self) -> bool {
+        for v in &self.counterparty_upgrade {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.proof_height {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.port_id)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.channel_id)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_proto3_enum_with_unknown_fields_into(wire_type, is, &mut self.counterparty_channel_state, 3, &mut self.unknown_fields)?
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.counterparty_upgrade)?;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.proof_channel)?;
+                },
+                6 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.proof_upgrade)?;
+                },
+                7 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.proof_height)?;
+                },
+                8 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.signer)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.port_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.port_id);
+        }
+        if !self.channel_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.channel_id);
+        }
+        if self.counterparty_channel_state != super::channel::State::STATE_UNINITIALIZED_UNSPECIFIED {
+            my_size += ::protobuf::rt::enum_size(3, self.counterparty_channel_state);
+        }
+        if let Some(ref v) = self.counterparty_upgrade.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.proof_channel.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(5, &self.proof_channel);
+        }
+        if !self.proof_upgrade.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(6, &self.proof_upgrade);
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.signer.is_empty() {
+            my_size += ::protobuf::rt::string_size(8, &self.signer);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.port_id.is_empty() {
+            os.write_string(1, &self.port_id)?;
+        }
+        if !self.channel_id.is_empty() {
+            os.write_string(2, &self.channel_id)?;
+        }
+        if self.counterparty_channel_state != super::channel::State::STATE_UNINITIALIZED_UNSPECIFIED {
+            os.write_enum(3, ::protobuf::ProtobufEnum::value(&self.counterparty_channel_state))?;
+        }
+        if let Some(ref v) = self.counterparty_upgrade.as_ref() {
+            os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.proof_channel.is_empty() {
+            os.write_bytes(5, &self.proof_channel)?;
+        }
+        if !self.proof_upgrade.is_empty() {
+            os.write_bytes(6, &self.proof_upgrade)?;
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            os.write_tag(7, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.signer.is_empty() {
+            os.write_string(8, &self.signer)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeConfirm {
+        MsgChannelUpgradeConfirm::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "port_id",
+                |m: &MsgChannelUpgradeConfirm| { &m.port_id },
+                |m: &mut MsgChannelUpgradeConfirm| { &mut m.port_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "channel_id",
+                |m: &MsgChannelUpgradeConfirm| { &m.channel_id },
+                |m: &mut MsgChannelUpgradeConfirm| { &mut m.channel_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<super::channel::State>>(
+                "counterparty_channel_state",
+                |m: &MsgChannelUpgradeConfirm| { &m.counterparty_channel_state },
+                |m: &mut MsgChannelUpgradeConfirm| { &mut m.counterparty_channel_state },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::channel_upgrade::Upgrade>>(
+                "counterparty_upgrade",
+                |m: &MsgChannelUpgradeConfirm| { &m.counterparty_upgrade },
+                |m: &mut MsgChannelUpgradeConfirm| { &mut m.counterparty_upgrade },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "proof_channel",
+                |m: &MsgChannelUpgradeConfirm| { &m.proof_channel },
+                |m: &mut MsgChannelUpgradeConfirm| { &mut m.proof_channel },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "proof_upgrade",
+                |m: &MsgChannelUpgradeConfirm| { &m.proof_upgrade },
+                |m: &mut MsgChannelUpgradeConfirm| { &mut m.proof_upgrade },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::client::Height>>(
+                "proof_height",
+                |m: &MsgChannelUpgradeConfirm| { &m.proof_height },
+                |m: &mut MsgChannelUpgradeConfirm| { &mut m.proof_height },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "signer",
+                |m: &MsgChannelUpgradeConfirm| { &m.signer },
+                |m: &mut MsgChannelUpgradeConfirm| { &mut m.signer },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeConfirm>(
+                "MsgChannelUpgradeConfirm",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeConfirm {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeConfirm> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeConfirm::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeConfirm {
+    fn clear(&mut self) {
+        self.port_id.clear();
+        self.channel_id.clear();
+        self.counterparty_channel_state = super::channel::State::STATE_UNINITIALIZED_UNSPECIFIED;
+        self.counterparty_upgrade.clear();
+        self.proof_channel.clear();
+        self.proof_upgrade.clear();
+        self.proof_height.clear();
+        self.signer.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeConfirm {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeConfirm {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeConfirmResponse {
+    // message fields
+    pub result: ResponseResultType,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeConfirmResponse {
+    fn default() -> &'a MsgChannelUpgradeConfirmResponse {
+        <MsgChannelUpgradeConfirmResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeConfirmResponse {
+    pub fn new() -> MsgChannelUpgradeConfirmResponse {
+        ::std::default::Default::default()
+    }
+
+    // .ibc.core.channel.v1.ResponseResultType result = 1;
+
+
+    pub fn get_result(&self) -> ResponseResultType {
+        self.result
+    }
+    pub fn clear_result(&mut self) {
+        self.result = ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_result(&mut self, v: ResponseResultType) {
+        self.result = v;
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeConfirmResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_proto3_enum_with_unknown_fields_into(wire_type, is, &mut self.result, 1, &mut self.unknown_fields)?
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if self.result != ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED {
+            my_size += ::protobuf::rt::enum_size(1, self.result);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if self.result != ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED {
+            os.write_enum(1, ::protobuf::ProtobufEnum::value(&self.result))?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeConfirmResponse {
+        MsgChannelUpgradeConfirmResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<ResponseResultType>>(
+                "result",
+                |m: &MsgChannelUpgradeConfirmResponse| { &m.result },
+                |m: &mut MsgChannelUpgradeConfirmResponse| { &mut m.result },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeConfirmResponse>(
+                "MsgChannelUpgradeConfirmResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeConfirmResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeConfirmResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeConfirmResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeConfirmResponse {
+    fn clear(&mut self) {
+        self.result = ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeConfirmResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeConfirmResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeOpen {
+    // message fields
+    pub port_id: ::std::string::String,
+    pub channel_id: ::std::string::String,
+    pub counterparty_channel_state: super::channel::State,
+    pub counterparty_upgrade_sequence: u64,
+    pub proof_channel: ::std::vec::Vec<u8>,
+    pub proof_height: ::protobuf::SingularPtrField<super::client::Height>,
+    pub signer: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeOpen {
+    fn default() -> &'a MsgChannelUpgradeOpen {
+        <MsgChannelUpgradeOpen as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeOpen {
+    pub fn new() -> MsgChannelUpgradeOpen {
+        ::std::default::Default::default()
+    }
+
+    // string port_id = 1;
+
+
+    pub fn get_port_id(&self) -> &str {
+        &self.port_id
+    }
+    pub fn clear_port_id(&mut self) {
+        self.port_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_port_id(&mut self, v: ::std::string::String) {
+        self.port_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_port_id(&mut self) -> &mut ::std::string::String {
+        &mut self.port_id
+    }
+
+    // Take field
+    pub fn take_port_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.port_id, ::std::string::String::new())
+    }
+
+    // string channel_id = 2;
+
+
+    pub fn get_channel_id(&self) -> &str {
+        &self.channel_id
+    }
+    pub fn clear_channel_id(&mut self) {
+        self.channel_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_channel_id(&mut self, v: ::std::string::String) {
+        self.channel_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_channel_id(&mut self) -> &mut ::std::string::String {
+        &mut self.channel_id
+    }
+
+    // Take field
+    pub fn take_channel_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.channel_id, ::std::string::String::new())
+    }
+
+    // .ibc.core.channel.v1.State counterparty_channel_state = 3;
+
+
+    pub fn get_counterparty_channel_state(&self) -> super::channel::State {
+        self.counterparty_channel_state
+    }
+    pub fn clear_counterparty_channel_state(&mut self) {
+        self.counterparty_channel_state = super::channel::State::STATE_UNINITIALIZED_UNSPECIFIED;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_counterparty_channel_state(&mut self, v: super::channel::State) {
+        self.counterparty_channel_state = v;
+    }
+
+    // uint64 counterparty_upgrade_sequence = 4;
+
+
+    pub fn get_counterparty_upgrade_sequence(&self) -> u64 {
+        self.counterparty_upgrade_sequence
+    }
+    pub fn clear_counterparty_upgrade_sequence(&mut self) {
+        self.counterparty_upgrade_sequence = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_counterparty_upgrade_sequence(&mut self, v: u64) {
+        self.counterparty_upgrade_sequence = v;
+    }
+
+    // bytes proof_channel = 5;
+
+
+    pub fn get_proof_channel(&self) -> &[u8] {
+        &self.proof_channel
+    }
+    pub fn clear_proof_channel(&mut self) {
+        self.proof_channel.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_channel(&mut self, v: ::std::vec::Vec<u8>) {
+        self.proof_channel = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_channel(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.proof_channel
+    }
+
+    // Take field
+    pub fn take_proof_channel(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.proof_channel, ::std::vec::Vec::new())
+    }
+
+    // .ibc.core.client.v1.Height proof_height = 6;
+
+
+    pub fn get_proof_height(&self) -> &super::client::Height {
+        self.proof_height.as_ref().unwrap_or_else(|| <super::client::Height as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_proof_height(&mut self) {
+        self.proof_height.clear();
+    }
+
+    pub fn has_proof_height(&self) -> bool {
+        self.proof_height.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_height(&mut self, v: super::client::Height) {
+        self.proof_height = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_height(&mut self) -> &mut super::client::Height {
+        if self.proof_height.is_none() {
+            self.proof_height.set_default();
+        }
+        self.proof_height.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_proof_height(&mut self) -> super::client::Height {
+        self.proof_height.take().unwrap_or_else(|| super::client::Height::new())
+    }
+
+    // string signer = 7;
+
+
+    pub fn get_signer(&self) -> &str {
+        &self.signer
+    }
+    pub fn clear_signer(&mut self) {
+        self.signer.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_signer(&mut self, v: ::std::string::String) {
+        self.signer = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_signer(&mut self) -> &mut ::std::string::String {
+        &mut self.signer
+    }
+
+    // Take field
+    pub fn take_signer(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.signer, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeOpen {
+    fn is_initialized(&self) -> bool {
+        for v in &self.proof_height {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.port_id)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.channel_id)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_proto3_enum_with_unknown_fields_into(wire_type, is, &mut self.counterparty_channel_state, 3, &mut self.unknown_fields)?
+                },
+                4 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.counterparty_upgrade_sequence = tmp;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.proof_channel)?;
+                },
+                6 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.proof_height)?;
+                },
+                7 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.signer)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.port_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.port_id);
+        }
+        if !self.channel_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.channel_id);
+        }
+        if self.counterparty_channel_state != super::channel::State::STATE_UNINITIALIZED_UNSPECIFIED {
+            my_size += ::protobuf::rt::enum_size(3, self.counterparty_channel_state);
+        }
+        if self.counterparty_upgrade_sequence != 0 {
+            my_size += ::protobuf::rt::value_size(4, self.counterparty_upgrade_sequence, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if !self.proof_channel.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(5, &self.proof_channel);
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.signer.is_empty() {
+            my_size += ::protobuf::rt::string_size(7, &self.signer);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.port_id.is_empty() {
+            os.write_string(1, &self.port_id)?;
+        }
+        if !self.channel_id.is_empty() {
+            os.write_string(2, &self.channel_id)?;
+        }
+        if self.counterparty_channel_state != super::channel::State::STATE_UNINITIALIZED_UNSPECIFIED {
+            os.write_enum(3, ::protobuf::ProtobufEnum::value(&self.counterparty_channel_state))?;
+        }
+        if self.counterparty_upgrade_sequence != 0 {
+            os.write_uint64(4, self.counterparty_upgrade_sequence)?;
+        }
+        if !self.proof_channel.is_empty() {
+            os.write_bytes(5, &self.proof_channel)?;
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            os.write_tag(6, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.signer.is_empty() {
+            os.write_string(7, &self.signer)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeOpen {
+        MsgChannelUpgradeOpen::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "port_id",
+                |m: &MsgChannelUpgradeOpen| { &m.port_id },
+                |m: &mut MsgChannelUpgradeOpen| { &mut m.port_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "channel_id",
+                |m: &MsgChannelUpgradeOpen| { &m.channel_id },
+                |m: &mut MsgChannelUpgradeOpen| { &mut m.channel_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<super::channel::State>>(
+                "counterparty_channel_state",
+                |m: &MsgChannelUpgradeOpen| { &m.counterparty_channel_state },
+                |m: &mut MsgChannelUpgradeOpen| { &mut m.counterparty_channel_state },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "counterparty_upgrade_sequence",
+                |m: &MsgChannelUpgradeOpen| { &m.counterparty_upgrade_sequence },
+                |m: &mut MsgChannelUpgradeOpen| { &mut m.counterparty_upgrade_sequence },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "proof_channel",
+                |m: &MsgChannelUpgradeOpen| { &m.proof_channel },
+                |m: &mut MsgChannelUpgradeOpen| { &mut m.proof_channel },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::client::Height>>(
+                "proof_height",
+                |m: &MsgChannelUpgradeOpen| { &m.proof_height },
+                |m: &mut MsgChannelUpgradeOpen| { &mut m.proof_height },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "signer",
+                |m: &MsgChannelUpgradeOpen| { &m.signer },
+                |m: &mut MsgChannelUpgradeOpen| { &mut m.signer },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeOpen>(
+                "MsgChannelUpgradeOpen",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeOpen {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeOpen> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeOpen::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeOpen {
+    fn clear(&mut self) {
+        self.port_id.clear();
+        self.channel_id.clear();
+        self.counterparty_channel_state = super::channel::State::STATE_UNINITIALIZED_UNSPECIFIED;
+        self.counterparty_upgrade_sequence = 0;
+        self.proof_channel.clear();
+        self.proof_height.clear();
+        self.signer.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeOpen {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeOpen {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeOpenResponse {
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeOpenResponse {
+    fn default() -> &'a MsgChannelUpgradeOpenResponse {
+        <MsgChannelUpgradeOpenResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeOpenResponse {
+    pub fn new() -> MsgChannelUpgradeOpenResponse {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeOpenResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeOpenResponse {
+        MsgChannelUpgradeOpenResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let fields = ::std::vec::Vec::new();
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeOpenResponse>(
+                "MsgChannelUpgradeOpenResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeOpenResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeOpenResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeOpenResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeOpenResponse {
+    fn clear(&mut self) {
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeOpenResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeOpenResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeTimeout {
+    // message fields
+    pub port_id: ::std::string::String,
+    pub channel_id: ::std::string::String,
+    pub counterparty_channel: ::protobuf::SingularPtrField<super::channel::Channel>,
+    pub proof_channel: ::std::vec::Vec<u8>,
+    pub proof_height: ::protobuf::SingularPtrField<super::client::Height>,
+    pub signer: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeTimeout {
+    fn default() -> &'a MsgChannelUpgradeTimeout {
+        <MsgChannelUpgradeTimeout as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeTimeout {
+    pub fn new() -> MsgChannelUpgradeTimeout {
+        ::std::default::Default::default()
+    }
+
+    // string port_id = 1;
+
+
+    pub fn get_port_id(&self) -> &str {
+        &self.port_id
+    }
+    pub fn clear_port_id(&mut self) {
+        self.port_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_port_id(&mut self, v: ::std::string::String) {
+        self.port_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_port_id(&mut self) -> &mut ::std::string::String {
+        &mut self.port_id
+    }
+
+    // Take field
+    pub fn take_port_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.port_id, ::std::string::String::new())
+    }
+
+    // string channel_id = 2;
+
+
+    pub fn get_channel_id(&self) -> &str {
+        &self.channel_id
+    }
+    pub fn clear_channel_id(&mut self) {
+        self.channel_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_channel_id(&mut self, v: ::std::string::String) {
+        self.channel_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_channel_id(&mut self) -> &mut ::std::string::String {
+        &mut self.channel_id
+    }
+
+    // Take field
+    pub fn take_channel_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.channel_id, ::std::string::String::new())
+    }
+
+    // .ibc.core.channel.v1.Channel counterparty_channel = 3;
+
+
+    pub fn get_counterparty_channel(&self) -> &super::channel::Channel {
+        self.counterparty_channel.as_ref().unwrap_or_else(|| <super::channel::Channel as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_counterparty_channel(&mut self) {
+        self.counterparty_channel.clear();
+    }
+
+    pub fn has_counterparty_channel(&self) -> bool {
+        self.counterparty_channel.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_counterparty_channel(&mut self, v: super::channel::Channel) {
+        self.counterparty_channel = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_counterparty_channel(&mut self) -> &mut super::channel::Channel {
+        if self.counterparty_channel.is_none() {
+            self.counterparty_channel.set_default();
+        }
+        self.counterparty_channel.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_counterparty_channel(&mut self) -> super::channel::Channel {
+        self.counterparty_channel.take().unwrap_or_else(|| super::channel::Channel::new())
+    }
+
+    // bytes proof_channel = 4;
+
+
+    pub fn get_proof_channel(&self) -> &[u8] {
+        &self.proof_channel
+    }
+    pub fn clear_proof_channel(&mut self) {
+        self.proof_channel.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_channel(&mut self, v: ::std::vec::Vec<u8>) {
+        self.proof_channel = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_channel(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.proof_channel
+    }
+
+    // Take field
+    pub fn take_proof_channel(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.proof_channel, ::std::vec::Vec::new())
+    }
+
+    // .ibc.core.client.v1.Height proof_height = 5;
+
+
+    pub fn get_proof_height(&self) -> &super::client::Height {
+        self.proof_height.as_ref().unwrap_or_else(|| <super::client::Height as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_proof_height(&mut self) {
+        self.proof_height.clear();
+    }
+
+    pub fn has_proof_height(&self) -> bool {
+        self.proof_height.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_height(&mut self, v: super::client::Height) {
+        self.proof_height = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_height(&mut self) -> &mut super::client::Height {
+        if self.proof_height.is_none() {
+            self.proof_height.set_default();
+        }
+        self.proof_height.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_proof_height(&mut self) -> super::client::Height {
+        self.proof_height.take().unwrap_or_else(|| super::client::Height::new())
+    }
+
+    // string signer = 6;
+
+
+    pub fn get_signer(&self) -> &str {
+        &self.signer
+    }
+    pub fn clear_signer(&mut self) {
+        self.signer.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_signer(&mut self, v: ::std::string::String) {
+        self.signer = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_signer(&mut self) -> &mut ::std::string::String {
+        &mut self.signer
+    }
+
+    // Take field
+    pub fn take_signer(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.signer, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeTimeout {
+    fn is_initialized(&self) -> bool {
+        for v in &self.counterparty_channel {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.proof_height {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.port_id)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.channel_id)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.counterparty_channel)?;
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.proof_channel)?;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.proof_height)?;
+                },
+                6 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.signer)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.port_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.port_id);
+        }
+        if !self.channel_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.channel_id);
+        }
+        if let Some(ref v) = self.counterparty_channel.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.proof_channel.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(4, &self.proof_channel);
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.signer.is_empty() {
+            my_size += ::protobuf::rt::string_size(6, &self.signer);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.port_id.is_empty() {
+            os.write_string(1, &self.port_id)?;
+        }
+        if !self.channel_id.is_empty() {
+            os.write_string(2, &self.channel_id)?;
+        }
+        if let Some(ref v) = self.counterparty_channel.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.proof_channel.is_empty() {
+            os.write_bytes(4, &self.proof_channel)?;
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.signer.is_empty() {
+            os.write_string(6, &self.signer)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeTimeout {
+        MsgChannelUpgradeTimeout::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "port_id",
+                |m: &MsgChannelUpgradeTimeout| { &m.port_id },
+                |m: &mut MsgChannelUpgradeTimeout| { &mut m.port_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "channel_id",
+                |m: &MsgChannelUpgradeTimeout| { &m.channel_id },
+                |m: &mut MsgChannelUpgradeTimeout| { &mut m.channel_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::channel::Channel>>(
+                "counterparty_channel",
+                |m: &MsgChannelUpgradeTimeout| { &m.counterparty_channel },
+                |m: &mut MsgChannelUpgradeTimeout| { &mut m.counterparty_channel },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "proof_channel",
+                |m: &MsgChannelUpgradeTimeout| { &m.proof_channel },
+                |m: &mut MsgChannelUpgradeTimeout| { &mut m.proof_channel },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::client::Height>>(
+                "proof_height",
+                |m: &MsgChannelUpgradeTimeout| { &m.proof_height },
+                |m: &mut MsgChannelUpgradeTimeout| { &mut m.proof_height },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "signer",
+                |m: &MsgChannelUpgradeTimeout| { &m.signer },
+                |m: &mut MsgChannelUpgradeTimeout| { &mut m.signer },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeTimeout>(
+                "MsgChannelUpgradeTimeout",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeTimeout {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeTimeout> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeTimeout::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeTimeout {
+    fn clear(&mut self) {
+        self.port_id.clear();
+        self.channel_id.clear();
+        self.counterparty_channel.clear();
+        self.proof_channel.clear();
+        self.proof_height.clear();
+        self.signer.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeTimeout {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeTimeout {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeTimeoutResponse {
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeTimeoutResponse {
+    fn default() -> &'a MsgChannelUpgradeTimeoutResponse {
+        <MsgChannelUpgradeTimeoutResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeTimeoutResponse {
+    pub fn new() -> MsgChannelUpgradeTimeoutResponse {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeTimeoutResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeTimeoutResponse {
+        MsgChannelUpgradeTimeoutResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let fields = ::std::vec::Vec::new();
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeTimeoutResponse>(
+                "MsgChannelUpgradeTimeoutResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeTimeoutResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeTimeoutResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeTimeoutResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeTimeoutResponse {
+    fn clear(&mut self) {
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeTimeoutResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeTimeoutResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeCancel {
+    // message fields
+    pub port_id: ::std::string::String,
+    pub channel_id: ::std::string::String,
+    pub error_receipt: ::protobuf::SingularPtrField<super::channel_upgrade::ErrorReceipt>,
+    pub proof_error_receipt: ::std::vec::Vec<u8>,
+    pub proof_height: ::protobuf::SingularPtrField<super::client::Height>,
+    pub signer: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeCancel {
+    fn default() -> &'a MsgChannelUpgradeCancel {
+        <MsgChannelUpgradeCancel as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeCancel {
+    pub fn new() -> MsgChannelUpgradeCancel {
+        ::std::default::Default::default()
+    }
+
+    // string port_id = 1;
+
+
+    pub fn get_port_id(&self) -> &str {
+        &self.port_id
+    }
+    pub fn clear_port_id(&mut self) {
+        self.port_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_port_id(&mut self, v: ::std::string::String) {
+        self.port_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_port_id(&mut self) -> &mut ::std::string::String {
+        &mut self.port_id
+    }
+
+    // Take field
+    pub fn take_port_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.port_id, ::std::string::String::new())
+    }
+
+    // string channel_id = 2;
+
+
+    pub fn get_channel_id(&self) -> &str {
+        &self.channel_id
+    }
+    pub fn clear_channel_id(&mut self) {
+        self.channel_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_channel_id(&mut self, v: ::std::string::String) {
+        self.channel_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_channel_id(&mut self) -> &mut ::std::string::String {
+        &mut self.channel_id
+    }
+
+    // Take field
+    pub fn take_channel_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.channel_id, ::std::string::String::new())
+    }
+
+    // .ibc.core.channel.v1.ErrorReceipt error_receipt = 3;
+
+
+    pub fn get_error_receipt(&self) -> &super::channel_upgrade::ErrorReceipt {
+        self.error_receipt.as_ref().unwrap_or_else(|| <super::channel_upgrade::ErrorReceipt as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_error_receipt(&mut self) {
+        self.error_receipt.clear();
+    }
+
+    pub fn has_error_receipt(&self) -> bool {
+        self.error_receipt.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_error_receipt(&mut self, v: super::channel_upgrade::ErrorReceipt) {
+        self.error_receipt = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_error_receipt(&mut self) -> &mut super::channel_upgrade::ErrorReceipt {
+        if self.error_receipt.is_none() {
+            self.error_receipt.set_default();
+        }
+        self.error_receipt.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_error_receipt(&mut self) -> super::channel_upgrade::ErrorReceipt {
+        self.error_receipt.take().unwrap_or_else(|| super::channel_upgrade::ErrorReceipt::new())
+    }
+
+    // bytes proof_error_receipt = 4;
+
+
+    pub fn get_proof_error_receipt(&self) -> &[u8] {
+        &self.proof_error_receipt
+    }
+    pub fn clear_proof_error_receipt(&mut self) {
+        self.proof_error_receipt.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_error_receipt(&mut self, v: ::std::vec::Vec<u8>) {
+        self.proof_error_receipt = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_error_receipt(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.proof_error_receipt
+    }
+
+    // Take field
+    pub fn take_proof_error_receipt(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.proof_error_receipt, ::std::vec::Vec::new())
+    }
+
+    // .ibc.core.client.v1.Height proof_height = 5;
+
+
+    pub fn get_proof_height(&self) -> &super::client::Height {
+        self.proof_height.as_ref().unwrap_or_else(|| <super::client::Height as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_proof_height(&mut self) {
+        self.proof_height.clear();
+    }
+
+    pub fn has_proof_height(&self) -> bool {
+        self.proof_height.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_proof_height(&mut self, v: super::client::Height) {
+        self.proof_height = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_proof_height(&mut self) -> &mut super::client::Height {
+        if self.proof_height.is_none() {
+            self.proof_height.set_default();
+        }
+        self.proof_height.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_proof_height(&mut self) -> super::client::Height {
+        self.proof_height.take().unwrap_or_else(|| super::client::Height::new())
+    }
+
+    // string signer = 6;
+
+
+    pub fn get_signer(&self) -> &str {
+        &self.signer
+    }
+    pub fn clear_signer(&mut self) {
+        self.signer.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_signer(&mut self, v: ::std::string::String) {
+        self.signer = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_signer(&mut self) -> &mut ::std::string::String {
+        &mut self.signer
+    }
+
+    // Take field
+    pub fn take_signer(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.signer, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeCancel {
+    fn is_initialized(&self) -> bool {
+        for v in &self.error_receipt {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.proof_height {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.port_id)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.channel_id)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.error_receipt)?;
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.proof_error_receipt)?;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.proof_height)?;
+                },
+                6 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.signer)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.port_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.port_id);
+        }
+        if !self.channel_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.channel_id);
+        }
+        if let Some(ref v) = self.error_receipt.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.proof_error_receipt.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(4, &self.proof_error_receipt);
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.signer.is_empty() {
+            my_size += ::protobuf::rt::string_size(6, &self.signer);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.port_id.is_empty() {
+            os.write_string(1, &self.port_id)?;
+        }
+        if !self.channel_id.is_empty() {
+            os.write_string(2, &self.channel_id)?;
+        }
+        if let Some(ref v) = self.error_receipt.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.proof_error_receipt.is_empty() {
+            os.write_bytes(4, &self.proof_error_receipt)?;
+        }
+        if let Some(ref v) = self.proof_height.as_ref() {
+            os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.signer.is_empty() {
+            os.write_string(6, &self.signer)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeCancel {
+        MsgChannelUpgradeCancel::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "port_id",
+                |m: &MsgChannelUpgradeCancel| { &m.port_id },
+                |m: &mut MsgChannelUpgradeCancel| { &mut m.port_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "channel_id",
+                |m: &MsgChannelUpgradeCancel| { &m.channel_id },
+                |m: &mut MsgChannelUpgradeCancel| { &mut m.channel_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::channel_upgrade::ErrorReceipt>>(
+                "error_receipt",
+                |m: &MsgChannelUpgradeCancel| { &m.error_receipt },
+                |m: &mut MsgChannelUpgradeCancel| { &mut m.error_receipt },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "proof_error_receipt",
+                |m: &MsgChannelUpgradeCancel| { &m.proof_error_receipt },
+                |m: &mut MsgChannelUpgradeCancel| { &mut m.proof_error_receipt },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::client::Height>>(
+                "proof_height",
+                |m: &MsgChannelUpgradeCancel| { &m.proof_height },
+                |m: &mut MsgChannelUpgradeCancel| { &mut m.proof_height },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "signer",
+                |m: &MsgChannelUpgradeCancel| { &m.signer },
+                |m: &mut MsgChannelUpgradeCancel| { &mut m.signer },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeCancel>(
+                "MsgChannelUpgradeCancel",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeCancel {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeCancel> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeCancel::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeCancel {
+    fn clear(&mut self) {
+        self.port_id.clear();
+        self.channel_id.clear();
+        self.error_receipt.clear();
+        self.proof_error_receipt.clear();
+        self.proof_height.clear();
+        self.signer.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeCancel {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeCancel {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgChannelUpgradeCancelResponse {
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgChannelUpgradeCancelResponse {
+    fn default() -> &'a MsgChannelUpgradeCancelResponse {
+        <MsgChannelUpgradeCancelResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgChannelUpgradeCancelResponse {
+    pub fn new() -> MsgChannelUpgradeCancelResponse {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for MsgChannelUpgradeCancelResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgChannelUpgradeCancelResponse {
+        MsgChannelUpgradeCancelResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let fields = ::std::vec::Vec::new();
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgChannelUpgradeCancelResponse>(
+                "MsgChannelUpgradeCancelResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgChannelUpgradeCancelResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgChannelUpgradeCancelResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgChannelUpgradeCancelResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgChannelUpgradeCancelResponse {
+    fn clear(&mut self) {
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgChannelUpgradeCancelResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgChannelUpgradeCancelResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgUpdateParams {
+    // message fields
+    pub authority: ::std::string::String,
+    pub params: ::protobuf::SingularPtrField<super::channel::Params>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgUpdateParams {
+    fn default() -> &'a MsgUpdateParams {
+        <MsgUpdateParams as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgUpdateParams {
+    pub fn new() -> MsgUpdateParams {
+        ::std::default::Default::default()
+    }
+
+    // string authority = 1;
+
+
+    pub fn get_authority(&self) -> &str {
+        &self.authority
+    }
+    pub fn clear_authority(&mut self) {
+        self.authority.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_authority(&mut self, v: ::std::string::String) {
+        self.authority = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_authority(&mut self) -> &mut ::std::string::String {
+        &mut self.authority
+    }
+
+    // Take field
+    pub fn take_authority(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.authority, ::std::string::String::new())
+    }
+
+    // .ibc.core.channel.v1.Params params = 2;
+
+
+    pub fn get_params(&self) -> &super::channel::Params {
+        self.params.as_ref().unwrap_or_else(|| <super::channel::Params as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_params(&mut self) {
+        self.params.clear();
+    }
+
+    pub fn has_params(&self) -> bool {
+        self.params.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_params(&mut self, v: super::channel::Params) {
+        self.params = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_params(&mut self) -> &mut super::channel::Params {
+        if self.params.is_none() {
+            self.params.set_default();
+        }
+        self.params.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_params(&mut self) -> super::channel::Params {
+        self.params.take().unwrap_or_else(|| super::channel::Params::new())
+    }
+}
+
+impl ::protobuf::Message for MsgUpdateParams {
+    fn is_initialized(&self) -> bool {
+        for v in &self.params {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.authority)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.params)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.authority.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.authority);
+        }
+        if let Some(ref v) = self.params.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.authority.is_empty() {
+            os.write_string(1, &self.authority)?;
+        }
+        if let Some(ref v) = self.params.as_ref() {
+            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgUpdateParams {
+        MsgUpdateParams::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "authority",
+                |m: &MsgUpdateParams| { &m.authority },
+                |m: &mut MsgUpdateParams| { &mut m.authority },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::channel::Params>>(
+                "params",
+                |m: &MsgUpdateParams| { &m.params },
+                |m: &mut MsgUpdateParams| { &mut m.params },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgUpdateParams>(
+                "MsgUpdateParams",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgUpdateParams {
+        static instance: ::protobuf::rt::LazyV2<MsgUpdateParams> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgUpdateParams::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgUpdateParams {
+    fn clear(&mut self) {
+        self.authority.clear();
+        self.params.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgUpdateParams {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgUpdateParams {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgUpdateParamsResponse {
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgUpdateParamsResponse {
+    fn default() -> &'a MsgUpdateParamsResponse {
+        <MsgUpdateParamsResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgUpdateParamsResponse {
+    pub fn new() -> MsgUpdateParamsResponse {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for MsgUpdateParamsResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgUpdateParamsResponse {
+        MsgUpdateParamsResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let fields = ::std::vec::Vec::new();
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgUpdateParamsResponse>(
+                "MsgUpdateParamsResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgUpdateParamsResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgUpdateParamsResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgUpdateParamsResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgUpdateParamsResponse {
+    fn clear(&mut self) {
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgUpdateParamsResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgUpdateParamsResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgPruneAcknowledgements {
+    // message fields
+    pub port_id: ::std::string::String,
+    pub channel_id: ::std::string::String,
+    pub limit: u64,
+    pub signer: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgPruneAcknowledgements {
+    fn default() -> &'a MsgPruneAcknowledgements {
+        <MsgPruneAcknowledgements as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgPruneAcknowledgements {
+    pub fn new() -> MsgPruneAcknowledgements {
+        ::std::default::Default::default()
+    }
+
+    // string port_id = 1;
+
+
+    pub fn get_port_id(&self) -> &str {
+        &self.port_id
+    }
+    pub fn clear_port_id(&mut self) {
+        self.port_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_port_id(&mut self, v: ::std::string::String) {
+        self.port_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_port_id(&mut self) -> &mut ::std::string::String {
+        &mut self.port_id
+    }
+
+    // Take field
+    pub fn take_port_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.port_id, ::std::string::String::new())
+    }
+
+    // string channel_id = 2;
+
+
+    pub fn get_channel_id(&self) -> &str {
+        &self.channel_id
+    }
+    pub fn clear_channel_id(&mut self) {
+        self.channel_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_channel_id(&mut self, v: ::std::string::String) {
+        self.channel_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_channel_id(&mut self) -> &mut ::std::string::String {
+        &mut self.channel_id
+    }
+
+    // Take field
+    pub fn take_channel_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.channel_id, ::std::string::String::new())
+    }
+
+    // uint64 limit = 3;
+
+
+    pub fn get_limit(&self) -> u64 {
+        self.limit
+    }
+    pub fn clear_limit(&mut self) {
+        self.limit = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_limit(&mut self, v: u64) {
+        self.limit = v;
+    }
+
+    // string signer = 4;
+
+
+    pub fn get_signer(&self) -> &str {
+        &self.signer
+    }
+    pub fn clear_signer(&mut self) {
+        self.signer.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_signer(&mut self, v: ::std::string::String) {
+        self.signer = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_signer(&mut self) -> &mut ::std::string::String {
+        &mut self.signer
+    }
+
+    // Take field
+    pub fn take_signer(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.signer, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for MsgPruneAcknowledgements {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.port_id)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.channel_id)?;
+                },
+                3 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.limit = tmp;
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.signer)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.port_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.port_id);
+        }
+        if !self.channel_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.channel_id);
+        }
+        if self.limit != 0 {
+            my_size += ::protobuf::rt::value_size(3, self.limit, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if !self.signer.is_empty() {
+            my_size += ::protobuf::rt::string_size(4, &self.signer);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.port_id.is_empty() {
+            os.write_string(1, &self.port_id)?;
+        }
+        if !self.channel_id.is_empty() {
+            os.write_string(2, &self.channel_id)?;
+        }
+        if self.limit != 0 {
+            os.write_uint64(3, self.limit)?;
+        }
+        if !self.signer.is_empty() {
+            os.write_string(4, &self.signer)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgPruneAcknowledgements {
+        MsgPruneAcknowledgements::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "port_id",
+                |m: &MsgPruneAcknowledgements| { &m.port_id },
+                |m: &mut MsgPruneAcknowledgements| { &mut m.port_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "channel_id",
+                |m: &MsgPruneAcknowledgements| { &m.channel_id },
+                |m: &mut MsgPruneAcknowledgements| { &mut m.channel_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "limit",
+                |m: &MsgPruneAcknowledgements| { &m.limit },
+                |m: &mut MsgPruneAcknowledgements| { &mut m.limit },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "signer",
+                |m: &MsgPruneAcknowledgements| { &m.signer },
+                |m: &mut MsgPruneAcknowledgements| { &mut m.signer },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgPruneAcknowledgements>(
+                "MsgPruneAcknowledgements",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgPruneAcknowledgements {
+        static instance: ::protobuf::rt::LazyV2<MsgPruneAcknowledgements> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgPruneAcknowledgements::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgPruneAcknowledgements {
+    fn clear(&mut self) {
+        self.port_id.clear();
+        self.channel_id.clear();
+        self.limit = 0;
+        self.signer.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgPruneAcknowledgements {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgPruneAcknowledgements {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgPruneAcknowledgementsResponse {
+    // message fields
+    pub total_pruned_sequences: u64,
+    pub total_remaining_sequences: u64,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgPruneAcknowledgementsResponse {
+    fn default() -> &'a MsgPruneAcknowledgementsResponse {
+        <MsgPruneAcknowledgementsResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgPruneAcknowledgementsResponse {
+    pub fn new() -> MsgPruneAcknowledgementsResponse {
+        ::std::default::Default::default()
+    }
+
+    // uint64 total_pruned_sequences = 1;
+
+
+    pub fn get_total_pruned_sequences(&self) -> u64 {
+        self.total_pruned_sequences
+    }
+    pub fn clear_total_pruned_sequences(&mut self) {
+        self.total_pruned_sequences = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_total_pruned_sequences(&mut self, v: u64) {
+        self.total_pruned_sequences = v;
+    }
+
+    // uint64 total_remaining_sequences = 2;
+
+
+    pub fn get_total_remaining_sequences(&self) -> u64 {
+        self.total_remaining_sequences
+    }
+    pub fn clear_total_remaining_sequences(&mut self) {
+        self.total_remaining_sequences = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_total_remaining_sequences(&mut self, v: u64) {
+        self.total_remaining_sequences = v;
+    }
+}
+
+impl ::protobuf::Message for MsgPruneAcknowledgementsResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.total_pruned_sequences = tmp;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.total_remaining_sequences = tmp;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if self.total_pruned_sequences != 0 {
+            my_size += ::protobuf::rt::value_size(1, self.total_pruned_sequences, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if self.total_remaining_sequences != 0 {
+            my_size += ::protobuf::rt::value_size(2, self.total_remaining_sequences, ::protobuf::wire_format::WireTypeVarint);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if self.total_pruned_sequences != 0 {
+            os.write_uint64(1, self.total_pruned_sequences)?;
+        }
+        if self.total_remaining_sequences != 0 {
+            os.write_uint64(2, self.total_remaining_sequences)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgPruneAcknowledgementsResponse {
+        MsgPruneAcknowledgementsResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "total_pruned_sequences",
+                |m: &MsgPruneAcknowledgementsResponse| { &m.total_pruned_sequences },
+                |m: &mut MsgPruneAcknowledgementsResponse| { &mut m.total_pruned_sequences },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "total_remaining_sequences",
+                |m: &MsgPruneAcknowledgementsResponse| { &m.total_remaining_sequences },
+                |m: &mut MsgPruneAcknowledgementsResponse| { &mut m.total_remaining_sequences },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgPruneAcknowledgementsResponse>(
+                "MsgPruneAcknowledgementsResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgPruneAcknowledgementsResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgPruneAcknowledgementsResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgPruneAcknowledgementsResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgPruneAcknowledgementsResponse {
+    fn clear(&mut self) {
+        self.total_pruned_sequences = 0;
+        self.total_remaining_sequences = 0;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgPruneAcknowledgementsResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgPruneAcknowledgementsResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
 #[derive(Clone,PartialEq,Eq,Debug,Hash)]
 pub enum ResponseResultType {
     RESPONSE_RESULT_TYPE_UNSPECIFIED = 0,
     RESPONSE_RESULT_TYPE_NOOP = 1,
     RESPONSE_RESULT_TYPE_SUCCESS = 2,
+    RESPONSE_RESULT_TYPE_FAILURE = 3,
 }
 
 impl ::protobuf::ProtobufEnum for ResponseResultType {
@@ -4922,6 +9861,7 @@ impl ::protobuf::ProtobufEnum for ResponseResultType {
             0 => ::std::option::Option::Some(ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED),
             1 => ::std::option::Option::Some(ResponseResultType::RESPONSE_RESULT_TYPE_NOOP),
             2 => ::std::option::Option::Some(ResponseResultType::RESPONSE_RESULT_TYPE_SUCCESS),
+            3 => ::std::option::Option::Some(ResponseResultType::RESPONSE_RESULT_TYPE_FAILURE),
             _ => ::std::option::Option::None
         }
     }
@@ -4931,6 +9871,7 @@ impl ::protobuf::ProtobufEnum for ResponseResultType {
             ResponseResultType::RESPONSE_RESULT_TYPE_UNSPECIFIED,
             ResponseResultType::RESPONSE_RESULT_TYPE_NOOP,
             ResponseResultType::RESPONSE_RESULT_TYPE_SUCCESS,
+            ResponseResultType::RESPONSE_RESULT_TYPE_FAILURE,
         ];
         values
     }
@@ -4960,121 +9901,209 @@ impl ::protobuf::reflect::ProtobufValue for ResponseResultType {
 
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x1cibc/core/channel/v1/tx.proto\x12\x13ibc.core.channel.v1\x1a\x14gog\
-    oproto/gogo.proto\x1a\x1fibc/core/client/v1/client.proto\x1a!ibc/core/ch\
-    annel/v1/channel.proto\"\xa1\x01\n\x12MsgChannelOpenInit\x12+\n\x07port_\
-    id\x18\x01\x20\x01(\tR\x06portIdB\x12\xf2\xde\x1f\x0eyaml:\"port_id\"\
-    \x12<\n\x07channel\x18\x02\x20\x01(\x0b2\x1c.ibc.core.channel.v1.Channel\
-    R\x07channelB\x04\xc8\xde\x1f\0\x12\x16\n\x06signer\x18\x03\x20\x01(\tR\
-    \x06signer:\x08\x88\xa0\x1f\0\xe8\xa0\x1f\0\"l\n\x1aMsgChannelOpenInitRe\
-    sponse\x124\n\nchannel_id\x18\x01\x20\x01(\tR\tchannelIdB\x15\xf2\xde\
-    \x1f\x11yaml:\"channel_id\"\x12\x18\n\x07version\x18\x02\x20\x01(\tR\x07\
-    version\"\xd8\x03\n\x11MsgChannelOpenTry\x12+\n\x07port_id\x18\x01\x20\
-    \x01(\tR\x06portIdB\x12\xf2\xde\x1f\x0eyaml:\"port_id\"\x12P\n\x13previo\
-    us_channel_id\x18\x02\x20\x01(\tR\x11previousChannelIdB\x20\x18\x01\xf2\
-    \xde\x1f\x1ayaml:\"previous_channel_id\"\x12<\n\x07channel\x18\x03\x20\
+    oproto/gogo.proto\x1a\x17cosmos/msg/v1/msg.proto\x1a\x1fibc/core/client/\
+    v1/client.proto\x1a!ibc/core/channel/v1/channel.proto\x1a)ibc/core/chann\
+    el/v1/channel_upgrade.proto\"\x94\x01\n\x12MsgChannelOpenInit\x12\x17\n\
+    \x07port_id\x18\x01\x20\x01(\tR\x06portId\x12<\n\x07channel\x18\x02\x20\
     \x01(\x0b2\x1c.ibc.core.channel.v1.ChannelR\x07channelB\x04\xc8\xde\x1f\
-    \0\x12R\n\x14counterparty_version\x18\x04\x20\x01(\tR\x13counterpartyVer\
-    sionB\x1f\xf2\xde\x1f\x1byaml:\"counterparty_version\"\x124\n\nproof_ini\
-    t\x18\x05\x20\x01(\x0cR\tproofInitB\x15\xf2\xde\x1f\x11yaml:\"proof_init\
-    \"\x12Z\n\x0cproof_height\x18\x06\x20\x01(\x0b2\x1a.ibc.core.client.v1.H\
-    eightR\x0bproofHeightB\x1b\xf2\xde\x1f\x13yaml:\"proof_height\"\xc8\xde\
-    \x1f\0\x12\x16\n\x06signer\x18\x07\x20\x01(\tR\x06signer:\x08\x88\xa0\
-    \x1f\0\xe8\xa0\x1f\0\"5\n\x19MsgChannelOpenTryResponse\x12\x18\n\x07vers\
-    ion\x18\x01\x20\x01(\tR\x07version\"\xd7\x03\n\x11MsgChannelOpenAck\x12+\
-    \n\x07port_id\x18\x01\x20\x01(\tR\x06portIdB\x12\xf2\xde\x1f\x0eyaml:\"p\
-    ort_id\"\x124\n\nchannel_id\x18\x02\x20\x01(\tR\tchannelIdB\x15\xf2\xde\
-    \x1f\x11yaml:\"channel_id\"\x12Z\n\x17counterparty_channel_id\x18\x03\
-    \x20\x01(\tR\x15counterpartyChannelIdB\"\xf2\xde\x1f\x1eyaml:\"counterpa\
-    rty_channel_id\"\x12R\n\x14counterparty_version\x18\x04\x20\x01(\tR\x13c\
-    ounterpartyVersionB\x1f\xf2\xde\x1f\x1byaml:\"counterparty_version\"\x12\
-    1\n\tproof_try\x18\x05\x20\x01(\x0cR\x08proofTryB\x14\xf2\xde\x1f\x10yam\
-    l:\"proof_try\"\x12Z\n\x0cproof_height\x18\x06\x20\x01(\x0b2\x1a.ibc.cor\
-    e.client.v1.HeightR\x0bproofHeightB\x1b\xf2\xde\x1f\x13yaml:\"proof_heig\
-    ht\"\xc8\xde\x1f\0\x12\x16\n\x06signer\x18\x07\x20\x01(\tR\x06signer:\
-    \x08\x88\xa0\x1f\0\xe8\xa0\x1f\0\"\x1b\n\x19MsgChannelOpenAckResponse\"\
-    \xab\x02\n\x15MsgChannelOpenConfirm\x12+\n\x07port_id\x18\x01\x20\x01(\t\
-    R\x06portIdB\x12\xf2\xde\x1f\x0eyaml:\"port_id\"\x124\n\nchannel_id\x18\
-    \x02\x20\x01(\tR\tchannelIdB\x15\xf2\xde\x1f\x11yaml:\"channel_id\"\x121\
-    \n\tproof_ack\x18\x03\x20\x01(\x0cR\x08proofAckB\x14\xf2\xde\x1f\x10yaml\
-    :\"proof_ack\"\x12Z\n\x0cproof_height\x18\x04\x20\x01(\x0b2\x1a.ibc.core\
-    .client.v1.HeightR\x0bproofHeightB\x1b\xf2\xde\x1f\x13yaml:\"proof_heigh\
-    t\"\xc8\xde\x1f\0\x12\x16\n\x06signer\x18\x05\x20\x01(\tR\x06signer:\x08\
-    \x88\xa0\x1f\0\xe8\xa0\x1f\0\"\x1f\n\x1dMsgChannelOpenConfirmResponse\"\
-    \x9a\x01\n\x13MsgChannelCloseInit\x12+\n\x07port_id\x18\x01\x20\x01(\tR\
-    \x06portIdB\x12\xf2\xde\x1f\x0eyaml:\"port_id\"\x124\n\nchannel_id\x18\
-    \x02\x20\x01(\tR\tchannelIdB\x15\xf2\xde\x1f\x11yaml:\"channel_id\"\x12\
-    \x16\n\x06signer\x18\x03\x20\x01(\tR\x06signer:\x08\x88\xa0\x1f\0\xe8\
-    \xa0\x1f\0\"\x1d\n\x1bMsgChannelCloseInitResponse\"\xaf\x02\n\x16MsgChan\
-    nelCloseConfirm\x12+\n\x07port_id\x18\x01\x20\x01(\tR\x06portIdB\x12\xf2\
-    \xde\x1f\x0eyaml:\"port_id\"\x124\n\nchannel_id\x18\x02\x20\x01(\tR\tcha\
-    nnelIdB\x15\xf2\xde\x1f\x11yaml:\"channel_id\"\x124\n\nproof_init\x18\
-    \x03\x20\x01(\x0cR\tproofInitB\x15\xf2\xde\x1f\x11yaml:\"proof_init\"\
-    \x12Z\n\x0cproof_height\x18\x04\x20\x01(\x0b2\x1a.ibc.core.client.v1.Hei\
-    ghtR\x0bproofHeightB\x1b\xf2\xde\x1f\x13yaml:\"proof_height\"\xc8\xde\
-    \x1f\0\x12\x16\n\x06signer\x18\x05\x20\x01(\tR\x06signer:\x08\x88\xa0\
-    \x1f\0\xe8\xa0\x1f\0\"\x20\n\x1eMsgChannelCloseConfirmResponse\"\x90\x02\
-    \n\rMsgRecvPacket\x129\n\x06packet\x18\x01\x20\x01(\x0b2\x1b.ibc.core.ch\
-    annel.v1.PacketR\x06packetB\x04\xc8\xde\x1f\0\x12F\n\x10proof_commitment\
-    \x18\x02\x20\x01(\x0cR\x0fproofCommitmentB\x1b\xf2\xde\x1f\x17yaml:\"pro\
-    of_commitment\"\x12Z\n\x0cproof_height\x18\x03\x20\x01(\x0b2\x1a.ibc.cor\
-    e.client.v1.HeightR\x0bproofHeightB\x1b\xf2\xde\x1f\x13yaml:\"proof_heig\
-    ht\"\xc8\xde\x1f\0\x12\x16\n\x06signer\x18\x04\x20\x01(\tR\x06signer:\
-    \x08\x88\xa0\x1f\0\xe8\xa0\x1f\0\"^\n\x15MsgRecvPacketResponse\x12?\n\
-    \x06result\x18\x01\x20\x01(\x0e2'.ibc.core.channel.v1.ResponseResultType\
-    R\x06result:\x04\x88\xa0\x1f\0\"\xda\x02\n\nMsgTimeout\x129\n\x06packet\
-    \x18\x01\x20\x01(\x0b2\x1b.ibc.core.channel.v1.PacketR\x06packetB\x04\
-    \xc8\xde\x1f\0\x12F\n\x10proof_unreceived\x18\x02\x20\x01(\x0cR\x0fproof\
-    UnreceivedB\x1b\xf2\xde\x1f\x17yaml:\"proof_unreceived\"\x12Z\n\x0cproof\
-    _height\x18\x03\x20\x01(\x0b2\x1a.ibc.core.client.v1.HeightR\x0bproofHei\
-    ghtB\x1b\xf2\xde\x1f\x13yaml:\"proof_height\"\xc8\xde\x1f\0\x12K\n\x12ne\
-    xt_sequence_recv\x18\x04\x20\x01(\x04R\x10nextSequenceRecvB\x1d\xf2\xde\
-    \x1f\x19yaml:\"next_sequence_recv\"\x12\x16\n\x06signer\x18\x05\x20\x01(\
-    \tR\x06signer:\x08\x88\xa0\x1f\0\xe8\xa0\x1f\0\"[\n\x12MsgTimeoutRespons\
-    e\x12?\n\x06result\x18\x01\x20\x01(\x0e2'.ibc.core.channel.v1.ResponseRe\
-    sultTypeR\x06result:\x04\x88\xa0\x1f\0\"\x9a\x03\n\x11MsgTimeoutOnClose\
-    \x129\n\x06packet\x18\x01\x20\x01(\x0b2\x1b.ibc.core.channel.v1.PacketR\
-    \x06packetB\x04\xc8\xde\x1f\0\x12F\n\x10proof_unreceived\x18\x02\x20\x01\
-    (\x0cR\x0fproofUnreceivedB\x1b\xf2\xde\x1f\x17yaml:\"proof_unreceived\"\
-    \x127\n\x0bproof_close\x18\x03\x20\x01(\x0cR\nproofCloseB\x16\xf2\xde\
-    \x1f\x12yaml:\"proof_close\"\x12Z\n\x0cproof_height\x18\x04\x20\x01(\x0b\
-    2\x1a.ibc.core.client.v1.HeightR\x0bproofHeightB\x1b\xf2\xde\x1f\x13yaml\
-    :\"proof_height\"\xc8\xde\x1f\0\x12K\n\x12next_sequence_recv\x18\x05\x20\
-    \x01(\x04R\x10nextSequenceRecvB\x1d\xf2\xde\x1f\x19yaml:\"next_sequence_\
-    recv\"\x12\x16\n\x06signer\x18\x06\x20\x01(\tR\x06signer:\x08\x88\xa0\
-    \x1f\0\xe8\xa0\x1f\0\"b\n\x19MsgTimeoutOnCloseResponse\x12?\n\x06result\
+    \0\x12\x16\n\x06signer\x18\x03\x20\x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\
+    \x82\xe7\xb0*\x06signer\"[\n\x1aMsgChannelOpenInitResponse\x12\x1d\n\nch\
+    annel_id\x18\x01\x20\x01(\tR\tchannelId\x12\x18\n\x07version\x18\x02\x20\
+    \x01(\tR\x07version:\x04\x88\xa0\x1f\0\"\xde\x02\n\x11MsgChannelOpenTry\
+    \x12\x17\n\x07port_id\x18\x01\x20\x01(\tR\x06portId\x122\n\x13previous_c\
+    hannel_id\x18\x02\x20\x01(\tR\x11previousChannelIdB\x02\x18\x01\x12<\n\
+    \x07channel\x18\x03\x20\x01(\x0b2\x1c.ibc.core.channel.v1.ChannelR\x07ch\
+    annelB\x04\xc8\xde\x1f\0\x121\n\x14counterparty_version\x18\x04\x20\x01(\
+    \tR\x13counterpartyVersion\x12\x1d\n\nproof_init\x18\x05\x20\x01(\x0cR\t\
+    proofInit\x12C\n\x0cproof_height\x18\x06\x20\x01(\x0b2\x1a.ibc.core.clie\
+    nt.v1.HeightR\x0bproofHeightB\x04\xc8\xde\x1f\0\x12\x16\n\x06signer\x18\
+    \x07\x20\x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\x82\xe7\xb0*\x06signer\"Z\
+    \n\x19MsgChannelOpenTryResponse\x12\x18\n\x07version\x18\x01\x20\x01(\tR\
+    \x07version\x12\x1d\n\nchannel_id\x18\x02\x20\x01(\tR\tchannelId:\x04\
+    \x88\xa0\x1f\0\"\xc1\x02\n\x11MsgChannelOpenAck\x12\x17\n\x07port_id\x18\
+    \x01\x20\x01(\tR\x06portId\x12\x1d\n\nchannel_id\x18\x02\x20\x01(\tR\tch\
+    annelId\x126\n\x17counterparty_channel_id\x18\x03\x20\x01(\tR\x15counter\
+    partyChannelId\x121\n\x14counterparty_version\x18\x04\x20\x01(\tR\x13cou\
+    nterpartyVersion\x12\x1b\n\tproof_try\x18\x05\x20\x01(\x0cR\x08proofTry\
+    \x12C\n\x0cproof_height\x18\x06\x20\x01(\x0b2\x1a.ibc.core.client.v1.Hei\
+    ghtR\x0bproofHeightB\x04\xc8\xde\x1f\0\x12\x16\n\x06signer\x18\x07\x20\
+    \x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\x82\xe7\xb0*\x06signer\"\x1b\n\x19\
+    MsgChannelOpenAckResponse\"\xda\x01\n\x15MsgChannelOpenConfirm\x12\x17\n\
+    \x07port_id\x18\x01\x20\x01(\tR\x06portId\x12\x1d\n\nchannel_id\x18\x02\
+    \x20\x01(\tR\tchannelId\x12\x1b\n\tproof_ack\x18\x03\x20\x01(\x0cR\x08pr\
+    oofAck\x12C\n\x0cproof_height\x18\x04\x20\x01(\x0b2\x1a.ibc.core.client.\
+    v1.HeightR\x0bproofHeightB\x04\xc8\xde\x1f\0\x12\x16\n\x06signer\x18\x05\
+    \x20\x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\x82\xe7\xb0*\x06signer\"\x1f\n\
+    \x1dMsgChannelOpenConfirmResponse\"v\n\x13MsgChannelCloseInit\x12\x17\n\
+    \x07port_id\x18\x01\x20\x01(\tR\x06portId\x12\x1d\n\nchannel_id\x18\x02\
+    \x20\x01(\tR\tchannelId\x12\x16\n\x06signer\x18\x03\x20\x01(\tR\x06signe\
+    r:\x0f\x88\xa0\x1f\0\x82\xe7\xb0*\x06signer\"\x1d\n\x1bMsgChannelCloseIn\
+    itResponse\"\xa1\x02\n\x16MsgChannelCloseConfirm\x12\x17\n\x07port_id\
+    \x18\x01\x20\x01(\tR\x06portId\x12\x1d\n\nchannel_id\x18\x02\x20\x01(\tR\
+    \tchannelId\x12\x1d\n\nproof_init\x18\x03\x20\x01(\x0cR\tproofInit\x12C\
+    \n\x0cproof_height\x18\x04\x20\x01(\x0b2\x1a.ibc.core.client.v1.HeightR\
+    \x0bproofHeightB\x04\xc8\xde\x1f\0\x12\x16\n\x06signer\x18\x05\x20\x01(\
+    \tR\x06signer\x12B\n\x1dcounterparty_upgrade_sequence\x18\x06\x20\x01(\
+    \x04R\x1bcounterpartyUpgradeSequence:\x0f\x88\xa0\x1f\0\x82\xe7\xb0*\x06\
+    signer\"\x20\n\x1eMsgChannelCloseConfirmResponse\"\xe3\x01\n\rMsgRecvPac\
+    ket\x129\n\x06packet\x18\x01\x20\x01(\x0b2\x1b.ibc.core.channel.v1.Packe\
+    tR\x06packetB\x04\xc8\xde\x1f\0\x12)\n\x10proof_commitment\x18\x02\x20\
+    \x01(\x0cR\x0fproofCommitment\x12C\n\x0cproof_height\x18\x03\x20\x01(\
+    \x0b2\x1a.ibc.core.client.v1.HeightR\x0bproofHeightB\x04\xc8\xde\x1f\0\
+    \x12\x16\n\x06signer\x18\x04\x20\x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\
+    \x82\xe7\xb0*\x06signer\"^\n\x15MsgRecvPacketResponse\x12?\n\x06result\
     \x18\x01\x20\x01(\x0e2'.ibc.core.channel.v1.ResponseResultTypeR\x06resul\
-    t:\x04\x88\xa0\x1f\0\"\xb0\x02\n\x12MsgAcknowledgement\x129\n\x06packet\
-    \x18\x01\x20\x01(\x0b2\x1b.ibc.core.channel.v1.PacketR\x06packetB\x04\
-    \xc8\xde\x1f\0\x12(\n\x0facknowledgement\x18\x02\x20\x01(\x0cR\x0facknow\
-    ledgement\x127\n\x0bproof_acked\x18\x03\x20\x01(\x0cR\nproofAckedB\x16\
-    \xf2\xde\x1f\x12yaml:\"proof_acked\"\x12Z\n\x0cproof_height\x18\x04\x20\
-    \x01(\x0b2\x1a.ibc.core.client.v1.HeightR\x0bproofHeightB\x1b\xf2\xde\
-    \x1f\x13yaml:\"proof_height\"\xc8\xde\x1f\0\x12\x16\n\x06signer\x18\x05\
-    \x20\x01(\tR\x06signer:\x08\x88\xa0\x1f\0\xe8\xa0\x1f\0\"c\n\x1aMsgAckno\
-    wledgementResponse\x12?\n\x06result\x18\x01\x20\x01(\x0e2'.ibc.core.chan\
-    nel.v1.ResponseResultTypeR\x06result:\x04\x88\xa0\x1f\0*\xa9\x01\n\x12Re\
-    sponseResultType\x125\n\x20RESPONSE_RESULT_TYPE_UNSPECIFIED\x10\0\x1a\
-    \x0f\x8a\x9d\x20\x0bUNSPECIFIED\x12'\n\x19RESPONSE_RESULT_TYPE_NOOP\x10\
-    \x01\x1a\x08\x8a\x9d\x20\x04NOOP\x12-\n\x1cRESPONSE_RESULT_TYPE_SUCCESS\
-    \x10\x02\x1a\x0b\x8a\x9d\x20\x07SUCCESS\x1a\x04\x88\xa3\x1e\02\xaf\x08\n\
-    \x03Msg\x12k\n\x0fChannelOpenInit\x12'.ibc.core.channel.v1.MsgChannelOpe\
-    nInit\x1a/.ibc.core.channel.v1.MsgChannelOpenInitResponse\x12h\n\x0eChan\
-    nelOpenTry\x12&.ibc.core.channel.v1.MsgChannelOpenTry\x1a..ibc.core.chan\
-    nel.v1.MsgChannelOpenTryResponse\x12h\n\x0eChannelOpenAck\x12&.ibc.core.\
-    channel.v1.MsgChannelOpenAck\x1a..ibc.core.channel.v1.MsgChannelOpenAckR\
-    esponse\x12t\n\x12ChannelOpenConfirm\x12*.ibc.core.channel.v1.MsgChannel\
-    OpenConfirm\x1a2.ibc.core.channel.v1.MsgChannelOpenConfirmResponse\x12n\
-    \n\x10ChannelCloseInit\x12(.ibc.core.channel.v1.MsgChannelCloseInit\x1a0\
-    .ibc.core.channel.v1.MsgChannelCloseInitResponse\x12w\n\x13ChannelCloseC\
-    onfirm\x12+.ibc.core.channel.v1.MsgChannelCloseConfirm\x1a3.ibc.core.cha\
-    nnel.v1.MsgChannelCloseConfirmResponse\x12\\\n\nRecvPacket\x12\".ibc.cor\
-    e.channel.v1.MsgRecvPacket\x1a*.ibc.core.channel.v1.MsgRecvPacketRespons\
-    e\x12S\n\x07Timeout\x12\x1f.ibc.core.channel.v1.MsgTimeout\x1a'.ibc.core\
-    .channel.v1.MsgTimeoutResponse\x12h\n\x0eTimeoutOnClose\x12&.ibc.core.ch\
-    annel.v1.MsgTimeoutOnClose\x1a..ibc.core.channel.v1.MsgTimeoutOnCloseRes\
-    ponse\x12k\n\x0fAcknowledgement\x12'.ibc.core.channel.v1.MsgAcknowledgem\
-    ent\x1a/.ibc.core.channel.v1.MsgAcknowledgementResponseB;Z9github.com/co\
-    smos/ibc-go/v4/modules/core/04-channel/typesb\x06proto3\
+    t:\x04\x88\xa0\x1f\0\"\x8e\x02\n\nMsgTimeout\x129\n\x06packet\x18\x01\
+    \x20\x01(\x0b2\x1b.ibc.core.channel.v1.PacketR\x06packetB\x04\xc8\xde\
+    \x1f\0\x12)\n\x10proof_unreceived\x18\x02\x20\x01(\x0cR\x0fproofUnreceiv\
+    ed\x12C\n\x0cproof_height\x18\x03\x20\x01(\x0b2\x1a.ibc.core.client.v1.H\
+    eightR\x0bproofHeightB\x04\xc8\xde\x1f\0\x12,\n\x12next_sequence_recv\
+    \x18\x04\x20\x01(\x04R\x10nextSequenceRecv\x12\x16\n\x06signer\x18\x05\
+    \x20\x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\x82\xe7\xb0*\x06signer\"[\n\
+    \x12MsgTimeoutResponse\x12?\n\x06result\x18\x01\x20\x01(\x0e2'.ibc.core.\
+    channel.v1.ResponseResultTypeR\x06result:\x04\x88\xa0\x1f\0\"\xfa\x02\n\
+    \x11MsgTimeoutOnClose\x129\n\x06packet\x18\x01\x20\x01(\x0b2\x1b.ibc.cor\
+    e.channel.v1.PacketR\x06packetB\x04\xc8\xde\x1f\0\x12)\n\x10proof_unrece\
+    ived\x18\x02\x20\x01(\x0cR\x0fproofUnreceived\x12\x1f\n\x0bproof_close\
+    \x18\x03\x20\x01(\x0cR\nproofClose\x12C\n\x0cproof_height\x18\x04\x20\
+    \x01(\x0b2\x1a.ibc.core.client.v1.HeightR\x0bproofHeightB\x04\xc8\xde\
+    \x1f\0\x12,\n\x12next_sequence_recv\x18\x05\x20\x01(\x04R\x10nextSequenc\
+    eRecv\x12\x16\n\x06signer\x18\x06\x20\x01(\tR\x06signer\x12B\n\x1dcounte\
+    rparty_upgrade_sequence\x18\x07\x20\x01(\x04R\x1bcounterpartyUpgradeSequ\
+    ence:\x0f\x88\xa0\x1f\0\x82\xe7\xb0*\x06signer\"b\n\x19MsgTimeoutOnClose\
+    Response\x12?\n\x06result\x18\x01\x20\x01(\x0e2'.ibc.core.channel.v1.Res\
+    ponseResultTypeR\x06result:\x04\x88\xa0\x1f\0\"\x88\x02\n\x12MsgAcknowle\
+    dgement\x129\n\x06packet\x18\x01\x20\x01(\x0b2\x1b.ibc.core.channel.v1.P\
+    acketR\x06packetB\x04\xc8\xde\x1f\0\x12(\n\x0facknowledgement\x18\x02\
+    \x20\x01(\x0cR\x0facknowledgement\x12\x1f\n\x0bproof_acked\x18\x03\x20\
+    \x01(\x0cR\nproofAcked\x12C\n\x0cproof_height\x18\x04\x20\x01(\x0b2\x1a.\
+    ibc.core.client.v1.HeightR\x0bproofHeightB\x04\xc8\xde\x1f\0\x12\x16\n\
+    \x06signer\x18\x05\x20\x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\x82\xe7\xb0*\
+    \x06signer\"c\n\x1aMsgAcknowledgementResponse\x12?\n\x06result\x18\x01\
+    \x20\x01(\x0e2'.ibc.core.channel.v1.ResponseResultTypeR\x06result:\x04\
+    \x88\xa0\x1f\0\"\xba\x01\n\x15MsgChannelUpgradeInit\x12\x17\n\x07port_id\
+    \x18\x01\x20\x01(\tR\x06portId\x12\x1d\n\nchannel_id\x18\x02\x20\x01(\tR\
+    \tchannelId\x12@\n\x06fields\x18\x03\x20\x01(\x0b2\".ibc.core.channel.v1\
+    .UpgradeFieldsR\x06fieldsB\x04\xc8\xde\x1f\0\x12\x16\n\x06signer\x18\x04\
+    \x20\x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\x82\xe7\xb0*\x06signer\"\x8e\
+    \x01\n\x1dMsgChannelUpgradeInitResponse\x12<\n\x07upgrade\x18\x01\x20\
+    \x01(\x0b2\x1c.ibc.core.channel.v1.UpgradeR\x07upgradeB\x04\xc8\xde\x1f\
+    \0\x12)\n\x10upgrade_sequence\x18\x02\x20\x01(\x04R\x0fupgradeSequence:\
+    \x04\x88\xa0\x1f\0\"\xfd\x03\n\x14MsgChannelUpgradeTry\x12\x17\n\x07port\
+    _id\x18\x01\x20\x01(\tR\x06portId\x12\x1d\n\nchannel_id\x18\x02\x20\x01(\
+    \tR\tchannelId\x12G\n\x20proposed_upgrade_connection_hops\x18\x03\x20\
+    \x03(\tR\x1dproposedUpgradeConnectionHops\x12h\n\x1bcounterparty_upgrade\
+    _fields\x18\x04\x20\x01(\x0b2\".ibc.core.channel.v1.UpgradeFieldsR\x19co\
+    unterpartyUpgradeFieldsB\x04\xc8\xde\x1f\0\x12B\n\x1dcounterparty_upgrad\
+    e_sequence\x18\x05\x20\x01(\x04R\x1bcounterpartyUpgradeSequence\x12#\n\r\
+    proof_channel\x18\x06\x20\x01(\x0cR\x0cproofChannel\x12#\n\rproof_upgrad\
+    e\x18\x07\x20\x01(\x0cR\x0cproofUpgrade\x12C\n\x0cproof_height\x18\x08\
+    \x20\x01(\x0b2\x1a.ibc.core.client.v1.HeightR\x0bproofHeightB\x04\xc8\
+    \xde\x1f\0\x12\x16\n\x06signer\x18\t\x20\x01(\tR\x06signer:\x0f\x88\xa0\
+    \x1f\0\x82\xe7\xb0*\x06signer\"\xce\x01\n\x1cMsgChannelUpgradeTryRespons\
+    e\x12<\n\x07upgrade\x18\x01\x20\x01(\x0b2\x1c.ibc.core.channel.v1.Upgrad\
+    eR\x07upgradeB\x04\xc8\xde\x1f\0\x12)\n\x10upgrade_sequence\x18\x02\x20\
+    \x01(\x04R\x0fupgradeSequence\x12?\n\x06result\x18\x03\x20\x01(\x0e2'.ib\
+    c.core.channel.v1.ResponseResultTypeR\x06result:\x04\x88\xa0\x1f\0\"\xdd\
+    \x02\n\x14MsgChannelUpgradeAck\x12\x17\n\x07port_id\x18\x01\x20\x01(\tR\
+    \x06portId\x12\x1d\n\nchannel_id\x18\x02\x20\x01(\tR\tchannelId\x12U\n\
+    \x14counterparty_upgrade\x18\x03\x20\x01(\x0b2\x1c.ibc.core.channel.v1.U\
+    pgradeR\x13counterpartyUpgradeB\x04\xc8\xde\x1f\0\x12#\n\rproof_channel\
+    \x18\x04\x20\x01(\x0cR\x0cproofChannel\x12#\n\rproof_upgrade\x18\x05\x20\
+    \x01(\x0cR\x0cproofUpgrade\x12C\n\x0cproof_height\x18\x06\x20\x01(\x0b2\
+    \x1a.ibc.core.client.v1.HeightR\x0bproofHeightB\x04\xc8\xde\x1f\0\x12\
+    \x16\n\x06signer\x18\x07\x20\x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\x82\
+    \xe7\xb0*\x06signer\"e\n\x1cMsgChannelUpgradeAckResponse\x12?\n\x06resul\
+    t\x18\x01\x20\x01(\x0e2'.ibc.core.channel.v1.ResponseResultTypeR\x06resu\
+    lt:\x04\x88\xa0\x1f\0\"\xbb\x03\n\x18MsgChannelUpgradeConfirm\x12\x17\n\
+    \x07port_id\x18\x01\x20\x01(\tR\x06portId\x12\x1d\n\nchannel_id\x18\x02\
+    \x20\x01(\tR\tchannelId\x12X\n\x1acounterparty_channel_state\x18\x03\x20\
+    \x01(\x0e2\x1a.ibc.core.channel.v1.StateR\x18counterpartyChannelState\
+    \x12U\n\x14counterparty_upgrade\x18\x04\x20\x01(\x0b2\x1c.ibc.core.chann\
+    el.v1.UpgradeR\x13counterpartyUpgradeB\x04\xc8\xde\x1f\0\x12#\n\rproof_c\
+    hannel\x18\x05\x20\x01(\x0cR\x0cproofChannel\x12#\n\rproof_upgrade\x18\
+    \x06\x20\x01(\x0cR\x0cproofUpgrade\x12C\n\x0cproof_height\x18\x07\x20\
+    \x01(\x0b2\x1a.ibc.core.client.v1.HeightR\x0bproofHeightB\x04\xc8\xde\
+    \x1f\0\x12\x16\n\x06signer\x18\x08\x20\x01(\tR\x06signer:\x0f\x88\xa0\
+    \x1f\0\x82\xe7\xb0*\x06signer\"i\n\x20MsgChannelUpgradeConfirmResponse\
+    \x12?\n\x06result\x18\x01\x20\x01(\x0e2'.ibc.core.channel.v1.ResponseRes\
+    ultTypeR\x06result:\x04\x88\xa0\x1f\0\"\x80\x03\n\x15MsgChannelUpgradeOp\
+    en\x12\x17\n\x07port_id\x18\x01\x20\x01(\tR\x06portId\x12\x1d\n\nchannel\
+    _id\x18\x02\x20\x01(\tR\tchannelId\x12X\n\x1acounterparty_channel_state\
+    \x18\x03\x20\x01(\x0e2\x1a.ibc.core.channel.v1.StateR\x18counterpartyCha\
+    nnelState\x12B\n\x1dcounterparty_upgrade_sequence\x18\x04\x20\x01(\x04R\
+    \x1bcounterpartyUpgradeSequence\x12#\n\rproof_channel\x18\x05\x20\x01(\
+    \x0cR\x0cproofChannel\x12C\n\x0cproof_height\x18\x06\x20\x01(\x0b2\x1a.i\
+    bc.core.client.v1.HeightR\x0bproofHeightB\x04\xc8\xde\x1f\0\x12\x16\n\
+    \x06signer\x18\x07\x20\x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\x82\xe7\xb0*\
+    \x06signer\"\x1f\n\x1dMsgChannelUpgradeOpenResponse\"\xbc\x02\n\x18MsgCh\
+    annelUpgradeTimeout\x12\x17\n\x07port_id\x18\x01\x20\x01(\tR\x06portId\
+    \x12\x1d\n\nchannel_id\x18\x02\x20\x01(\tR\tchannelId\x12U\n\x14counterp\
+    arty_channel\x18\x03\x20\x01(\x0b2\x1c.ibc.core.channel.v1.ChannelR\x13c\
+    ounterpartyChannelB\x04\xc8\xde\x1f\0\x12#\n\rproof_channel\x18\x04\x20\
+    \x01(\x0cR\x0cproofChannel\x12C\n\x0cproof_height\x18\x05\x20\x01(\x0b2\
+    \x1a.ibc.core.client.v1.HeightR\x0bproofHeightB\x04\xc8\xde\x1f\0\x12\
+    \x16\n\x06signer\x18\x06\x20\x01(\tR\x06signer:\x0f\x88\xa0\x1f\0\x82\
+    \xe7\xb0*\x06signer\"\"\n\x20MsgChannelUpgradeTimeoutResponse\"\xbd\x02\
+    \n\x17MsgChannelUpgradeCancel\x12\x17\n\x07port_id\x18\x01\x20\x01(\tR\
+    \x06portId\x12\x1d\n\nchannel_id\x18\x02\x20\x01(\tR\tchannelId\x12L\n\r\
+    error_receipt\x18\x03\x20\x01(\x0b2!.ibc.core.channel.v1.ErrorReceiptR\
+    \x0cerrorReceiptB\x04\xc8\xde\x1f\0\x12.\n\x13proof_error_receipt\x18\
+    \x04\x20\x01(\x0cR\x11proofErrorReceipt\x12C\n\x0cproof_height\x18\x05\
+    \x20\x01(\x0b2\x1a.ibc.core.client.v1.HeightR\x0bproofHeightB\x04\xc8\
+    \xde\x1f\0\x12\x16\n\x06signer\x18\x06\x20\x01(\tR\x06signer:\x0f\x88\
+    \xa0\x1f\0\x82\xe7\xb0*\x06signer\"!\n\x1fMsgChannelUpgradeCancelRespons\
+    e\"~\n\x0fMsgUpdateParams\x12\x1c\n\tauthority\x18\x01\x20\x01(\tR\tauth\
+    ority\x129\n\x06params\x18\x02\x20\x01(\x0b2\x1b.ibc.core.channel.v1.Par\
+    amsR\x06paramsB\x04\xc8\xde\x1f\0:\x12\x88\xa0\x1f\0\x82\xe7\xb0*\tautho\
+    rity\"\x19\n\x17MsgUpdateParamsResponse\"\x91\x01\n\x18MsgPruneAcknowled\
+    gements\x12\x17\n\x07port_id\x18\x01\x20\x01(\tR\x06portId\x12\x1d\n\nch\
+    annel_id\x18\x02\x20\x01(\tR\tchannelId\x12\x14\n\x05limit\x18\x03\x20\
+    \x01(\x04R\x05limit\x12\x16\n\x06signer\x18\x04\x20\x01(\tR\x06signer:\
+    \x0f\x88\xa0\x1f\0\x82\xe7\xb0*\x06signer\"\x94\x01\n\x20MsgPruneAcknowl\
+    edgementsResponse\x124\n\x16total_pruned_sequences\x18\x01\x20\x01(\x04R\
+    \x14totalPrunedSequences\x12:\n\x19total_remaining_sequences\x18\x02\x20\
+    \x01(\x04R\x17totalRemainingSequences*\xd8\x01\n\x12ResponseResultType\
+    \x125\n\x20RESPONSE_RESULT_TYPE_UNSPECIFIED\x10\0\x1a\x0f\x8a\x9d\x20\
+    \x0bUNSPECIFIED\x12'\n\x19RESPONSE_RESULT_TYPE_NOOP\x10\x01\x1a\x08\x8a\
+    \x9d\x20\x04NOOP\x12-\n\x1cRESPONSE_RESULT_TYPE_SUCCESS\x10\x02\x1a\x0b\
+    \x8a\x9d\x20\x07SUCCESS\x12-\n\x1cRESPONSE_RESULT_TYPE_FAILURE\x10\x03\
+    \x1a\x0b\x8a\x9d\x20\x07FAILURE\x1a\x04\x88\xa3\x1e\02\xec\x10\n\x03Msg\
+    \x12k\n\x0fChannelOpenInit\x12'.ibc.core.channel.v1.MsgChannelOpenInit\
+    \x1a/.ibc.core.channel.v1.MsgChannelOpenInitResponse\x12h\n\x0eChannelOp\
+    enTry\x12&.ibc.core.channel.v1.MsgChannelOpenTry\x1a..ibc.core.channel.v\
+    1.MsgChannelOpenTryResponse\x12h\n\x0eChannelOpenAck\x12&.ibc.core.chann\
+    el.v1.MsgChannelOpenAck\x1a..ibc.core.channel.v1.MsgChannelOpenAckRespon\
+    se\x12t\n\x12ChannelOpenConfirm\x12*.ibc.core.channel.v1.MsgChannelOpenC\
+    onfirm\x1a2.ibc.core.channel.v1.MsgChannelOpenConfirmResponse\x12n\n\x10\
+    ChannelCloseInit\x12(.ibc.core.channel.v1.MsgChannelCloseInit\x1a0.ibc.c\
+    ore.channel.v1.MsgChannelCloseInitResponse\x12w\n\x13ChannelCloseConfirm\
+    \x12+.ibc.core.channel.v1.MsgChannelCloseConfirm\x1a3.ibc.core.channel.v\
+    1.MsgChannelCloseConfirmResponse\x12\\\n\nRecvPacket\x12\".ibc.core.chan\
+    nel.v1.MsgRecvPacket\x1a*.ibc.core.channel.v1.MsgRecvPacketResponse\x12S\
+    \n\x07Timeout\x12\x1f.ibc.core.channel.v1.MsgTimeout\x1a'.ibc.core.chann\
+    el.v1.MsgTimeoutResponse\x12h\n\x0eTimeoutOnClose\x12&.ibc.core.channel.\
+    v1.MsgTimeoutOnClose\x1a..ibc.core.channel.v1.MsgTimeoutOnCloseResponse\
+    \x12k\n\x0fAcknowledgement\x12'.ibc.core.channel.v1.MsgAcknowledgement\
+    \x1a/.ibc.core.channel.v1.MsgAcknowledgementResponse\x12t\n\x12ChannelUp\
+    gradeInit\x12*.ibc.core.channel.v1.MsgChannelUpgradeInit\x1a2.ibc.core.c\
+    hannel.v1.MsgChannelUpgradeInitResponse\x12q\n\x11ChannelUpgradeTry\x12)\
+    .ibc.core.channel.v1.MsgChannelUpgradeTry\x1a1.ibc.core.channel.v1.MsgCh\
+    annelUpgradeTryResponse\x12q\n\x11ChannelUpgradeAck\x12).ibc.core.channe\
+    l.v1.MsgChannelUpgradeAck\x1a1.ibc.core.channel.v1.MsgChannelUpgradeAckR\
+    esponse\x12}\n\x15ChannelUpgradeConfirm\x12-.ibc.core.channel.v1.MsgChan\
+    nelUpgradeConfirm\x1a5.ibc.core.channel.v1.MsgChannelUpgradeConfirmRespo\
+    nse\x12t\n\x12ChannelUpgradeOpen\x12*.ibc.core.channel.v1.MsgChannelUpgr\
+    adeOpen\x1a2.ibc.core.channel.v1.MsgChannelUpgradeOpenResponse\x12}\n\
+    \x15ChannelUpgradeTimeout\x12-.ibc.core.channel.v1.MsgChannelUpgradeTime\
+    out\x1a5.ibc.core.channel.v1.MsgChannelUpgradeTimeoutResponse\x12z\n\x14\
+    ChannelUpgradeCancel\x12,.ibc.core.channel.v1.MsgChannelUpgradeCancel\
+    \x1a4.ibc.core.channel.v1.MsgChannelUpgradeCancelResponse\x12i\n\x13Upda\
+    teChannelParams\x12$.ibc.core.channel.v1.MsgUpdateParams\x1a,.ibc.core.c\
+    hannel.v1.MsgUpdateParamsResponse\x12}\n\x15PruneAcknowledgements\x12-.i\
+    bc.core.channel.v1.MsgPruneAcknowledgements\x1a5.ibc.core.channel.v1.Msg\
+    PruneAcknowledgementsResponse\x1a\x05\x80\xe7\xb0*\x01B;Z9github.com/cos\
+    mos/ibc-go/v8/modules/core/04-channel/typesb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

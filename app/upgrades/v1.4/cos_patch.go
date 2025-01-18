@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
@@ -40,13 +41,13 @@ func mintLostTokens(
 		panic(fmt.Sprintf("validator address is not valid bech32: %s", cosValAddress))
 	}
 
-	cosValidator, found := stakingKeeper.GetValidator(ctx, cosValAddress)
-	if !found {
+	cosValidator, err := stakingKeeper.GetValidator(ctx, cosValAddress)
+	if err != nil {
 		panic(fmt.Sprintf("cos validator '%s' not found", cosValAddress))
 	}
 
 	for _, mintRecord := range cosMints {
-		coinAmount, mintOk := sdk.NewIntFromString(mintRecord.AmountUscrt)
+		coinAmount, mintOk := math.NewIntFromString(mintRecord.AmountUscrt)
 		if !mintOk {
 			panic(fmt.Sprintf("error parsing mint of %suscrt to %s", mintRecord.AmountUscrt, mintRecord.Address))
 		}
@@ -96,7 +97,10 @@ func revertTombstone(ctx sdk.Context, slashingKeeper *slashingkeeper.Keeper) err
 	slashingKeeper.RevertTombstone(ctx, cosConsAddress)
 
 	// Set jail until=now, the validator then must unjail manually
-	slashingKeeper.JailUntil(ctx, cosConsAddress, ctx.BlockTime())
+	err = slashingKeeper.JailUntil(ctx, cosConsAddress, ctx.BlockTime())
+	if err != nil {
+		panic(fmt.Sprintf("failed to jail: %s", cosValAddress))
+	}
 
 	return nil
 }

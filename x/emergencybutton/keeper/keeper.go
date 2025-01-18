@@ -1,18 +1,22 @@
 package keeper
 
 import (
+	"cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
+	codec "github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	porttypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
-	"github.com/cosmos/ibc-go/v4/modules/core/exported"
+	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
+	"github.com/cosmos/ibc-go/v8/modules/core/exported"
 	"github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 )
 
 type Keeper struct {
-	channel    porttypes.ICS4Wrapper
-	paramSpace paramtypes.Subspace
+	cdc       codec.BinaryCodec
+	channel   porttypes.ICS4Wrapper
+	storeKey  storetypes.StoreKey
+	authority string
 }
 
 func (i *Keeper) GetAppVersion(ctx sdk.Context, portID, channelID string) (string, bool) {
@@ -21,30 +25,30 @@ func (i *Keeper) GetAppVersion(ctx sdk.Context, portID, channelID string) (strin
 
 func NewKeeper(
 	channel porttypes.ICS4Wrapper,
-	paramSpace paramtypes.Subspace,
+	cdc codec.BinaryCodec,
+	key storetypes.StoreKey,
+	authority string,
 ) Keeper {
-	if !paramSpace.HasKeyTable() {
-		paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
-	}
-
 	return Keeper{
-		channel:    channel,
-		paramSpace: paramSpace,
+		channel:   channel,
+		authority: authority,
+		cdc:       cdc,
+		storeKey:  key,
 	}
 }
 
 // SendPacket implements the ICS4 interface and is called when sending packets.
 // This method blocks the sending of the packet if the emergencybutton is turned off.
 // If the switcher param is not configured, packets are not blocked and handled by the wrapped IBC app
-func (i *Keeper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI) error {
+func (i *Keeper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability, sourcePort string, sourceChannel string, timeoutHeight ibcclienttypes.Height, timeoutTimestamp uint64, data []byte) (uint64, error) {
 	status := i.GetSwitchStatus(ctx)
 
 	if status == types.IbcSwitchStatusOff {
 		println("Returning error!")
-		return sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
+		return 0, errors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 	}
 
-	return i.channel.SendPacket(ctx, chanCap, packet)
+	return i.channel.SendPacket(ctx, chanCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, data)
 }
 
 func (i *Keeper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI, ack exported.Acknowledgement) error {
@@ -53,4 +57,9 @@ func (i *Keeper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilitytypes.
 
 func (i *Keeper) IsHalted(ctx sdk.Context) bool {
 	return i.GetSwitchStatus(ctx) == types.IbcSwitchStatusOff
+}
+
+// GetAuthority returns the x/emergencybutton module's authority.
+func (i Keeper) GetAuthority() string {
+	return i.authority
 }

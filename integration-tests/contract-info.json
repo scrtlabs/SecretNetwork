@@ -1,0 +1,17 @@
+{
+  "contract_infos": [
+    {
+      "contract_address": "secret1u4g0zlxkfh9xamcscptp7lj2v8c4jdcjaeg7q6",
+      "contract_info": {
+        "code_id": "1",
+        "creator": "secret1njjhv3zuqvq3tcssepkm76knm7ysymlr4y20ug",
+        "label": "counterContract",
+        "created": null,
+        "ibc_port_id": "",
+        "admin": "",
+        "admin_proof": null
+      }
+    }
+  ]
+}
+

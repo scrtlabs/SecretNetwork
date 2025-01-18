@@ -1,4 +1,4 @@
-FROM ghcr.io/scrtlabs/localsecret:v1.9.0-beta.1-random
+FROM ghcr.io/scrtlabs/localsecret:beta
 
 ### Install Sudo ###
 

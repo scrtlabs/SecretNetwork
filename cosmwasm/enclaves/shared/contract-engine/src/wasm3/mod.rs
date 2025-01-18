@@ -1712,9 +1712,9 @@ fn host_ed25519_batch_verify(
     rng_entropy.append(&mut used_gas.to_be_bytes().to_vec());
 
     let rng_seed: [u8; 32] = sha_256(&rng_entropy);
-    let mut rng = ChaChaRng::from_seed(rng_seed);
+    let rng = ChaChaRng::from_seed(rng_seed);
 
-    match batch.verify(&mut rng) {
+    match batch.verify(rng) {
         Err(err) => {
             debug!(
                 "ed25519_batch_verify() failed to verify signatures: {:?}",

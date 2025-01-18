@@ -6,6 +6,7 @@ use log::*;
 use log::{error, info};
 use std::io::{Read, Write};
 use std::path::Path;
+use std::untrusted::path::PathEx;
 use std::ptr;
 use std::sgxfs::SgxFile;
 use std::slice;
