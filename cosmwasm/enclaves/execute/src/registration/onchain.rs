@@ -6,7 +6,7 @@ use std::panic;
 
 use enclave_ffi_types::NodeAuthResult;
 
-use crate::registration::attestation::verify_quote_ecdsa;
+use crate::registration::attestation::verify_quote_sgx;
 use crate::registration::cert::verify_ra_report;
 use crate::registration::seed_exchange::SeedType;
 
@@ -105,7 +105,7 @@ fn verify_attestation_dcap(
     trace!("Current block time: {}", tm_s);
 
     // test self
-    let report_body = match verify_quote_ecdsa(vec_quote, vec_coll, tm_s) {
+    let report_body = match verify_quote_sgx(vec_quote, vec_coll, tm_s) {
         Ok(r) => {
             trace!("Remote quote verified ok");
             if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {

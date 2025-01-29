@@ -18,7 +18,7 @@ use crate::registration::cert::verify_quote_status;
 use crate::registration::attestation::get_quote_ecdsa_untested;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use crate::registration::attestation::verify_quote_ecdsa;
+use crate::registration::attestation::verify_quote_sgx;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_utils::storage::write_to_untrusted;
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn ecall_check_patch_level(
 unsafe fn check_patch_level_dcap(pub_k: &[u8; 32]) -> NodeAuthResult {
     match get_quote_ecdsa_untested(pub_k) {
         Ok((vec_quote, vec_coll)) => {
-            match verify_quote_ecdsa(&vec_quote, &vec_coll, 0) {
+            match verify_quote_sgx(&vec_quote, &vec_coll, 0) {
                 Ok(r) => {
                     if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
                         println!("WARNING: {}", r.1);

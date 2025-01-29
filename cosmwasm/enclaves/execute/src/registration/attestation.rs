@@ -239,23 +239,20 @@ pub fn in_grace_period(timestamp: u64) -> bool {
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn verify_quote_ecdsa(
+pub fn verify_quote_any(
     _vec_quote: &[u8],
     _vec_coll: &[u8],
     _time_s: i64,
-) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
+) -> Result<sgx_ql_qv_result_t, sgx_status_t> {
     Err(sgx_status_t::SGX_ERROR_NO_DEVICE)
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn verify_quote_ecdsa(
+pub fn verify_quote_any(
     vec_quote: &[u8],
     vec_coll: &[u8],
     time_s: i64,
-) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
-    //
-    // use sgx_types::sgx_ql_qv_supplemental_t;
-
+) -> Result<sgx_ql_qv_result_t, sgx_status_t> {
     let mut qe_report: sgx_ql_qe_report_info_t = sgx_ql_qe_report_info_t::default();
     let mut p_supp: [u8; 5000] = [0; 5000];
     let mut n_supp: u32 = 0;
@@ -332,32 +329,20 @@ pub fn verify_quote_ecdsa(
     trace!("exp_status = {}", exp_status);
     trace!("qv_result = {}", qv_result);
 
-    /*
-        if n_supp >= mem::size_of::<sgx_ql_qv_supplemental_t>() as u32 {
-            let p_supp_fmt = p_supp.as_ptr() as *const sgx_ql_qv_supplemental_t;
-            let supp = unsafe { *p_supp_fmt };
-
-            trace!("supp.ver = {}", supp.version);
-            trace!("supp.earliest_issue_date = {}", supp.earliest_issue_date);
-            trace!("supp.latest_issue_date = {}", supp.latest_issue_date);
-            trace!(
-                "supp.earliest_expiration_date = {}",
-                supp.earliest_expiration_date
-            );
-            trace!("supp.tcb_level_date_tag = {}", supp.tcb_level_date_tag);
-            trace!("supp.pck_crl_num = {}", supp.pck_crl_num);
-            trace!("supp.root_ca_crl_num = {}", supp.root_ca_crl_num);
-            trace!("supp.tcb_eval_ref_num = {}", supp.tcb_eval_ref_num);
-            trace!("supp.tcb_cpusvn = {:?}", supp.tcb_cpusvn.svn);
-            trace!("supp.tcb_pce_isvsvn = {}", supp.tcb_pce_isvsvn);
-            trace!("supp.pce_id = {}", supp.pce_id);
-        }
-    */
-
     if exp_status != 0 {
         trace!("DCAP Collateral expired");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
+
+    Ok(qv_result)
+}
+
+pub fn verify_quote_sgx(
+    vec_quote: &[u8],
+    vec_coll: &[u8],
+    time_s: i64,
+) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
+    let qv_result = verify_quote_any(&vec_quote, &vec_coll, time_s)?;
 
     if vec_quote.len() < mem::size_of::<sgx_quote_t>() {
         trace!("Quote too small");
@@ -365,19 +350,17 @@ pub fn verify_quote_ecdsa(
     }
 
     let my_p_quote = vec_quote.as_ptr() as *const sgx_quote_t;
-    let report_body = unsafe { (*my_p_quote).report_body };
 
-    //    trace!(
-    //        "body.mr_signer = {}",
-    //        orig_hex::encode(&report_body.mr_signer.m)
-    //    );
-    //    trace!(
-    //        "body.mr_enclave = {}",
-    //        orig_hex::encode(&report_body.mr_enclave.m)
-    //    );
-    //    trace!("body.report_data = {}", orig_hex::encode(&report_body.report_data.d));
-
-    Ok((report_body, qv_result))
+    unsafe {
+        let version = (*my_p_quote).version;
+        if version != 3 {
+            trace!("Unrecognized quote version: {}", version);
+            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+        } else {
+            let report_body = (*my_p_quote).report_body;
+            Ok((report_body, qv_result))
+        }
+    }
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -512,7 +495,7 @@ pub fn get_quote_ecdsa(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t>
     let (vec_quote, vec_coll) = get_quote_ecdsa_untested(pub_k)?;
 
     // test self
-    match verify_quote_ecdsa(&vec_quote, &vec_coll, 0) {
+    match verify_quote_sgx(&vec_quote, &vec_coll, 0) {
         Ok(r) => {
             trace!("Self quote verified ok");
             if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {

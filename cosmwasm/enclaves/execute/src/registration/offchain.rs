@@ -1,7 +1,7 @@
 //!
 use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
 use super::seed_service::get_next_consensus_seed_from_service;
-use crate::registration::attestation::verify_quote_ecdsa;
+use crate::registration::attestation::verify_quote_sgx;
 use crate::registration::onchain::split_combined_cert;
 #[cfg(feature = "verify-validator-whitelist")]
 use block_verifier::validator_whitelist;
@@ -481,7 +481,7 @@ fn get_verified_migration_report_body() -> SgxResult<sgx_report_body_t> {
 
         let (_, vec_quote, vec_coll) = split_combined_cert(cert.as_ptr(), cert.len() as u32);
 
-        match verify_quote_ecdsa(vec_quote.as_slice(), vec_coll.as_slice(), 0) {
+        match verify_quote_sgx(vec_quote.as_slice(), vec_coll.as_slice(), 0) {
             Ok((body, _)) => {
                 return Ok(body);
             }
