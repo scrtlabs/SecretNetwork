@@ -436,7 +436,6 @@ func (app *SecretNetworkApp) Initialize() {
 	//nolint:errcheck
 }
 
-
 // Name returns the name of the App
 func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 
