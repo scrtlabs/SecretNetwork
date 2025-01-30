@@ -1,15 +1,10 @@
-#[cfg(feature = "SGX_MODE_HW")]
 use log::*;
-
-use sgx_types::{sgx_ql_qv_result_t, sgx_status_t};
-
-#[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{
     sgx_isv_svn_t, sgx_ql_qe_report_info_t, sgx_quote3_error_t, sgx_self_target, sgx_target_info_t,
     sgx_tvl_verify_qve_report_and_identity,
 };
+use sgx_types::{sgx_ql_qv_result_t, sgx_status_t};
 
-#[cfg(feature = "SGX_MODE_HW")]
 extern "C" {
     pub fn ocall_verify_quote_ecdsa(
         ret_val: *mut sgx_status_t,
@@ -29,16 +24,6 @@ extern "C" {
     ) -> sgx_status_t;
 }
 
-#[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn verify_quote_any(
-    _vec_quote: &[u8],
-    _vec_coll: &[u8],
-    _time_s: i64,
-) -> Result<sgx_ql_qv_result_t, sgx_status_t> {
-    Err(sgx_status_t::SGX_ERROR_NO_DEVICE)
-}
-
-#[cfg(feature = "SGX_MODE_HW")]
 pub fn verify_quote_any(
     vec_quote: &[u8],
     vec_coll: &[u8],
