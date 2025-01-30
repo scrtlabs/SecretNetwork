@@ -14,6 +14,7 @@ use wasm3::{Instance, Memory, Trap};
 use cw_types_v010::consts::BECH32_PREFIX_ACC_ADDR;
 use cw_types_v010::encoding::Binary;
 use enclave_cosmos_types::types::{ContractCode, HandleType};
+use enclave_crypto::dcap::verify_quote_any;
 use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_ffi_types::{Ctx, EnclaveError};
 
@@ -356,6 +357,7 @@ impl Engine {
         link_fn(instance, "ed25519_batch_verify", host_ed25519_batch_verify)?;
         link_fn(instance, "secp256k1_sign", host_secp256k1_sign)?;
         link_fn(instance, "ed25519_sign", host_ed25519_sign)?;
+        link_fn(instance, "dcap_quote_verify", host_dcap_quote_verify)?;
         link_fn_no_args(instance, "check_gas", host_check_gas_used)?;
         link_fn(instance, "gas_evaporate", host_gas_evaporate)?;
 
@@ -1861,6 +1863,38 @@ fn host_ed25519_sign(
 
     // Return pointer to the allocated buffer with the value written to it
     Ok(to_low_half(ptr_to_region_in_wasm_vm) as i64)
+}
+
+fn host_dcap_quote_verify(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+    (quote_ptr, collateral_ptr): (i32, i32),
+) -> WasmEngineResult<i64> {
+    let used_gas = context.gas_costs.external_dcap_quote_verify as u64;
+    use_gas(instance, used_gas)?;
+
+    let quote_data = read_from_memory(instance, quote_ptr as u32).map_err(
+        debug_err!(err => "dcap_quote_verify error while trying to read message_hash from wasm memory: {err}")
+    )?;
+    let collateral_data = read_from_memory(instance, collateral_ptr as u32).map_err(
+        debug_err!(err => "dcap_quote_verify error while trying to read private key from wasm memory: {err}")
+    )?;
+
+    trace!("dcap_quote_verify() was called from WASM code");
+
+    // check private_key input
+    if collateral_data.is_empty() {
+        debug!("dcap_quote_verify called with empty collateral");
+        return Ok(to_high_half(WasmApiCryptoError::GenericErr as u32) as i64);
+    }
+
+    match verify_quote_any(&quote_data, &collateral_data, 0) {
+        Ok(val) => Ok(to_low_half(val as u32) as i64),
+        Err(err) => {
+            debug!("dcap_quote_verify error {}", err);
+            Ok(to_high_half(err as u32) as i64)
+        }
+    }
 }
 
 fn get_encryption_salt(timestamp: u64) -> Vec<u8> {
