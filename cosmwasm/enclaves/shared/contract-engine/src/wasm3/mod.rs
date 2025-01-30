@@ -1888,7 +1888,10 @@ fn host_dcap_quote_verify(
         return Ok(to_high_half(WasmApiCryptoError::GenericErr as u32) as i64);
     }
 
-    match verify_quote_any(&quote_data, &collateral_data, 0) {
+    let tm_ns = context.timestamp;
+    let tm_s = (tm_ns / 1000000000) as i64;
+
+    match verify_quote_any(&quote_data, &collateral_data, tm_s) {
         Ok(val) => Ok(to_low_half(val as u32) as i64),
         Err(err) => {
             debug!("dcap_quote_verify error {}", err);
