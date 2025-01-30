@@ -22,6 +22,8 @@ pub mod ed25519;
 mod hmac;
 pub mod secp256k1;
 
+pub mod dcap;
+
 mod rng;
 
 pub mod hash;
