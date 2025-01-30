@@ -238,7 +238,7 @@ pub fn verify_quote_sgx(
     vec_coll: &[u8],
     time_s: i64,
 ) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
-    let qv_result = verify_quote_any(&vec_quote, &vec_coll, time_s)?;
+    let qv_result = verify_quote_any(vec_quote, vec_coll, time_s)?;
 
     if vec_quote.len() < mem::size_of::<sgx_quote_t>() {
         trace!("Quote too small");
