@@ -1,11 +1,9 @@
-#[cfg(feature = "SGX_MODE_HW")]
 use core::mem;
 
 use enclave_crypto::dcap::verify_quote_any;
 use enclave_crypto::KeyPair;
 use std::vec::Vec;
 
-#[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 
 #[cfg(feature = "SGX_MODE_HW")]

@@ -40,9 +40,6 @@ use std::panic;
 use std::slice;
 use tendermint::Hash::Sha256 as tm_Sha256;
 
-#[cfg(feature = "verify-validator-whitelist")]
-use validator_whitelist::ValidatorList;
-
 use super::persistency::{write_master_pub_keys, write_seed};
 use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
 
@@ -871,9 +868,9 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
     );
 
     #[cfg(feature = "verify-validator-whitelist")]
-    if (approved_whitelisted < validator_whitelist::VALIDATOR_THRESHOLD) {
-        return false;
+    if approved_whitelisted < validator_whitelist::VALIDATOR_THRESHOLD {
         error!("not enogh whitelisted validators");
+        return false;
     }
 
     if approved_power * 3 < total_voting_power * 2 {
