@@ -740,12 +740,12 @@ fn get_sdk_messages_from_sign_bytes(
             );
 
             // Always starts with '\x19Ethereum Signed Message:\n\d+{'
-            // So we need to find the first occurance of '{' and go from there until the end
+            // So we need to find the first occurrence of '{' and go from there until the end
             let start_index = match sign_bytes_as_string.find('{') {
                 Some(start_index) => start_index,
                 None => {
                     warn!(
-                        "SIGN_MODE_EIP_191 failed to find first occurance of '{{' in '{}'",
+                        "SIGN_MODE_EIP_191 failed to find first occurrence of '{{' in '{}'",
                         sign_bytes_as_string
                     );
                     return Err(EnclaveError::FailedTxVerification);
