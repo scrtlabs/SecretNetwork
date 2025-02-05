@@ -229,15 +229,10 @@ pub enum NodeAuthResult {
 /// enclave while authenticating a new node in the network.
 /// cbindgen:prefix-with-name
 #[repr(C)]
-#[derive(Debug, Display, PartialEq, Eq)]
+#[derive(Debug, Display, PartialEq, Eq, Default)]
 pub enum HealthCheckResult {
+    #[default]
     Success,
-}
-
-impl Default for HealthCheckResult {
-    fn default() -> Self {
-        HealthCheckResult::Success
-    }
 }
 
 /// This type holds a pointer to a VmError that is boxed on the untrusted side

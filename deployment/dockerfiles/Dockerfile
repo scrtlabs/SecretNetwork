@@ -7,8 +7,8 @@
 #   `--target build-deb-mainnet` - the image used to generate deb package for mainnet (will pull precompiled enclave)
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
-ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-rust:2004-1.1.6
-ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.20-dcap
+ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-rust:2204-1.1.6
+ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:22.04-2.20-dcap
 
 # ***************** PREPARE COMPILE ENCLAVE ************** #
 
@@ -16,13 +16,13 @@ FROM $SCRT_BASE_IMAGE_ENCLAVE AS prepare-compile-enclave
 
 RUN apt-get update &&  \
     apt-get install -y --no-install-recommends \
-    clang-10 && \
+    clang-12 && \
     rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/root/.cargo/bin:$PATH"
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
+WORKDIR /go/src/github.com/scrtlabs/SecretNetwork/
 
 # ***************** COMPILE ENCLAVE ************** #
 FROM prepare-compile-enclave AS compile-enclave
@@ -51,7 +51,7 @@ RUN rustup component add rust-src
 RUN cargo install xargo --version 0.3.25
 
 
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
+WORKDIR /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm
 
 RUN . /opt/sgxsdk/environment && env \
     && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
@@ -70,7 +70,7 @@ ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
-RUN git clone --branch v1.11.5 --depth 1 https://github.com/scrtlabs/tm-secret-enclave.git
+RUN git clone --branch main --depth 1 https://github.com/scrtlabs/tm-secret-enclave.git
 
 WORKDIR tm-secret-enclave
 
@@ -95,7 +95,7 @@ RUN tar -C /usr/local -xzf go.linux-amd64.tar.gz
 RUN go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork
+WORKDIR /go/src/github.com/scrtlabs/SecretNetwork
 
 ARG BUILD_VERSION="v0.0.0"
 ARG SGX_MODE=SW
@@ -122,28 +122,29 @@ COPY app app
 COPY go.mod .
 COPY go.sum .
 COPY cmd cmd
+COPY eip191 eip191
 COPY Makefile .
 RUN true
 COPY client client
 
 RUN ln -s /usr/lib/x86_64-linux-gnu/liblz4.so /usr/local/lib/liblz4.so  && ln -s /usr/lib/x86_64-linux-gnu/libzstd.so /usr/local/lib/libzstd.so
 
-RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/
+RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/release/
 
-COPY --from=compile-enclave /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so
-COPY --from=compile-enclave /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so
+COPY --from=compile-enclave /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so
+COPY --from=compile-enclave /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so
 
-RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop
-RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy
-RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production
+RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/develop
+RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/sw_dummy
+RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/production
 
-RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/spid.txt
-RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/spid.txt
-RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/spid.txt
+RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/develop/spid.txt
+RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/sw_dummy/spid.txt
+RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/production/spid.txt
 
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/api_key.txt
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/develop/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/sw_dummy/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/production/api_key.txt
 
 RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS=${CGO_LDFLAGS} DB_BACKEND=${DB_BACKEND} VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
 RUN . /opt/sgxsdk/environment && env && VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
@@ -152,7 +153,7 @@ RUN . /opt/sgxsdk/environment && env && VERSION=${VERSION} FEATURES=${FEATURES} 
 FROM $SCRT_RELEASE_BASE_IMAGE as release-image
 
 # wasmi-sgx-test script requirements
-RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
+RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main" && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
@@ -186,11 +187,11 @@ RUN ln -s /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/x86_64-linux-gnu/
 WORKDIR /root
 
 # Copy over binaries from the build-env
-COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
-COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
-COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
-COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
-COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/api/librandom_api.so /usr/lib/librandom_api.so
+COPY --from=compile-secretd /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
+COPY --from=compile-secretd /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
+COPY --from=compile-secretd /go/src/github.com/scrtlabs/SecretNetwork/secretd /usr/bin/secretd
+COPY --from=compile-tendermint-enclave /go/src/github.com/scrtlabs/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
+COPY --from=compile-tendermint-enclave /go/src/github.com/scrtlabs/SecretNetwork/tm-secret-enclave/api/librandom_api.so /usr/lib/librandom_api.so
 
 
 COPY deployment/docker/testnet/bootstrap_init.sh .
@@ -272,12 +273,12 @@ RUN mkdir -p ./go-cosmwasm/api/
 COPY Makefile .
 
 # Copy over binaries from the build-env
-RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/
-RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
-COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so ./go-cosmwasm/tendermint_enclave.signed.so
-COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/api/librandom_api.so ./go-cosmwasm/librandom_api.so
-RUN cp /go/src/github.com/enigmampc/SecretNetwork/secretd secretd
-RUN cp /go/src/github.com/enigmampc/SecretNetwork/secretcli secretcli
+RUN cp /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/
+RUN cp /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
+COPY --from=compile-tendermint-enclave /go/src/github.com/scrtlabs/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so ./go-cosmwasm/tendermint_enclave.signed.so
+COPY --from=compile-tendermint-enclave /go/src/github.com/scrtlabs/SecretNetwork/tm-secret-enclave/api/librandom_api.so ./go-cosmwasm/librandom_api.so
+RUN cp /go/src/github.com/scrtlabs/SecretNetwork/secretd secretd
+RUN cp /go/src/github.com/scrtlabs/SecretNetwork/secretcli secretcli
 
 COPY ./deployment/deb ./deployment/deb
 COPY ./deployment/docker/builder/build_deb.sh .
@@ -308,28 +309,28 @@ ENV VERSION=${BUILD_VERSION}
 ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
+WORKDIR /go/src/github.com/scrtlabs/SecretNetwork/
 
 COPY check-hw check-hw
 
 RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O check-hw/check_hw_enclave.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
-COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so check-hw/check_hw_enclave_testnet.so
+COPY --from=compile-secretd /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so check-hw/check_hw_enclave_testnet.so
 
-RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop
-RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy
-RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production
+RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/develop
+RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/sw_dummy
+RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/production
 
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/api_key.txt
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
-RUN --mount=type=secret,id=API_KEY_MAINNET,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/develop/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/sw_dummy/api_key.txt
+RUN --mount=type=secret,id=API_KEY_MAINNET,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/production/api_key.txt
 
 
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/check-hw
+WORKDIR /go/src/github.com/scrtlabs/SecretNetwork/check-hw
 
 RUN make
 
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
+WORKDIR /go/src/github.com/scrtlabs/SecretNetwork/
 
 COPY ./deployment/docker/builder/create_check_hw_tar.sh .
 RUN chmod +x create_check_hw_tar.sh
@@ -347,5 +348,7 @@ RUN chmod +x bootstrap_init.sh
 COPY deployment/docker/localsecret/faucet/faucet_server.js .
 
 HEALTHCHECK --interval=5s --timeout=1s --retries=120 CMD bash -c 'curl -sfm1 http://localhost:26657/status && curl -s http://localhost:26657/status | jq -e "(.result.sync_info.latest_block_height | tonumber) > 0"'
+
+WORKDIR /root
 
 ENTRYPOINT ["./bootstrap_init.sh"]

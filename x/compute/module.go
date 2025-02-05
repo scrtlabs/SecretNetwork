@@ -3,33 +3,30 @@ package compute
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"math/rand"
 
-	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
-
-	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-
+	tm_type "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/scrt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"github.com/scrtlabs/SecretNetwork/x/compute/client/cli"
-	"github.com/scrtlabs/SecretNetwork/x/compute/client/rest"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 var (
-	_ module.AppModule      = AppModule{}
-	_ module.AppModuleBasic = AppModuleBasic{}
+	_ module.AppModule           = AppModule{}
+	_ module.HasName             = AppModule{}
+	_ module.HasGenesis          = AppModule{}
+	_ module.HasServices         = AppModule{}
+	_ module.HasConsensusVersion = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
 )
 
 // AppModuleBasic defines the basic application module used by the compute module.
@@ -52,7 +49,7 @@ func (AppModuleBasic) Name() string {
 // module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(&GenesisState{
-		// Params: DefaultParams(),
+		Params: types.DefaultParams(),
 	})
 }
 
@@ -66,18 +63,11 @@ func (AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, _ client.TxEnco
 	return ValidateGenesis(data)
 }
 
-// RegisterRESTRoutes registers the REST routes for the compute module.
-func (AppModuleBasic) RegisterRESTRoutes(ctx client.Context, rtr *mux.Router) {
-	rest.RegisterRoutes(ctx, rtr)
-}
-
-// GetTxCmd returns the root tx command for the compute module.
-func (AppModuleBasic) GetTxCmd() *cobra.Command {
+func (b AppModuleBasic) GetTxCmd() *cobra.Command {
 	return cli.GetTxCmd()
 }
 
-// GetQueryCmd returns no root query command for the compute module.
-func (AppModuleBasic) GetQueryCmd() *cobra.Command {
+func (b AppModuleBasic) GetQueryCmd() *cobra.Command {
 	return cli.GetQueryCmd()
 }
 
@@ -103,7 +93,7 @@ func NewAppModule(keeper Keeper) AppModule {
 }
 
 // ConsensusVersion implements AppModule/ConsensusVersion.
-func (AppModule) ConsensusVersion() uint64 { return 5 }
+func (AppModule) ConsensusVersion() uint64 { return 6 }
 
 func (am AppModule) RegisterServices(configurator module.Configurator) {
 	types.RegisterMsgServer(configurator.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
@@ -128,34 +118,20 @@ func (am AppModule) RegisterServices(configurator module.Configurator) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
-	return keeper.NewLegacyQuerier(am.keeper)
-}
-
-// RegisterInvariants registers the compute module invariants.
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
-// Route returns the message routing key for the compute module.
-func (am AppModule) Route() sdk.Route {
-	return sdk.NewRoute(RouterKey, NewHandler(am.keeper))
-}
-
-// QuerierRoute returns the compute module's querier route name.
-func (AppModule) QuerierRoute() string {
-	return QuerierRoute
+	err = configurator.RegisterMigration(types.ModuleName, 5, m.Migrate5to6)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // InitGenesis performs genesis initialization for the compute module. It returns
 // no validator updates.
-func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
+func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) {
 	var genesisState GenesisState
 	cdc.MustUnmarshalJSON(data, &genesisState)
 	if err := InitGenesis(ctx, am.keeper, genesisState); err != nil {
 		panic(err)
 	}
-	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns the exported genesis state as raw bytes for the compute
@@ -166,76 +142,47 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 }
 
 // BeginBlock returns the begin blocker for the compute module.
-func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBlock) {
-	header, err := beginBlock.Header.Marshal()
+func (am AppModule) BeginBlock(c context.Context) error {
+	// Note: as of tendermint v0.38.0 block begin request info is no longer available
+	ctx := c.(sdk.Context)
+	block_header := ctx.BlockHeader()
+	header, err := block_header.Marshal()
 	if err != nil {
-		ctx.Logger().Error("Failed to marshal header")
-		panic(err)
+		ctx.Logger().Error("Failed to marshal block header")
+		return err
 	}
 
-	// There is a possibility, specifically was found on upgrade block, when there are no pre-commits at all (beginBlock.Commit == nil)
-	// In this case Marshal will fail with a Seg Fault.
-	// The fix below it a temporary fix until we will investigate the issue in tendermint.
-	if beginBlock.Commit == nil {
-		ctx.Logger().Info(fmt.Sprintf("Skipping commit submission to the enclave for block %d\n", beginBlock.Header.Height))
-		return
-	}
-
-	commit, err := beginBlock.Commit.Marshal()
+	commit := ctx.Commit()
+	b_commit, err := commit.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal commit")
-		panic(err)
+		return err
 	}
 
-	data, err := beginBlock.Data.Marshal()
+	x2_data := scrt.UnFlatten(ctx.TxBytes())
+	tm_data := tm_type.Data{Txs: x2_data}
+	data, err := tm_data.Marshal()
 	if err != nil {
-		ctx.Logger().Error("Failed to marshal data")
-		panic(err)
+		ctx.Logger().Error("Failed to marshal tx data")
+		return err
 	}
-
-	if beginBlock.Header.EncryptedRandom != nil {
-		randomAndProof := append(beginBlock.Header.EncryptedRandom.Random, beginBlock.Header.EncryptedRandom.Proof...) //nolint:all
-		random, err := api.SubmitBlockSignatures(header, commit, data, randomAndProof)
+	if block_header.EncryptedRandom != nil {
+		randomAndProof := append(block_header.EncryptedRandom.Random, block_header.EncryptedRandom.Proof...) //nolint:all
+		random, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof)
 		if err != nil {
 			ctx.Logger().Error("Failed to submit block signatures")
-			panic(err)
+			return err
 		}
 
 		am.keeper.SetRandomSeed(ctx, random)
 	} else {
-		println("No random got from TM header")
+		ctx.Logger().Debug("Non-encrypted block", "Block_hash", block_header.LastBlockId.Hash, "Height", ctx.BlockHeight(), "Txs", len(x2_data))
 	}
-}
-
-// EndBlock returns the end blocker for the compute module. It returns no validator
-// updates.
-func (AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-	return []abci.ValidatorUpdate{}
-}
-
-// ____________________________________________________________________________
-
-// AppModuleSimulation functions
-
-// GenerateGenesisState creates a randomized GenState of the bank module.
-func (AppModule) GenerateGenesisState(simState *module.SimulationState) { //nolint:all
-}
-
-// ProposalContents doesn't return any content functions for governance proposals.
-func (AppModule) ProposalContents(simState module.SimulationState) []simtypes.WeightedProposalContent { //nolint:all
 	return nil
 }
 
-// RandomizedParams creates randomized bank param changes for the simulator.
-func (AppModule) RandomizedParams(r *rand.Rand) []simtypes.ParamChange { //nolint:all
-	return nil
-}
+// IsAppModule implements the appmodule.AppModule interface.
+func (AppModule) IsAppModule() {}
 
-// RegisterStoreDecoder registers a decoder for supply module's types
-func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) { //nolint:all
-}
-
-// WeightedOperations returns the all the gov module operations with their respective weights.
-func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation { //nolint:all
-	return nil
-}
+// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
+func (AppModule) IsOnePerModuleType() {}

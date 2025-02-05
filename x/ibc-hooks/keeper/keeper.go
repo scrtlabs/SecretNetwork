@@ -5,7 +5,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types/address"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/core/store"
+	"cosmossdk.io/log"
 
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 
@@ -14,16 +15,16 @@ import (
 
 type (
 	Keeper struct {
-		storeKey sdk.StoreKey
+		storeService store.KVStoreService
 	}
 )
 
 // NewKeeper returns a new instance of the x/ibchooks keeper
 func NewKeeper(
-	storeKey sdk.StoreKey,
+	storeService store.KVStoreService,
 ) Keeper {
 	return Keeper{
-		storeKey: storeKey,
+		storeService: storeService,
 	}
 }
 
@@ -38,20 +39,27 @@ func GetPacketKey(channel string, packetSequence uint64) []byte {
 
 // StorePacketCallback stores which contract will be listening for the ack or timeout of a packet
 func (k Keeper) StorePacketCallback(ctx sdk.Context, channel string, packetSequence uint64, contract string) {
-	store := ctx.KVStore(k.storeKey)
-	store.Set(GetPacketKey(channel, packetSequence), []byte(contract))
+	store := k.storeService.OpenKVStore(ctx)
+	err := store.Set(GetPacketKey(channel, packetSequence), []byte(contract))
+	if err != nil {
+		ctx.Logger().Error("store callback", "store", err.Error())
+	}
 }
 
 // GetPacketCallback returns the bech32 addr of the contract that is expecting a callback from a packet
 func (k Keeper) GetPacketCallback(ctx sdk.Context, channel string, packetSequence uint64) string {
-	store := ctx.KVStore(k.storeKey)
-	return string(store.Get(GetPacketKey(channel, packetSequence)))
+	store := k.storeService.OpenKVStore(ctx)
+	value, _ := store.Get(GetPacketKey(channel, packetSequence))
+	return string(value)
 }
 
 // DeletePacketCallback deletes the callback from storage once it has been processed
 func (k Keeper) DeletePacketCallback(ctx sdk.Context, channel string, packetSequence uint64) {
-	store := ctx.KVStore(k.storeKey)
-	store.Delete(GetPacketKey(channel, packetSequence))
+	store := k.storeService.OpenKVStore(ctx)
+	err := store.Delete(GetPacketKey(channel, packetSequence))
+	if err != nil {
+		ctx.Logger().Error("delete callback", "store", err.Error())
+	}
 }
 
 func DeriveIntermediateSender(channel, originalSender, bech32Prefix string) (string, error) {

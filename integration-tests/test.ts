@@ -32,6 +32,7 @@ import {
   waitForBlocks,
   waitForIBCChannel,
   waitForIBCConnection,
+  getValueFromEvents,
 } from "./utils";
 
 type Account = {
@@ -82,15 +83,16 @@ beforeAll(async () => {
   for (let i = 0; i < mnemonics.length; i++) {
     const mnemonic = mnemonics[i];
     const walletAmino = new AminoWallet(mnemonic);
+    const walletProto = new Wallet(mnemonic);
     accounts[i] = {
       address: walletAmino.address,
       mnemonic: mnemonic,
       walletAmino,
-      walletProto: new Wallet(mnemonic),
+      walletProto,
       secretjs: new SecretNetworkClient({
         url: "http://localhost:1317",
-        wallet: walletAmino,
-        walletAddress: walletAmino.address,
+        wallet: walletProto,
+        walletAddress: walletProto.address,
         chainId: "secretdev-1",
       }),
     };
@@ -100,15 +102,16 @@ beforeAll(async () => {
   for (let i = 0; i < mnemonics.length; i++) {
     const mnemonic = mnemonics[i];
     const walletAmino = new AminoWallet(mnemonic);
+    const walletProto = new Wallet(mnemonic);
     accounts2[i] = {
       address: walletAmino.address,
       mnemonic: mnemonic,
       walletAmino,
-      walletProto: new Wallet(mnemonic),
+      walletProto,
       secretjs: new SecretNetworkClient({
         url: "http://localhost:2317",
-        wallet: walletAmino,
-        walletAddress: walletAmino.address,
+        wallet: walletProto,
+        walletAddress: walletProto.address,
         chainId: "secretdev-2",
       }),
     };
@@ -128,7 +131,7 @@ beforeAll(async () => {
       secretjs: new SecretNetworkClient({
         url: "http://localhost:1317",
         chainId: "secretdev-1",
-        wallet: wallet,
+        wallet: walletProto,
         walletAddress: address,
       }),
     };
@@ -163,7 +166,9 @@ beforeAll(async () => {
 
   if (t.code !== 0) {
     console.error(`failed to multisend coins`);
-    throw new Error(`Failed to multisend coins to initial accounts: ${t.code}: ${t.rawLog}`);
+    throw new Error(
+      `Failed to multisend coins to initial accounts: ${t.code}: ${t.rawLog}`
+    );
   }
 
   readonly = new SecretNetworkClient({
@@ -194,10 +199,10 @@ beforeAll(async () => {
   ]);
 
   contracts["secretdev-1"].v1.codeId = Number(
-    tx.arrayLog.find((x) => x.key === "code_id").value
+    getValueFromEvents(tx.events, "message.code_id", 1)
   );
   contracts["secretdev-1"].v010.codeId = Number(
-    tx.arrayLog.reverse().find((x) => x.key === "code_id").value
+    getValueFromEvents(tx.events, "message.code_id", 2)
   );
 
   console.log("Instantiating contracts on secretdev-1...");
@@ -206,15 +211,18 @@ beforeAll(async () => {
     contracts["secretdev-1"].v010,
   ]);
 
-  contracts["secretdev-1"].v1.address = tx.arrayLog.find(
-    (x) => x.key === "contract_address"
-  ).value;
+  contracts["secretdev-1"].v1.address = getValueFromEvents(
+    tx.events,
+    "message.contract_address"
+  );
   contracts["secretdev-1"].v1.ibcPortId =
     "wasm." + contracts["secretdev-1"].v1.address;
 
-  contracts["secretdev-1"].v010.address = tx.arrayLog
-    .reverse()
-    .find((x) => x.key === "contract_address").value;
+  contracts["secretdev-1"].v010.address = getValueFromEvents(
+    tx.events,
+    "message.contract_address",
+    2
+  );
 
   // create a second validator for MsgRedelegate tests
   const { validators } = await readonly.query.staking.validators({});
@@ -274,40 +282,32 @@ describe("BankMsg", () => {
         console.error(tx.rawLog);
       }
       expect(tx.code).toBe(TxResultCode.Success);
-      expect(tx.arrayLog.filter((x) => x.type === "coin_spent")).toStrictEqual([
-        {
-          key: "spender",
-          msg: 0,
-          type: "coin_spent",
-          value: accounts[0].address,
-        },
-        { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
-        {
-          key: "spender",
-          msg: 0,
-          type: "coin_spent",
-          value: contracts["secretdev-1"].v1.address,
-        },
-        { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
-      ]);
+
       expect(
-        tx.arrayLog.filter((x) => x.type === "coin_received")
-      ).toStrictEqual([
-        {
-          key: "receiver",
-          msg: 0,
-          type: "coin_received",
-          value: contracts["secretdev-1"].v1.address,
-        },
-        { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-        {
-          key: "receiver",
-          msg: 0,
-          type: "coin_received",
-          value: accounts[1].address,
-        },
-        { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-      ]);
+        getValueFromEvents(tx.events, "coin_spent.spender", 2)
+      ).toStrictEqual(accounts[0].address);
+      expect(
+        getValueFromEvents(tx.events, "coin_spent.amount", 2)
+      ).toStrictEqual("1uscrt");
+      expect(
+        getValueFromEvents(tx.events, "coin_spent.spender", 3)
+      ).toStrictEqual(contracts["secretdev-1"].v1.address);
+      expect(
+        getValueFromEvents(tx.events, "coin_spent.amount", 3)
+      ).toStrictEqual("1uscrt");
+
+      expect(
+        getValueFromEvents(tx.events, "coin_received.receiver", 2)
+      ).toStrictEqual(contracts["secretdev-1"].v1.address);
+      expect(
+        getValueFromEvents(tx.events, "coin_received.amount", 2)
+      ).toStrictEqual("1uscrt");
+      expect(
+        getValueFromEvents(tx.events, "coin_received.receiver", 3)
+      ).toStrictEqual(accounts[1].address);
+      expect(
+        getValueFromEvents(tx.events, "coin_received.amount", 3)
+      ).toStrictEqual("1uscrt");
     });
 
     describe("v0.10", () => {
@@ -332,41 +332,30 @@ describe("BankMsg", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
         expect(
-          tx.arrayLog.filter((x) => x.type === "coin_spent")
-        ).toStrictEqual([
-          {
-            key: "spender",
-            msg: 0,
-            type: "coin_spent",
-            value: accounts[0].address,
-          },
-          { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
-          {
-            key: "spender",
-            msg: 0,
-            type: "coin_spent",
-            value: contracts["secretdev-1"].v010.address,
-          },
-          { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
-        ]);
+          getValueFromEvents(tx.events, "coin_spent.spender", 2)
+        ).toStrictEqual(accounts[0].address);
         expect(
-          tx.arrayLog.filter((x) => x.type === "coin_received")
-        ).toStrictEqual([
-          {
-            key: "receiver",
-            msg: 0,
-            type: "coin_received",
-            value: contracts["secretdev-1"].v010.address,
-          },
-          { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-          {
-            key: "receiver",
-            msg: 0,
-            type: "coin_received",
-            value: accounts[1].address,
-          },
-          { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-        ]);
+          getValueFromEvents(tx.events, "coin_spent.amount", 2)
+        ).toStrictEqual("1uscrt");
+        expect(
+          getValueFromEvents(tx.events, "coin_spent.spender", 3)
+        ).toStrictEqual(contracts["secretdev-1"].v010.address);
+        expect(
+          getValueFromEvents(tx.events, "coin_spent.amount", 3)
+        ).toStrictEqual("1uscrt");
+
+        expect(
+          getValueFromEvents(tx.events, "coin_received.receiver", 2)
+        ).toStrictEqual(contracts["secretdev-1"].v010.address);
+        expect(
+          getValueFromEvents(tx.events, "coin_received.amount", 2)
+        ).toStrictEqual("1uscrt");
+        expect(
+          getValueFromEvents(tx.events, "coin_received.receiver", 3)
+        ).toStrictEqual(accounts[1].address);
+        expect(
+          getValueFromEvents(tx.events, "coin_received.amount", 3)
+        ).toStrictEqual("1uscrt");
       });
 
       test("error", async () => {
@@ -448,6 +437,7 @@ describe("Env", () => {
 
           let txs = await Promise.all(txProm);
 
+          let count_vals = ["-1", "-1"];
           for (let i = 0; i < 2; i++) {
             if (txs[i].code !== TxResultCode.Success) {
               console.error(txs[i].rawLog);
@@ -455,19 +445,20 @@ describe("Env", () => {
 
             expect(txs[i].code).toBe(TxResultCode.Success);
 
-            const { attributes } = txs[i].jsonLog[0].events.find(
-              (x) => x.type === "wasm-count"
+            count_vals[i] = getValueFromEvents(
+              txs[i].events,
+              "wasm-count.count-val"
             );
-
-            expect(attributes.length).toBe(2);
-
-            const { value } = attributes.find((x) => x.key === "count-val");
-
-            if (value !== i.toString()) {
-              success = false;
-              break;
-            }
+            expect(
+              getValueFromEvents(txs[i].events, "wasm-count.count-val", 2)
+                .length
+            ).toBe(0);
           }
+          if (Number(count_vals[0]) > Number(count_vals[1])) {
+            [count_vals[0], count_vals[1]] = [count_vals[1], count_vals[0]];
+          }
+          expect(count_vals[0]).toBe("0");
+          expect(count_vals[1]).toBe("1");
 
           if (success) {
             break;
@@ -565,14 +556,14 @@ describe("GovMsgVote", () => {
   beforeAll(async () => {
     let tx = await accounts[0].secretjs.tx.gov.submitProposal(
       {
-        type: ProposalType.TextProposal,
         proposer: accounts[0].address,
-        // on localsecret min deposit is 10 SCRT
-        initial_deposit: stringToCoins("10000000uscrt"),
-        content: {
-          title: "Hi",
-          description: "Hello",
-        },
+        // on localsecret min deposit is 1000 SCRT
+        initial_deposit: stringToCoins("1000000000uscrt"),
+        messages: [],
+        metadata: "some_metadatas",
+        summary: "summary",
+        title: "title",
+        expedited: false,
       },
       {
         broadcastCheckIntervalMs: 100,
@@ -585,7 +576,7 @@ describe("GovMsgVote", () => {
     expect(tx.code).toBe(TxResultCode.Success);
 
     proposalId = Number(
-      tx.jsonLog?.[0].events
+      tx.events
         .find((e) => e.type === "submit_proposal")
         ?.attributes.find((a) => a.key === "proposal_id")?.value
     );
@@ -613,16 +604,18 @@ describe("GovMsgVote", () => {
       }
       expect(tx.code).toBe(TxResultCode.Success);
 
-      const { attributes } = tx.jsonLog[0].events.find(
-        (x) => x.type === "proposal_vote"
-      );
-      expect(attributes).toContainEqual({
+      const { attributes } = tx.events.find((x) => x.type === "proposal_vote");
+      const proposal_id = attributes.find((x) => x.key === "proposal_id");
+      expect(proposal_id).toStrictEqual({
         key: "proposal_id",
         value: String(proposalId),
+        index: true,
       });
-      expect(attributes).toContainEqual({
+      const option = attributes.find((x) => x.key === "option");
+      expect(option).toStrictEqual({
         key: "option",
-        value: '{"option":1,"weight":"1.000000000000000000"}',
+        value: '[{"option":1,"weight":"1.000000000000000000"}]',
+        index: true,
       });
     });
 
@@ -642,8 +635,8 @@ describe("GovMsgVote", () => {
         { gasLimit: 250_000 }
       );
 
-      expect(tx.code).toBe(2 /* Gov ErrUnknownProposal */);
-      expect(tx.rawLog).toContain(`${proposalId + 1e6}: unknown proposal`);
+      expect(tx.code).toBe(3 /* Gov ErrInvalidSequence */);
+      expect(tx.rawLog).toContain(`${proposalId + 1e6}: inactive proposal`);
     });
   });
 
@@ -668,16 +661,18 @@ describe("GovMsgVote", () => {
       }
       expect(tx.code).toBe(TxResultCode.Success);
 
-      const { attributes } = tx.jsonLog[0].events.find(
-        (x) => x.type === "proposal_vote"
-      );
-      expect(attributes).toContainEqual({
+      const { attributes } = tx.events.find((x) => x.type === "proposal_vote");
+      const proposal_id = attributes.find((x) => x.key === "proposal_id");
+      expect(proposal_id).toStrictEqual({
         key: "proposal_id",
+        index: true,
         value: String(proposalId),
       });
-      expect(attributes).toContainEqual({
+      const option = attributes.find((x) => x.key === "option");
+      expect(option).toStrictEqual({
+        index: true,
         key: "option",
-        value: '{"option":1,"weight":"1.000000000000000000"}',
+        value: '[{"option":1,"weight":"1.000000000000000000"}]',
       });
     });
 
@@ -697,8 +692,8 @@ describe("GovMsgVote", () => {
         { gasLimit: 250_000 }
       );
 
-      expect(tx.code).toBe(2 /* Gov ErrUnknownProposal */);
-      expect(tx.rawLog).toContain(`${proposalId + 1e6}: unknown proposal`);
+      expect(tx.code).toBe(3 /* Gov ErrInvalidSequence */);
+      expect(tx.rawLog).toContain(`${proposalId + 1e6}: inactive proposal`);
     });
   });
 });
@@ -730,16 +725,12 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        const { attributes } = tx.jsonLog[0].events.find(
-          (e) => e.type === "wasm"
-        );
-        expect(attributes.length).toBe(2);
-        expect(attributes[0].key).toBe("contract_address");
-        expect(attributes[0].value).toBe(contracts["secretdev-1"].v1.address);
-        expect(attributes[1].key).toBe("contract_address");
-        expect(attributes[1].value).not.toBe(
+        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(
           contracts["secretdev-1"].v1.address
         );
+        expect(
+          getValueFromEvents(tx.events, "wasm.contract_address", 2).length
+        ).toBeGreaterThan(0);
       });
 
       test("error", async () => {
@@ -795,16 +786,12 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        const { attributes } = tx.jsonLog[0].events.find(
-          (e) => e.type === "wasm"
-        );
-        expect(attributes.length).toBe(2);
-        expect(attributes[0].key).toBe("contract_address");
-        expect(attributes[0].value).toBe(contracts["secretdev-1"].v010.address);
-        expect(attributes[1].key).toBe("contract_address");
-        expect(attributes[1].value).not.toBe(
+        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(
           contracts["secretdev-1"].v010.address
         );
+        expect(
+          getValueFromEvents(tx.events, "wasm.contract_address", 2).length
+        ).toBeGreaterThan(0);
       });
 
       test("error", async () => {
@@ -861,14 +848,15 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        const { attributes } = tx.jsonLog[0].events.find(
-          (e) => e.type === "wasm"
+        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(
+          contracts["secretdev-1"].v1.address
         );
-        expect(attributes.length).toBe(2);
-        expect(attributes[0].key).toBe("contract_address");
-        expect(attributes[0].value).toBe(contracts["secretdev-1"].v1.address);
-        expect(attributes[1].key).toBe("contract_address");
-        expect(attributes[1].value).toBe(contracts["secretdev-1"].v1.address);
+        expect(getValueFromEvents(tx.events, "wasm.contract_address", 2)).toBe(
+          contracts["secretdev-1"].v1.address
+        );
+        expect(
+          getValueFromEvents(tx.events, "wasm.contract_address", 3).length
+        ).toBe(0);
       });
 
       test("error", async () => {
@@ -922,14 +910,15 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        const { attributes } = tx.jsonLog[0].events.find(
-          (e) => e.type === "wasm"
+        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(
+          contracts["secretdev-1"].v010.address
         );
-        expect(attributes.length).toBe(2);
-        expect(attributes[0].key).toBe("contract_address");
-        expect(attributes[0].value).toBe(contracts["secretdev-1"].v010.address);
-        expect(attributes[1].key).toBe("contract_address");
-        expect(attributes[1].value).toBe(contracts["secretdev-1"].v010.address);
+        expect(getValueFromEvents(tx.events, "wasm.contract_address", 2)).toBe(
+          contracts["secretdev-1"].v010.address
+        );
+        expect(
+          getValueFromEvents(tx.events, "wasm.contract_address", 3).length
+        ).toBe(0);
       });
 
       test("error", async () => {
@@ -971,14 +960,10 @@ describe("StakingMsg", () => {
         );
         expect(delegationStatus).toBeTruthy();
 
-        const { attributes } = tx.jsonLog[0].events.find(
-          (e) => e.type === "delegate"
+        expect(getValueFromEvents(tx.events, "delegate.amount")).toBe("1uscrt");
+        expect(getValueFromEvents(tx.events, "delegate.validator")).toBe(
+          validator
         );
-        expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
-        expect(attributes).toContainEqual({
-          key: "validator",
-          value: validator,
-        });
       });
 
       test("error", async () => {
@@ -1015,15 +1000,10 @@ describe("StakingMsg", () => {
           contracts["secretdev-1"].v010
         );
         expect(delegationStatus).toBeTruthy();
-
-        const { attributes } = tx.jsonLog[0].events.find(
-          (e) => e.type === "delegate"
+        expect(getValueFromEvents(tx.events, "delegate.amount")).toBe("1uscrt");
+        expect(getValueFromEvents(tx.events, "delegate.validator")).toBe(
+          validator
         );
-        expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
-        expect(attributes).toContainEqual({
-          key: "validator",
-          value: validator,
-        });
       });
 
       test("error", async () => {
@@ -1093,14 +1073,8 @@ describe("StakingMsg", () => {
       }
       expect(tx.code).toBe(TxResultCode.Success);
 
-      const { attributes } = tx.jsonLog[1].events.find(
-        (e) => e.type === "unbond"
-      );
-      expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
-      expect(attributes).toContainEqual({
-        key: "validator",
-        value: validator,
-      });
+      expect(getValueFromEvents(tx.events, "unbond.amount")).toBe("1uscrt");
+      expect(getValueFromEvents(tx.events, "unbond.validator")).toBe(validator);
     });
 
     test("error", async () => {
@@ -1166,14 +1140,10 @@ describe("StakingMsg", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        const { attributes } = tx.jsonLog[1].events.find(
-          (e) => e.type === "unbond"
+        expect(getValueFromEvents(tx.events, "unbond.amount")).toBe("1uscrt");
+        expect(getValueFromEvents(tx.events, "unbond.validator")).toBe(
+          validator
         );
-        expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
-        expect(attributes).toContainEqual({
-          key: "validator",
-          value: validator,
-        });
       });
 
       test("error", async () => {
@@ -1246,18 +1216,15 @@ describe("StakingMsg", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        const { attributes } = tx.jsonLog[1].events.find(
-          (e) => e.type === "redelegate"
+        expect(getValueFromEvents(tx.events, "redelegate.amount")).toBe(
+          "1uscrt"
         );
-        expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
-        expect(attributes).toContainEqual({
-          key: "source_validator",
-          value: validatorA,
-        });
-        expect(attributes).toContainEqual({
-          key: "destination_validator",
-          value: validatorB,
-        });
+        expect(
+          getValueFromEvents(tx.events, "redelegate.source_validator")
+        ).toBe(validatorA);
+        expect(
+          getValueFromEvents(tx.events, "redelegate.destination_validator")
+        ).toBe(validatorB);
       });
 
       test("error", async () => {
@@ -1329,18 +1296,15 @@ describe("StakingMsg", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        const { attributes } = tx.jsonLog[1].events.find(
-          (e) => e.type === "redelegate"
+        expect(getValueFromEvents(tx.events, "redelegate.amount")).toBe(
+          "1uscrt"
         );
-        expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
-        expect(attributes).toContainEqual({
-          key: "source_validator",
-          value: validatorA,
-        });
-        expect(attributes).toContainEqual({
-          key: "destination_validator",
-          value: validatorB,
-        });
+        expect(
+          getValueFromEvents(tx.events, "redelegate.source_validator")
+        ).toBe(validatorA);
+        expect(
+          getValueFromEvents(tx.events, "redelegate.destination_validator")
+        ).toBe(validatorB);
       });
 
       test("error", async () => {
@@ -1411,13 +1375,9 @@ describe("StakingMsg", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        const { attributes } = tx.jsonLog[1].events.find(
-          (e) => e.type === "withdraw_rewards"
-        );
-        expect(attributes).toContainEqual({
-          key: "validator",
-          value: validator,
-        });
+        expect(
+          getValueFromEvents(tx.events, "withdraw_rewards.validator")
+        ).toBe(validator);
       });
 
       test("set_withdraw_address", async () => {
@@ -1456,14 +1416,9 @@ describe("StakingMsg", () => {
           console.error(tx.rawLog);
         }
         expect(tx.code).toBe(TxResultCode.Success);
-
-        const { attributes } = tx.jsonLog[1].events.find(
-          (e) => e.type === "set_withdraw_address"
-        );
-        expect(attributes).toContainEqual({
-          key: "withdraw_address",
-          value: accounts[1].address,
-        });
+        expect(
+          getValueFromEvents(tx.events, "set_withdraw_address.withdraw_address")
+        ).toBe(accounts[1].address);
       });
 
       test("error", async () => {
@@ -1486,7 +1441,7 @@ describe("StakingMsg", () => {
           { gasLimit: 250_000 }
         );
 
-        expect(tx.code).toBe(TxResultCode.ErrInternal);
+        expect(tx.code).toBe(TxResultCode.ErrInvalidAddress);
       });
     });
 
@@ -1528,14 +1483,9 @@ describe("StakingMsg", () => {
           console.error(tx.rawLog);
         }
         expect(tx.code).toBe(TxResultCode.Success);
-
-        const { attributes } = tx.jsonLog[1].events.find(
-          (e) => e.type === "withdraw_rewards"
-        );
-        expect(attributes).toContainEqual({
-          key: "validator",
-          value: validator,
-        });
+        expect(
+          getValueFromEvents(tx.events, "withdraw_rewards.validator")
+        ).toBe(validator);
       });
 
       test("error", async () => {
@@ -1594,40 +1544,32 @@ describe("StargateMsg", () => {
       console.error(tx.rawLog);
     }
     expect(tx.code).toBe(TxResultCode.Success);
-    expect(tx.arrayLog.filter((x) => x.type === "coin_spent")).toStrictEqual([
-      {
-        key: "spender",
-        msg: 0,
-        type: "coin_spent",
-        value: accounts[0].address,
-      },
-      { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
-      {
-        key: "spender",
-        msg: 0,
-        type: "coin_spent",
-        value: contracts["secretdev-1"].v1.address,
-      },
-      { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
-    ]);
-    expect(tx.arrayLog.filter((x) => x.type === "coin_received")).toStrictEqual(
-      [
-        {
-          key: "receiver",
-          msg: 0,
-          type: "coin_received",
-          value: contracts["secretdev-1"].v1.address,
-        },
-        { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-        {
-          key: "receiver",
-          msg: 0,
-          type: "coin_received",
-          value: accounts[1].address,
-        },
-        { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-      ]
+
+    expect(
+      getValueFromEvents(tx.events, "coin_spent.spender", 2)
+    ).toStrictEqual(accounts[0].address);
+    expect(getValueFromEvents(tx.events, "coin_spent.amount", 2)).toStrictEqual(
+      "1uscrt"
     );
+    expect(
+      getValueFromEvents(tx.events, "coin_spent.spender", 3)
+    ).toStrictEqual(contracts["secretdev-1"].v1.address);
+    expect(getValueFromEvents(tx.events, "coin_spent.amount", 3)).toStrictEqual(
+      "1uscrt"
+    );
+
+    expect(
+      getValueFromEvents(tx.events, "coin_received.receiver", 2)
+    ).toStrictEqual(contracts["secretdev-1"].v1.address);
+    expect(
+      getValueFromEvents(tx.events, "coin_received.amount", 2)
+    ).toStrictEqual("1uscrt");
+    expect(
+      getValueFromEvents(tx.events, "coin_received.receiver", 3)
+    ).toStrictEqual(accounts[1].address);
+    expect(
+      getValueFromEvents(tx.events, "coin_received.amount", 3)
+    ).toStrictEqual("1uscrt");
   });
 });
 
@@ -1958,12 +1900,11 @@ describe("IBC", () => {
     expect(tx.code).toBe(TxResultCode.Success);
 
     contracts["secretdev-2"].v1.codeId = Number(
-      tx.arrayLog.find((x) => x.key === "code_id").value
+      getValueFromEvents(tx.events, "message.code_id", 1)
     );
     contracts["secretdev-2"].v010.codeId = Number(
-      tx.arrayLog.reverse().find((x) => x.key === "code_id").value
+      getValueFromEvents(tx.events, "message.code_id", 2)
     );
-
     contracts["secretdev-2"].v1.codeHash = contracts["secretdev-1"].v1.codeHash;
     contracts["secretdev-2"].v010.codeHash =
       contracts["secretdev-1"].v010.codeHash;
@@ -1979,15 +1920,18 @@ describe("IBC", () => {
     }
     expect(tx.code).toBe(TxResultCode.Success);
 
-    contracts["secretdev-2"].v1.address = tx.arrayLog.find(
-      (x) => x.key === "contract_address"
-    ).value;
+    contracts["secretdev-2"].v1.address = getValueFromEvents(
+      tx.events,
+      "message.contract_address"
+    );
     contracts["secretdev-2"].v1.ibcPortId =
       "wasm." + contracts["secretdev-2"].v1.address;
 
-    contracts["secretdev-2"].v010.address = tx.arrayLog
-      .reverse()
-      .find((x) => x.key === "contract_address").value;
+    contracts["secretdev-2"].v010.address = getValueFromEvents(
+      tx.events,
+      "message.contract_address",
+      2
+    );
 
     console.log("Waiting for IBC to set up...");
     await waitForIBCConnection("secretdev-1", "http://localhost:1317");
@@ -2028,6 +1972,7 @@ describe("IBC", () => {
       source_port: "transfer",
       token: stringToCoin("1uscrt"),
       timeout_timestamp: String(Math.floor(Date.now() / 1000 + 30)),
+      memo: "hi",
     });
     if (result.code !== TxResultCode.Success) {
       console.error(result.rawLog);

@@ -19,6 +19,7 @@ use crate::traits::SIVEncryptable;
 use crate::CryptoError;
 use aes_siv::aead::generic_array::GenericArray;
 use aes_siv::siv::Aes128Siv;
+use aes_siv::KeyInit;
 use log::*;
 
 impl SIVEncryptable for AESKey {
@@ -38,7 +39,7 @@ fn aes_siv_encrypt(
 ) -> Result<Vec<u8>, CryptoError> {
     let ad = ad.unwrap_or(&[&[]]);
 
-    let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
+    let mut cipher = Aes128Siv::new(&GenericArray::clone_from_slice(key));
     cipher.encrypt(ad, plaintext).map_err(|e| {
         warn!("aes_siv_encrypt error: {:?}", e);
         CryptoError::EncryptionError
@@ -52,7 +53,7 @@ fn aes_siv_decrypt(
 ) -> Result<Vec<u8>, CryptoError> {
     let ad = ad.unwrap_or(&[&[]]);
 
-    let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
+    let mut cipher = Aes128Siv::new(&GenericArray::clone_from_slice(key));
     cipher.decrypt(ad, ciphertext).map_err(|e| {
         warn!("aes_siv_decrypt error: {:?}", e);
         CryptoError::DecryptionError

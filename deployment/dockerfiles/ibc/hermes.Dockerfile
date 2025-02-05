@@ -9,7 +9,7 @@ USER hermes-user
 WORKDIR /home/hermes-user
 
 # install hermes
-ADD ["./hermes-v1.0.0-rc.2-x86_64-unknown-linux-gnu.tar.gz", "/hermes-installation"]
+ADD ["./hermes-v1.10.3-x86_64-unknown-linux-gnu.tar.gz", "/hermes-installation"]
 ENV PATH="${PATH}:/hermes-installation"
 
 # configure hermes

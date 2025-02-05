@@ -1,6 +1,7 @@
 package v1_7
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -8,12 +9,13 @@ import (
 	"os"
 	"path/filepath"
 
-	icacontrollertypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/controller/types"
+	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
 
-	store "github.com/cosmos/cosmos-sdk/store/types"
+	"cosmossdk.io/log"
+	store "cosmossdk.io/store/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
@@ -29,15 +31,16 @@ var Upgrade = upgrades.Upgrade{
 
 func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,
 ) upgradetypes.UpgradeHandler {
-	return func(ctx sdk.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
-		ctx.Logger().Info(` _    _ _____   _____ _____            _____  ______ `)
-		ctx.Logger().Info(`| |  | |  __ \ / ____|  __ \     /\   |  __ \|  ____|`)
-		ctx.Logger().Info(`| |  | | |__) | |  __| |__) |   /  \  | |  | | |__   `)
-		ctx.Logger().Info(`| |  | |  ___/| | |_ |  _  /   / /\ \ | |  | |  __|  `)
-		ctx.Logger().Info(`| |__| | |    | |__| | | \ \  / ____ \| |__| | |____ `)
-		ctx.Logger().Info(` \____/|_|     \_____|_|  \_\/_/    \_\_____/|______|`)
+	return func(ctx context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
+		logger := log.NewLogger(os.Stderr)
+		logger.Info(` _    _ _____   _____ _____            _____  ______ `)
+		logger.Info(`| |  | |  __ \ / ____|  __ \     /\   |  __ \|  ____|`)
+		logger.Info(`| |  | | |__) | |  __| |__) |   /  \  | |  | | |__   `)
+		logger.Info(`| |  | |  ___/| | |_ |  _  /   / /\ \ | |  | |  __|  `)
+		logger.Info(`| |__| | |    | |__| | | \ \  / ____ \| |__| | |____ `)
+		logger.Info(` \____/|_|     \_____|_|  \_\/_/    \_\_____/|______|`)
 
-		ctx.Logger().Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
+		logger.Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
 
 		seedb64, err := os.ReadFile(reg.SeedPath)
 		if err != nil {
@@ -94,8 +97,8 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		masterKey := reg.MasterKey{Bytes: masterKeyBz}
 		ioMasterKey := reg.MasterKey{Bytes: ioMasterKeyBz}
 
-		keepers.RegKeeper.SetMasterKey(ctx, ioMasterKey, reg.MasterIoKeyId)
-		keepers.RegKeeper.SetMasterKey(ctx, masterKey, reg.MasterNodeKeyId)
+		keepers.RegKeeper.SetMasterKey(sdk.UnwrapSDKContext(ctx), ioMasterKey, reg.MasterIoKeyId)
+		keepers.RegKeeper.SetMasterKey(sdk.UnwrapSDKContext(ctx), masterKey, reg.MasterNodeKeyId)
 
 		return mm.RunMigrations(ctx, configurator, vm)
 	}

@@ -1,0 +1,6 @@
+When building the enclave we pull in multiple files named upgrade.proto which results in 
+overwriting the generated upgrade.rs file.
+In an attempt to resolve this naming collision we chose to rename ibc/channel/v1/upgrade.proto
+to channel_upgrade.proto and modify tx.proto and query.proto to point to channel_upgrade.proto
+
+In future upgrades we may have to do the same.

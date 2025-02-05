@@ -6,8 +6,8 @@ package types
 import (
 	bytes "bytes"
 	fmt "fmt"
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	proto "github.com/cosmos/gogoproto/proto"
 	github_com_scrtlabs_SecretNetwork_x_registration_remote_attestation "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 	io "io"
 	math "math"

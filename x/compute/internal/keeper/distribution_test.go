@@ -6,13 +6,14 @@ import (
 	"os"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/staking"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
@@ -34,36 +35,36 @@ func TestDistributionRewards(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, stakingKeeper, keeper, distKeeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper, keepers.DistKeeper
 
 	valAddr := addValidator(ctx, stakingKeeper, accKeeper, keeper.bankKeeper, sdk.NewInt64Coin("stake", 100))
 	ctx = nextBlock(ctx, stakingKeeper, keeper)
 
-	v, found := stakingKeeper.GetValidator(ctx, valAddr)
-	assert.True(t, found)
-	assert.Equal(t, v.GetDelegatorShares(), sdk.NewDec(100))
+	v, err := stakingKeeper.GetValidator(ctx, valAddr)
+	assert.True(t, err == nil)
+	assert.Equal(t, v.GetDelegatorShares(), math.LegacyNewDec(100))
 
 	depositCoin := sdk.NewInt64Coin(sdk.DefaultBondDenom, 5_000_000_000)
 	deposit := sdk.NewCoins(depositCoin)
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 	require.Equal(t, keeper.bankKeeper.GetBalance(ctx, creator, sdk.DefaultBondDenom), depositCoin)
 
 	delTokens := sdk.TokensFromConsensusPower(1000, sdk.DefaultPowerReduction)
-	msg2 := stakingtypes.NewMsgDelegate(creator, valAddr,
+	msg2 := stakingtypes.NewMsgDelegate(creator.String(), valAddr.String(),
 		sdk.NewCoin(sdk.DefaultBondDenom, delTokens))
 
 	require.Equal(t, uint64(2), distKeeper.GetValidatorHistoricalReferenceCount(ctx))
 
-	sh := staking.NewHandler(stakingKeeper)
+	sh := stakingkeeper.NewMsgServerImpl(&stakingKeeper)
 
-	res2, err := sh(ctx, msg2)
+	res2, err := sh.Delegate(ctx, msg2)
 	require.NoError(t, err)
 	require.NotNil(t, res2)
 	require.NoError(t, err)
 
-	distKeeper.AllocateTokensToValidator(ctx, v, sdk.NewDecCoins(sdk.NewDecCoin("stake", sdk.NewInt(100))))
+	distKeeper.AllocateTokensToValidator(ctx, v, sdk.NewDecCoins(sdk.NewDecCoin("stake", math.NewInt(100))))
 
 	// upload staking derivates code
 	govCode, err := os.ReadFile("./testdata/dist.wasm")

@@ -7,15 +7,19 @@ import (
 	"os"
 	"testing"
 
+	"cosmossdk.io/collections"
+	"github.com/cosmos/cosmos-sdk/codec"
+
 	wasmTypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/gov/types"
+	v1types "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	v1beta1types "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 )
 
-var TestProposal = types.NewTextProposal("Test", "description")
+var TestProposal = v1beta1types.NewTextProposal("Test", "description")
 
 type GovInitMsg struct{}
 
@@ -28,9 +32,9 @@ type GovExecMsg struct {
 }
 
 // ProposalEqual checks if two proposals are equal (note: slow, for tests only)
-func ProposalEqual(proposalA types.Proposal, proposalB types.Proposal) bool {
-	return bytes.Equal(types.ModuleCdc.MustMarshal(&proposalA),
-		types.ModuleCdc.MustMarshal(&proposalB))
+func ProposalEqual(proposalA v1types.Proposal, proposalB v1types.Proposal, cdc codec.Codec) bool {
+	return bytes.Equal(cdc.MustMarshal(&proposalA),
+		cdc.MustMarshal(&proposalB))
 }
 
 // TestGovQueryProposals tests reading how many proposals are active - first testing 0 proposals, then adding
@@ -41,17 +45,14 @@ func TestGovQueryProposals(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, _, keeper, govKeeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper, keepers.GovKeeper
 
-	govKeeper.SetProposalID(ctx, types.DefaultStartingProposalID)
-	govKeeper.SetDepositParams(ctx, types.DefaultDepositParams())
-	govKeeper.SetVotingParams(ctx, types.DefaultVotingParams())
-	govKeeper.SetTallyParams(ctx, types.DefaultTallyParams())
+	govKeeper.Params.Set(ctx, v1types.DefaultParams())
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("stake", 5_000_000_000))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 	//
 
 	// upload staking derivates code
@@ -83,13 +84,16 @@ func TestGovQueryProposals(t *testing.T) {
 	require.Equal(t, uint64(0), binary.BigEndian.Uint64(res))
 
 	tp := TestProposal
-	// check that gov is working
-	proposal, err := govKeeper.SubmitProposal(ctx, tp, false)
+	msgContent, err := v1types.NewLegacyContent(tp, govKeeper.GetGovernanceAccount(ctx).GetAddress().String())
 	require.NoError(t, err)
-	proposalID := proposal.ProposalId
-	gotProposal, ok := govKeeper.GetProposal(ctx, proposalID)
-	require.True(t, ok)
-	require.True(t, ProposalEqual(proposal, gotProposal))
+
+	// check that gov is working
+	proposal, err := govKeeper.SubmitProposal(ctx, []sdk.Msg{msgContent}, "", "title", "summary", govAddr, false)
+	require.NoError(t, err)
+	proposalID := proposal.Id
+	gotProposal, err := govKeeper.Proposals.Get(ctx, proposalID)
+	require.True(t, err == nil)
+	require.True(t, ProposalEqual(proposal, gotProposal, encodingConfig.Codec))
 
 	votingStarted, err := govKeeper.AddDeposit(ctx, proposalID, creator, deposit)
 	require.NoError(t, err)
@@ -107,19 +111,16 @@ func TestGovVote(t *testing.T) {
 	transferPortSource := MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, _, keeper, govKeeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper, keepers.GovKeeper
 
-	govKeeper.SetProposalID(ctx, types.DefaultStartingProposalID)
-	govKeeper.SetDepositParams(ctx, types.DefaultDepositParams())
-	govKeeper.SetVotingParams(ctx, types.DefaultVotingParams())
-	govKeeper.SetTallyParams(ctx, types.DefaultTallyParams())
+	govKeeper.Params.Set(ctx, v1types.DefaultParams())
 
 	deposit2 := sdk.NewCoins(sdk.NewInt64Coin("stake", 5_000_000_000))
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("stake", 5_000_000_000))
 	initFunds := sdk.NewCoins(sdk.NewInt64Coin("stake", 10_000_000_000))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, initFunds)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, initFunds)
 	//
 
 	// upload staking derivates code
@@ -146,12 +147,14 @@ func TestGovVote(t *testing.T) {
 	require.NoError(t, err)
 
 	// check that gov is working
-	proposal, err := govKeeper.SubmitProposal(ctx, TestProposal, false)
+	msgContent, err := v1types.NewLegacyContent(TestProposal, govKeeper.GetGovernanceAccount(ctx).GetAddress().String())
 	require.NoError(t, err)
-	proposalID := proposal.ProposalId
-	gotProposal, ok := govKeeper.GetProposal(ctx, proposalID)
-	require.True(t, ok)
-	require.True(t, ProposalEqual(proposal, gotProposal))
+	proposal, err := govKeeper.SubmitProposal(ctx, []sdk.Msg{msgContent}, "", "title", "summary", govAddr, false)
+	require.NoError(t, err)
+	proposalID := proposal.Id
+	gotProposal, err := govKeeper.Proposals.Get(ctx, proposalID)
+	require.True(t, err == nil)
+	require.True(t, ProposalEqual(proposal, gotProposal, encodingConfig.Codec))
 
 	_, _, _, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, false, defaultGasForTests, 0)
 	require.NotEmpty(t, err)
@@ -164,8 +167,9 @@ func TestGovVote(t *testing.T) {
 	_, _, _, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, false, defaultGasForTests, 0)
 	require.Empty(t, err)
 
-	votes := govKeeper.GetAllVotes(ctx)
-	require.Equal(t, uint64(0x1), votes[0].ProposalId)
-	require.Equal(t, govAddr.String(), votes[0].Voter)
-	require.Equal(t, types.OptionYes, votes[0].Option)
+	vote, err := govKeeper.Votes.Get(ctx, collections.Join(proposalID, govAddr))
+	require.NoError(t, err)
+	require.Equal(t, uint64(0x1), vote.ProposalId)
+	require.Equal(t, govAddr.String(), vote.Voter)
+	require.Equal(t, v1types.OptionYes, vote.Options[0].Option)
 }

@@ -4,11 +4,12 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
-	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 const (
@@ -18,7 +19,7 @@ const (
 )
 
 // NewHandler returns a handler for "bank" type messages.
-func NewHandler(k Keeper) sdk.Handler {
+func NewHandler(k Keeper) baseapp.MsgServiceHandler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
@@ -29,7 +30,7 @@ func NewHandler(k Keeper) sdk.Handler {
 
 		default:
 			errMsg := fmt.Sprintf("unrecognized wasm message type: %T", msg)
-			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
+			return nil, sdkerrors.ErrUnknownRequest.Wrap(errMsg)
 		}
 	}
 }

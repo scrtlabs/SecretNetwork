@@ -1,5 +1,19 @@
 # CHANGELOG
 
+# 1.16.0
+- Fix ASA-2024-0012, ASA-2024-0013
+
+# 1.15.0
+- Update build OS to Ubuntu 22.04
+- Update cosmos-sdk to v0.50.10. All the related changes can be found [here](https://github.com/cosmos/cosmos-sdk/blob/release/v0.50.x/CHANGELOG.md)
+- Update ibc-go to v8.1.0. Full changelog can be found [here](https://github.com/cosmos/ibc-go/blob/release/v8.5.x/CHANGELOG.md)
+- Update cometbft to v0.38.12. Full changelog can be found [here](https://github.com/cometbft/cometbft/blob/v0.38.12/CHANGELOG.md)
+- Remove mauth module in favor of 27-interchain-accounts, which has the same functionality
+- Update rust-toolchain to nightly-2023-03-13
+- Migrate `x/emergencybutton` to self-managed parameters and deprecate it's usage of `x/params`
+- Make txhash in env uppercase
+- Add parameters for compute module: max contract size and compile cost
+
 # 1.14.0
 
 - Fix CWA-2024-005

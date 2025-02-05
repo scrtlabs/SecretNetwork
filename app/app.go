@@ -7,29 +7,46 @@ import (
 	"os"
 	"path/filepath"
 
-	packetforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4/router/types"
-	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
+	packetforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/types"
+	ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 
+	"cosmossdk.io/client/v2/autocli"
+	"cosmossdk.io/core/appmodule"
+	txsigning "cosmossdk.io/x/tx/signing"
+	"cosmossdk.io/x/tx/signing/aminojson"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
 	nodeservice "github.com/cosmos/cosmos-sdk/client/grpc/node"
-	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
-	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
+	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/simapp"
+	"github.com/cosmos/cosmos-sdk/types/msgservice"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
+	eip191 "github.com/scrtlabs/SecretNetwork/eip191"
+	scrt "github.com/scrtlabs/SecretNetwork/types"
+
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
+	sigtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
+	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
+
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
-	icatypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/types"
-	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
-	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
-	ibckeeper "github.com/cosmos/ibc-go/v4/modules/core/keeper"
+	"github.com/cosmos/gogoproto/proto"
+	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	v1_10 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.10"
@@ -37,47 +54,46 @@ import (
 	v1_12 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.12"
 	v1_13 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.13"
 	v1_14 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.14"
-	v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
+	v1_15 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.15"
+	v1_16 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.16"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
 	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
 	v1_8 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.8"
-	v1_9 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.9"
-
-	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
-	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
+
+	evidencetypes "cosmossdk.io/x/evidence/types"
+	"cosmossdk.io/x/feegrant"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
-	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
+	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+
+	"cosmossdk.io/log"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	abci "github.com/cometbft/cometbft/abci/types"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	dbm "github.com/cosmos/cosmos-db"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	stakingkeeper "github.com/cosmos/ibc-go/v8/testing/types"
+
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	"github.com/spf13/cast"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	tmlog "github.com/tendermint/tendermint/libs/log"
-	tmos "github.com/tendermint/tendermint/libs/os"
-	dbm "github.com/tendermint/tm-db"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/scrtlabs/SecretNetwork/client/docs/statik"
@@ -99,26 +115,25 @@ var (
 	}
 
 	Upgrades = []upgrades.Upgrade{
-		v1_3.Upgrade,
 		v1_4.Upgrade,
 		v1_5.Upgrade,
 		v1_6.Upgrade,
 		v1_7.Upgrade,
 		v1_8.Upgrade,
-		v1_9.Upgrade,
 		v1_10.Upgrade,
 		v1_11.Upgrade,
 		v1_12.Upgrade,
 		v1_13.Upgrade,
 		v1_14.Upgrade,
+		v1_15.Upgrade,
+		v1_16.Upgrade,
 	}
 )
 
 // Verify app interface at compile time
 var (
-	_ simapp.App                          = (*SecretNetworkApp)(nil)
-	_ servertypes.Application             = (*SecretNetworkApp)(nil)
-	_ servertypes.ApplicationQueryService = (*SecretNetworkApp)(nil)
+	_ runtime.AppI            = (*SecretNetworkApp)(nil)
+	_ servertypes.Application = (*SecretNetworkApp)(nil)
 )
 
 // SecretNetworkApp extended ABCI application
@@ -127,6 +142,7 @@ type SecretNetworkApp struct {
 	legacyAmino       *codec.LegacyAmino
 	appCodec          codec.Codec
 	interfaceRegistry types.InterfaceRegistry
+	txConfig          client.TxConfig
 
 	invCheckPeriod uint
 	bootstrap      bool
@@ -141,21 +157,19 @@ type SecretNetworkApp struct {
 	sm *module.SimulationManager
 
 	configurator module.Configurator
+
+	event runtime.EventService
 }
 
 func (app *SecretNetworkApp) GetInterfaceRegistry() types.InterfaceRegistry {
 	return app.interfaceRegistry
 }
 
-func (app *SecretNetworkApp) GetCodec() codec.Codec {
-	return app.appCodec
-}
-
 func (app *SecretNetworkApp) GetBaseApp() *baseapp.BaseApp {
 	return app.BaseApp
 }
 
-func (app *SecretNetworkApp) GetStakingKeeper() stakingkeeper.Keeper {
+func (app *SecretNetworkApp) GetStakingKeeper() stakingkeeper.StakingKeeper {
 	return *app.AppKeepers.StakingKeeper
 }
 
@@ -167,12 +181,28 @@ func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper 
 	return app.AppKeepers.ScopedIBCKeeper
 }
 
-func (app *SecretNetworkApp) GetTxConfig() client.TxConfig {
-	return MakeEncodingConfig().TxConfig
-}
-
 func (app *SecretNetworkApp) AppCodec() codec.Codec {
 	return app.appCodec
+}
+
+func (app *SecretNetworkApp) AutoCliOpts() autocli.AppOptions {
+	modules := make(map[string]appmodule.AppModule, 0)
+	for _, m := range app.mm.Modules {
+		if moduleWithName, ok := m.(module.HasName); ok {
+			moduleName := moduleWithName.Name()
+			if appModule, ok := moduleWithName.(appmodule.AppModule); ok {
+				modules[moduleName] = appModule
+			}
+		}
+	}
+
+	return autocli.AppOptions{
+		Modules:               modules,
+		ModuleOptions:         runtimeservices.ExtractAutoCLIOptions(app.mm.Modules),
+		AddressCodec:          authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+		ValidatorAddressCodec: authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
+		ConsensusAddressCodec: authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ConsensusAddrPrefix()),
+	}
 }
 
 func (app *SecretNetworkApp) RegisterTxService(clientCtx client.Context) {
@@ -180,11 +210,16 @@ func (app *SecretNetworkApp) RegisterTxService(clientCtx client.Context) {
 }
 
 func (app *SecretNetworkApp) RegisterTendermintService(clientCtx client.Context) {
-	tmservice.RegisterTendermintService(app.BaseApp.GRPCQueryRouter(), clientCtx, app.interfaceRegistry)
+	cmtApp := server.NewCometABCIWrapper(app)
+	cmtservice.RegisterTendermintService(clientCtx, app.BaseApp.GRPCQueryRouter(), app.interfaceRegistry, cmtApp.Query)
 }
 
-func (app *SecretNetworkApp) RegisterNodeService(clientCtx client.Context) {
-	nodeservice.RegisterNodeService(clientCtx, app.GRPCQueryRouter())
+func (app *SecretNetworkApp) RegisterNodeService(clientCtx client.Context, cfg config.Config) {
+	nodeservice.RegisterNodeService(clientCtx, app.GRPCQueryRouter(), cfg)
+}
+
+func (app *SecretNetworkApp) TxConfig() client.TxConfig {
+	return app.txConfig
 }
 
 // WasmWrapper allows us to use namespacing in the config file
@@ -195,27 +230,38 @@ type WasmWrapper struct {
 
 // NewSecretNetworkApp is a constructor function for enigmaChainApp
 func NewSecretNetworkApp(
-	logger tmlog.Logger,
+	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
 	loadLatest bool,
-	skipUpgradeHeights map[int64]bool,
-	homePath string,
-	invCheckPeriod uint,
 	bootstrap bool,
 	appOpts servertypes.AppOptions,
 	computeConfig *compute.WasmConfig,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *SecretNetworkApp {
-	encodingConfig := MakeEncodingConfig()
-	appCodec, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
-	interfaceRegistry := encodingConfig.InterfaceRegistry
+	legacyAmino := codec.NewLegacyAmino()
+	interfaceRegistry := CodecOptions{
+		AccAddressPrefix: scrt.Bech32PrefixAccAddr,
+		ValAddressPrefix: scrt.Bech32PrefixValAddr,
+	}.NewInterfaceRegistry()
+
+	appCodec := codec.NewProtoCodec(interfaceRegistry)
+	txCfg := authtx.NewTxConfig(appCodec, authtx.DefaultSignModes)
+
+	sdk.RegisterLegacyAminoCodec(legacyAmino)
+	sdk.RegisterInterfaces(interfaceRegistry)
+	txtypes.RegisterInterfaces(interfaceRegistry)
+	cryptocodec.RegisterInterfaces(interfaceRegistry)
+
+	ModuleBasics().RegisterLegacyAminoCodec(legacyAmino)
+	ModuleBasics().RegisterInterfaces(interfaceRegistry)
 
 	// BaseApp handles interactions with Tendermint through the ABCI protocol
-	bApp := baseapp.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), baseAppOptions...)
+	bApp := baseapp.NewBaseApp(appName, logger, db, txCfg.TxDecoder(), baseAppOptions...)
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
+	bApp.SetTxEncoder(txCfg.TxEncoder())
 
 	// Initialize our application with the store keys it requires
 	app := &SecretNetworkApp{
@@ -223,13 +269,52 @@ func NewSecretNetworkApp(
 		legacyAmino:       legacyAmino,
 		appCodec:          appCodec,
 		interfaceRegistry: interfaceRegistry,
-		invCheckPeriod:    invCheckPeriod,
 		bootstrap:         bootstrap,
+		txConfig:          txCfg,
 	}
 
 	app.AppKeepers.InitKeys()
 
-	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath)
+	skipUpgradeHeights := map[int64]bool{}
+	for _, h := range cast.ToIntSlice(appOpts.Get(server.FlagUnsafeSkipUpgrades)) {
+		skipUpgradeHeights[int64(h)] = true
+	}
+	homePath := cast.ToString(appOpts.Get(flags.FlagHome))
+	invCheckPeriod := cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod))
+
+	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath, logger, &app.event)
+
+	enabledSignModes := authtx.DefaultSignModes
+	enabledSignModes = append(enabledSignModes, sigtypes.SignMode_SIGN_MODE_TEXTUAL)
+
+	signingOpts, err := authtx.NewDefaultSigningOptions()
+	if err != nil {
+		return nil
+	}
+	signingOpts.FileResolver = appCodec.InterfaceRegistry()
+
+	aminoHandler := aminojson.NewSignModeHandler(aminojson.SignModeHandlerOptions{
+		FileResolver: signingOpts.FileResolver,
+		TypeResolver: signingOpts.TypeResolver,
+	})
+	eip191Handler := eip191.NewSignModeHandler(eip191.SignModeHandlerOptions{
+		AminoJsonSignModeHandler: aminoHandler,
+	})
+
+	txConfigOpts := authtx.ConfigOptions{
+		EnabledSignModes:           enabledSignModes,
+		TextualCoinMetadataQueryFn: txmodule.NewBankKeeperCoinMetadataQueryFn(app.AppKeepers.BankKeeper),
+		CustomSignModes:            [](txsigning.SignModeHandler){*eip191Handler},
+	}
+	txConfig, err := authtx.NewTxConfigWithOptions(
+		appCodec,
+		txConfigOpts,
+	)
+	if err != nil {
+		panic(err)
+	}
+	app.txConfig = txConfig
+
 	app.AppKeepers.InitCustomKeepers(appCodec, legacyAmino, bApp, bootstrap, homePath, computeConfig)
 	app.setupUpgradeStoreLoaders()
 
@@ -239,11 +324,16 @@ func NewSecretNetworkApp(
 
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
-	app.mm = module.NewManager(Modules(app, encodingConfig, skipGenesisInvariants)...)
+	app.mm = module.NewManager(Modules(app, appCodec, skipGenesisInvariants)...)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
 	// CanWithdrawInvariant invariant.
+
+	// NOTE: upgrade module is required to be prioritized
+	app.mm.SetOrderPreBlockers(
+		upgradetypes.ModuleName,
+	)
 
 	SetOrderBeginBlockers(app)
 
@@ -259,41 +349,44 @@ func NewSecretNetworkApp(
 
 	// register all module routes and module queriers
 	app.mm.RegisterInvariants(app.AppKeepers.CrisisKeeper)
-	app.mm.RegisterRoutes(app.BaseApp.Router(), app.BaseApp.QueryRouter(), encodingConfig.Amino)
 
-	app.configurator = module.NewConfigurator(app.appCodec, app.BaseApp.MsgServiceRouter(), app.BaseApp.GRPCQueryRouter())
-	app.mm.RegisterServices(app.configurator)
+	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
+	err = app.mm.RegisterServices(app.configurator)
+	if err != nil {
+		panic(err)
+	}
 
 	// setupUpgradeHandlers() shoulbe be called after app.mm is configured
 	app.setupUpgradeHandlers()
 
 	// initialize stores
-	app.BaseApp.MountKVStores(app.AppKeepers.GetKeys())
-	app.BaseApp.MountTransientStores(app.AppKeepers.GetTransientStoreKeys())
-	app.BaseApp.MountMemoryStores(app.AppKeepers.GetMemoryStoreKeys())
+	app.MountKVStores(app.AppKeepers.GetKeys())
+	app.MountTransientStores(app.AppKeepers.GetTransientStoreKeys())
+	app.MountMemoryStores(app.AppKeepers.GetMemoryStoreKeys())
 
 	anteHandler, err := NewAnteHandler(HandlerOptions{
 		HandlerOptions: ante.HandlerOptions{
 			AccountKeeper:   app.AppKeepers.AccountKeeper,
 			BankKeeper:      *app.AppKeepers.BankKeeper,
 			FeegrantKeeper:  app.AppKeepers.FeegrantKeeper,
-			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
+			SignModeHandler: app.txConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
-		IBCKeeper:         app.AppKeepers.IbcKeeper,
-		WasmConfig:        computeConfig,
-		TXCounterStoreKey: app.AppKeepers.GetKey(compute.StoreKey),
+		IBCKeeper:             app.AppKeepers.IbcKeeper,
+		WasmConfig:            computeConfig,
+		TXCounterStoreService: app.AppKeepers.ComputeKeeper.GetStoreService(),
 	})
 	if err != nil {
 		panic(fmt.Errorf("failed to create AnteHandler: %s", err))
 	}
 
 	// The AnteHandler handles signature verification and transaction pre-processing
-	app.BaseApp.SetAnteHandler(anteHandler)
+	app.SetAnteHandler(anteHandler)
 	// The initChainer handles translating the genesis.json file into initial state for the network
-	app.BaseApp.SetInitChainer(app.InitChainer)
-	app.BaseApp.SetBeginBlocker(app.BeginBlocker)
-	app.BaseApp.SetEndBlocker(app.EndBlocker)
+	app.SetInitChainer(app.InitChainer)
+	app.SetBeginBlocker(app.BeginBlocker)
+	app.SetPreBlocker(app.PreBlocker)
+	app.SetEndBlocker(app.EndBlocker)
 
 	if manager := app.BaseApp.SnapshotManager(); manager != nil {
 		err := manager.RegisterExtensions(
@@ -304,11 +397,23 @@ func NewSecretNetworkApp(
 		}
 	}
 
+	// At startup, after all modules have been registered, check that all prot
+	// annotations are correct.
+	protoFiles, err := proto.MergedRegistry()
+	if err != nil {
+		panic(err)
+	}
+	err = msgservice.ValidateProtoAnnotations(protoFiles)
+	if err != nil {
+		// Once we switch to using protoreflect-based antehandlers, we might
+		// want to panic here instead of logging a warning.
+		fmt.Fprintln(os.Stderr, err.Error())
+	}
+
 	// This seals the app
 	if loadLatest {
-		err := app.BaseApp.LoadLatestVersion()
-		if err != nil {
-			tmos.Exit(err.Error())
+		if err := app.LoadLatestVersion(); err != nil {
+			panic(fmt.Errorf("error loading last version: %w", err))
 		}
 	}
 
@@ -319,23 +424,29 @@ func NewSecretNetworkApp(
 func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 
 // BeginBlocker application updates every begin block
-func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
-	return app.mm.BeginBlock(ctx, req)
+func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context) (sdk.BeginBlock, error) {
+	return app.mm.BeginBlock(ctx)
+}
+
+func (app *SecretNetworkApp) PreBlocker(ctx sdk.Context, _ *abci.RequestFinalizeBlock) (*sdk.ResponsePreBlock, error) {
+	return app.mm.PreBlock(ctx)
 }
 
 // EndBlocker application updates every end block
-func (app *SecretNetworkApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
-	return app.mm.EndBlock(ctx, req)
+func (app *SecretNetworkApp) EndBlocker(ctx sdk.Context) (sdk.EndBlock, error) {
+	return app.mm.EndBlock(ctx)
 }
 
 // InitChainer application update at chain initialization
-func (app *SecretNetworkApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
-	var genesisState simapp.GenesisState
+func (app *SecretNetworkApp) InitChainer(ctx sdk.Context, req *abci.RequestInitChain) (*abci.ResponseInitChain, error) {
+	var genesisState GenesisState
 	if err := tmjson.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
 		panic(err)
 	}
 
-	app.AppKeepers.UpgradeKeeper.SetModuleVersionMap(ctx, app.mm.GetVersionMap())
+	if err := app.AppKeepers.UpgradeKeeper.SetModuleVersionMap(ctx, app.mm.GetVersionMap()); err != nil {
+		panic(err)
+	}
 
 	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
 }
@@ -364,18 +475,16 @@ func (app *SecretNetworkApp) SimulationManager() *module.SimulationManager {
 // API server.
 func (app *SecretNetworkApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIConfig) {
 	clientCtx := apiSvr.ClientCtx
-	rpc.RegisterRoutes(clientCtx, apiSvr.Router)
 	// Register legacy tx routes
-	authrest.RegisterTxRoutes(clientCtx, apiSvr.Router)
+	// authrest.RegisterTxRoutes(clientCtx, apiSvr.Router)
 	// Register new tx routes from grpc-gateway
 	authtx.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 	// Register new tendermint queries routes from grpc-gateway.
-	tmservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+	cmtservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 	// Register node gRPC service for grpc-gateway.
 	nodeservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 
 	// Register legacy and grpc-gateway routes for all modules.
-	ModuleBasics().RegisterRESTRoutes(clientCtx, apiSvr.Router)
 	ModuleBasics().RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 
 	// register swagger API from root so that other applications can override easily
@@ -433,6 +542,7 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 
 	for i := range Upgrades {
 		if upgradeInfo.Name == Upgrades[i].UpgradeName {
+			app.Logger().Info(fmt.Sprintf("Upgrade store loader for %s at height %d", upgradeInfo.Name, upgradeInfo.Height))
 			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &Upgrades[i].StoreUpgrades))
 		}
 	}
@@ -452,7 +562,7 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
-		ibchost.ModuleName,
+		ibcexported.ModuleName,
 		ibctransfertypes.ModuleName,
 		feegrant.ModuleName,
 		authtypes.ModuleName,
@@ -464,7 +574,6 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		authz.ModuleName,
 		paramstypes.ModuleName,
 		icatypes.ModuleName,
-		icaauthtypes.ModuleName,
 		packetforwardtypes.ModuleName,
 		ibcfeetypes.ModuleName,
 		// custom modules
@@ -492,12 +601,11 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 		ibcswitchtypes.ModuleName,
 
 		icatypes.ModuleName,
-		icaauthtypes.ModuleName,
 
 		authz.ModuleName,
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
-		ibchost.ModuleName,
+		ibcexported.ModuleName,
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		ibctransfertypes.ModuleName,
@@ -526,10 +634,9 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		evidencetypes.ModuleName,
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
-		ibchost.ModuleName,
+		ibcexported.ModuleName,
 		ibctransfertypes.ModuleName,
 		icatypes.ModuleName,
-		icaauthtypes.ModuleName,
 		ibcfeetypes.ModuleName,
 		packetforwardtypes.ModuleName,
 		compute.ModuleName,

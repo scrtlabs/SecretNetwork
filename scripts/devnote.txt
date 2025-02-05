@@ -1,0 +1,22 @@
+How to deploy dev test net
+
+Create a bootstrap node
+export SCRT_CHAINID=secretdev-1
+export SCRT_MONIKER=scrt
+export SGX_MODE=SW
+and run ./scripts/start_bootstrap_node.sh
+You will need to run: secretd tendermint show-node-id
+Note the bootstrap node IP. Make sure the ports for 26656 snd 26657 are open and the machine is reachable
+On full nodes: secretd tendermint show-node-id 
+export SCRT_CHAINID=secretdev-1
+export SCRT_MONIKER=scrt
+export SGX_MODE=SW
+export SCRT_BOOTSTRAP=<bootstrap IP>
+export SCRT_BOOTSTRAP_NODE_ID=<bootstrap node id>
+
+Start full node by running: ./scripts/start_full_node.sh
+
+If you want to add this node as a validator:
+export keys a,b,c,d --recover [will need mnemonics]
+
+Add node as validator: ./scripts/add_validator.sh

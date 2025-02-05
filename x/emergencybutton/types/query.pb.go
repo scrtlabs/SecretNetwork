@@ -6,9 +6,9 @@ package types
 import (
 	context "context"
 	fmt "fmt"
-	_ "github.com/gogo/protobuf/gogoproto"
-	grpc1 "github.com/gogo/protobuf/grpc"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	grpc1 "github.com/cosmos/gogoproto/grpc"
+	proto "github.com/cosmos/gogoproto/proto"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -156,8 +156,8 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type QueryClient interface {
-	// Params defines a gRPC query method that returns the emergencybutton module's
-	// parameters.
+	// Params defines a gRPC query method that returns the emergencybutton
+	// module's parameters.
 	Params(ctx context.Context, in *ParamsRequest, opts ...grpc.CallOption) (*ParamsResponse, error)
 }
 
@@ -180,8 +180,8 @@ func (c *queryClient) Params(ctx context.Context, in *ParamsRequest, opts ...grp
 
 // QueryServer is the server API for Query service.
 type QueryServer interface {
-	// Params defines a gRPC query method that returns the emergencybutton module's
-	// parameters.
+	// Params defines a gRPC query method that returns the emergencybutton
+	// module's parameters.
 	Params(context.Context, *ParamsRequest) (*ParamsResponse, error)
 }
 

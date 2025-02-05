@@ -1,7 +1,6 @@
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 DOCKER := $(shell which docker)
-DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
 # SPID and API_KEY are used for Intel SGX attestation
 SPID ?= 00000000000000000000000000000000
@@ -156,49 +155,25 @@ go.sum: go.mod
 
 # Build the CLI tool
 build_cli:
-	go build -o secretcli -mod=readonly -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
-
-xgo_build_secretcli: go.sum
-	xgo --targets $(XGO_TARGET) -tags="$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
+	CGO_LDFLAGS=$(CGO_LDFLAGS) go build -o secretcli -mod=readonly $(GCFLAGS) -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
-	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	CGO_LDFLAGS=$(CGO_LDFLAGS) go build -mod=readonly $(GCFLAGS) -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build-secret: build-linux
 
 build-linux: _build-linux build_local_no_rust build_cli
 _build-linux:
-	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES)" FEATURES_U="$(FEATURES_U) light-client-validation go-tests" $(MAKE) -C go-cosmwasm build-rust
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES)" FEATURES_U="$(FEATURES_U)  light-client-validation go-tests" SGX_MODE="$(SGX_MODE)" $(MAKE) -C go-cosmwasm build-rust
 
 build-tm-secret-enclave:
 	git clone https://github.com/scrtlabs/tm-secret-enclave.git /tmp/tm-secret-enclave || true
-	cd /tmp/tm-secret-enclave && git checkout v1.9.3 && git submodule init && git submodule update --remote
+	cd /tmp/tm-secret-enclave && git checkout main && git submodule init && git submodule update --remote
 	rustup component add rust-src
 	SGX_MODE=$(SGX_MODE) $(MAKE) -C /tmp/tm-secret-enclave build
 
-# Targets for building the cli on various platforms like Windows, macOS, Linux
-build_windows_cli:
-	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
-	sudo mv github.com/scrtlabs/SecretNetwork-windows-* secretcli-windows-amd64.exe
-
-build_macos_cli:
-	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
-	sudo mv github.com/scrtlabs/SecretNetwork-darwin-amd64 secretcli-macos-amd64
-
-build_macos_arm64_cli:
-	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/arm64
-	sudo mv github.com/scrtlabs/SecretNetwork-darwin-arm64 secretcli-macos-arm64
-
-build_linux_cli:
-	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
-	sudo mv github.com/scrtlabs/SecretNetwork-linux-amd64 secretcli-linux-amd64
-
-build_linux_arm64_cli:
-	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
-	sudo mv github.com/scrtlabs/SecretNetwork-linux-arm64 secretcli-linux-arm64
-
-build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
+build_all: build-linux
 
 # Build Debian package
 deb: build-linux deb-no-compile
@@ -568,40 +543,37 @@ aesm-image:
 ###                         Swagger & Protobuf                              ###
 ###############################################################################
 
+protoVer=0.14.0
+protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
+protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
+
 .PHONY: update-swagger-openapi-docs statik statik-install proto-swagger-openapi-gen
 
 statik-install:
 	@echo "Installing statik..."
-	@go install github.com/rakyll/statik@v0.1.6
+	@go install github.com/rakyll/statik@v0.1.7
 
 statik:
 	statik -src=client/docs/static/ -dest=client/docs -f -m
 
 proto-swagger-openapi-gen:
-	cp go.mod /tmp/go.mod.bak
-	cp go.sum /tmp/go.sum.bak
+	@echo "Generating Protobuf Swagger: $@"
 	@./scripts/protoc-swagger-openapi-gen.sh
-	cp /tmp/go.mod.bak go.mod
-	cp /tmp/go.sum.bak go.sum
 
 # Example `CHAIN_VERSION=v1.4.0 make update-swagger-openapi-docs`
 update-swagger-openapi-docs: statik-install proto-swagger-openapi-gen statik
 
-protoVer=v0.2
-
-proto-all: proto-lint proto-gen proto-swagger-openapi-gen
+proto-all: proto-format proto-gen proto-swagger-openapi-gen
 
 proto-gen:
-	cp go.mod /tmp/go.mod.bak
-	cp go.sum /tmp/go.sum.bak
 	@echo "Generating Protobuf files"
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
-	cp /tmp/go.mod.bak go.mod
-	cp /tmp/go.sum.bak go.sum
-	go mod tidy
+	@$(protoImage) sh ./scripts/protocgen.sh
 
 proto-lint:
-	@$(DOCKER_BUF) lint --error-format=json
+	@$(protoImage) buf lint --error-format=json
+
+proto-format:
+	@$(protoImage) find ./proto -name "*.proto" -exec clang-format -i {} \;
 
 .PHONY: proto-all proto-gen proto-format proto-lint proto-check-breaking
 

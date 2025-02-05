@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   Enclave-Unit-Tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -15,7 +15,7 @@ jobs:
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
           SDK_BIN=sgx_linux_x64_sdk_2.20.100.4.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.20/distro/ubuntu20.04-server/"$SDK_BIN"
+          wget https://download.01.org/intel-sgx/sgx-linux/2.20/distro/ubuntu22.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
@@ -97,7 +97,7 @@ jobs:
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/static-too-high-initial-memory.wasm
 
   Go-Tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [Build-Contracts, Build-LocalSecret]
     steps:
       - uses: actions/checkout@v4
@@ -164,9 +164,9 @@ jobs:
       - name: Install Quote library SDK
         run: |
           curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
-          sudo add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main"
-          DCAP_VERSION=1.17.100.4-focal1
-          PSW_VERSION=2.20.100.4-focal1
+          sudo add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main"
+          DCAP_VERSION=1.17.100.4-jammy1
+          PSW_VERSION=2.20.100.4-jammy1
           sudo apt-get update
           sudo apt-get install -y \
               libsgx-aesm-launch-plugin=$PSW_VERSION \
@@ -186,6 +186,7 @@ jobs:
           LIB_PATH=/usr/lib/x86_64-linux-gnu
           sudo ln -s $LIB_PATH/libsgx_dcap_ql.so.1 $LIB_PATH/libsgx_dcap_ql.so
           sudo ln -s $LIB_PATH/libsgx_dcap_quoteverify.so.1 $LIB_PATH/libsgx_dcap_quoteverify.so
+          sudo ln -s $LIB_PATH/libsgx_epid.so.1 $LIB_PATH/libsgx_epid.so
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -204,7 +205,7 @@ jobs:
           LOG_LEVEL=ERROR SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
 
   Clippy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -254,23 +255,28 @@ jobs:
           SGX_MODE=HW make clippy
 
   MacOS-ARM64-CLI:
-    runs-on: ubuntu-20.04
+    runs-on: macos-12-large
+    strategy:
+      fail-fast: false
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
+          name: checkout
           submodules: recursive
       - uses: actions/setup-go@v5
         with:
+          name: set up go
           go-version: 1.21 # The Go version to download (if necessary) and use.
-      - name: Install xgo
-        run: |
-          go install github.com/crazy-max/xgo@v0.17.0
-          xgo || true # check installation
-      - name: Build MacOS CLI
-        run: make build_macos_arm64_cli
-
+      - name: Build macos darwin/arm64
+        run: SGX_MODE=SW make build_cli
+      - uses: actions/upload-artifact@v3
+        with:
+          name: secretcli-macos-arm64
+          path: secretcli
+          
   Build-LocalSecret:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -305,7 +311,7 @@ jobs:
           path: /tmp/localsecret.tar
 
   Build-Hermes:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -328,7 +334,7 @@ jobs:
           path: /tmp/hermes.tar
 
   Integration-Tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [Build-LocalSecret, Build-Hermes]
     steps:
       - uses: actions/checkout@v4
@@ -358,11 +364,12 @@ jobs:
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
-          git clone --depth 1 --branch master https://github.com/scrtlabs/secret.js
+          git clone --depth 1 --branch v1.15.0-beta.0 https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
           yarn
           docker compose -f ./test/docker-compose.yml up -d > docker-compose.log 2>&1
+          sleep 10
           yarn test-ci || { cat docker-compose.log; exit 1; }
           make kill-localsecret

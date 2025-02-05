@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	abci "github.com/tendermint/tendermint/abci/types"
+	storetypes "cosmossdk.io/store/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -57,13 +57,13 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, countingQuerier)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 	realWasmQuerier = WasmQuerier(&keeper)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, creatorPriv := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	creator, creatorPriv, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// store the code
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
@@ -148,7 +148,7 @@ func TestGasCostOnQuery(t *testing.T) {
 			keeper.queryGasLimit = 1000
 
 			// make sure we set a limit before calling
-			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit))
+			ctx = ctx.WithGasMeter(storetypes.NewGasMeter(tc.gasLimit))
 			require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 			// do the query
@@ -251,17 +251,15 @@ func TestGasOnExternalQuery(t *testing.T) {
 			require.NoError(t, err)
 
 			// do the query
-			path := []string{QueryGetContractState, contractAddr.String(), QueryMethodContractStateSmart}
-			req := abci.RequestQuery{Data: msg}
 			if tc.expectPanic {
 				require.Panics(t, func() {
 					// this should run out of gas
-					_, err := NewLegacyQuerier(keeper)(ctx, path, req)
+					_, err := keeper.QuerySmart(ctx, contractAddr, msg, true)
 					t.Logf("%v", err)
 				})
 			} else {
 				// otherwise, make sure we get a good success
-				_, err := NewLegacyQuerier(keeper)(ctx, path, req)
+				_, err := keeper.QuerySmart(ctx, contractAddr, msg, true)
 				require.NoError(t, err)
 			}
 		})
@@ -350,7 +348,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			totalWasmQueryCounter = 0
 
 			// make sure we set a limit before calling
-			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit))
+			ctx = ctx.WithGasMeter(storetypes.NewGasMeter(tc.gasLimit))
 			require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 			// prepare the query

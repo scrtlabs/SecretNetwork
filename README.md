@@ -42,8 +42,28 @@ Click the button below to start a new development environment:
 ### Install prerequisite packages
 
 ```
-apt-get install -y --no-install-recommends g++ libtool automake autoconf clang
+sudo apt-get install -y --no-install-recommends g++ libtool automake autoconf clang
 ```
+
+#### Optinal packages to install ((needed for local testing))
+```
+sudo apt install -y  jq nodejs npm
+```
+### Consider installing nvm (https://github.com/nvm-sh/nvm)
+```
+wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+nvm install 22
+```
+
+Note: lcp - Simple proxy to bypass CORS issues. It solve the issue
+```
+No 'Access-Control-Allow-Origin' header is present on the requested resource. Origin 'http://localhost:3000' is therefore not allowed access. If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disable
+```
+You may need to isntall __lcp__ CORS bypass proxy if you plan on running your network of nodes locally:
+```
+sudo npm install -g local-cors-proxy
+```
+
 
 #### Ubuntu 22+
 
@@ -51,12 +71,18 @@ The build depends on libssl1.1. Install using:
 
 ```bash
 wget https://debian.mirror.ac.za/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0%2Bdeb11u1_amd64.deb
-dpkg -i libssl1.1_1.1.1w-0%2Bdeb11u1_amd64.deb
 ```
-
+```bash
+sudo dpkg -i libssl1.1_1.1.1w-0+deb11u1_amd64.deb
+```
 ### Clone Repo
 
-Clone this repo to your favorite working directory
+Clone this repo to your favorite working directory. e.g. ~/SecretNetwork
+```
+git clone git@github.com:scrtlabs/SecretNetwork.git ~/SecretNetwork
+cd ~SecretNetwork
+git checkout <work-branch>
+```
 
 ### Install Rust
 
@@ -66,7 +92,7 @@ Install rust from [https://rustup.rs/](https://rustup.rs/).
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Then, add the rust-src component. This will also install the version of rust that is defined by the workspace (in `rust-toolchain`) - 
+Then, while in your __SecretNetwork__ add the _rust-src_ componenti and _wasm32-unknown-unknown_ target. This will also install the version of rust that is defined by the workspace (in `rust-toolchain`) - 
 ```
 rustup component add rust-src
 ```
@@ -79,6 +105,7 @@ rustup target add wasm32-unknown-unknown
 ### Install Go (v1.18+)
 
 Install go from [https://go.dev/doc/install](https://go.dev/doc/install)
+Any version up to 1.22.4 should work.
 
 #### Install gobindata
 
@@ -95,8 +122,40 @@ For a simple install, run the [install-sgx.sh](./scripts/install-sgx.sh) script 
 chmod +x ./scripts/install-sgx.sh
 sudo ./scripts/install-sgx.sh true true true false
 ```
+After SGX installs successfully, please add the following line to your _.bashrc_ file
+```
+SGX_HOME=/opt/intel/sgxsdk # or the directory where installed it if defferent
+. ${SGX_HOME}/environment
+```
+and
+```
+source ~/.bashrc
+```
+to bring into your shell the important paths from SGX that you will need when building _SecretNetwork_
+
+It may be worth mentioning that your LIBRARY_PATH should also point to SGX_SDK/sdk_libs
+
+If you plan to run in **SGX_MODE=SW** indicate it by exporting SGX_MODE
+```
+export SGX_MODE=SW
+```
+There is one more important step you need to do:
+```
+ln -s $SGX_HOME/lib64/libsgx_epid.so $SGX_HOME/sdk_libs/libsgx_epid.so
+```
+as this library will be required during building.
 
 Note: If you are using WSL you'll need to use the 5.15 kernel which you can find how to do [here](https://github.com/scrtlabs/SecretNetwork/blob/master/docs/SGX%20on%20WSL%20(SW).md), otherwise you'll have to run anything SGX related only in docker
+
+### Install DCAP
+```
+sudo apt-get install libsgx-epid libsgx-quote-ex libsgx-dcap-ql
+```
+assume LIB_PATH points to /usr/lib/x86_64-linux-gnu/
+```
+sudo ln -s $LIB_PATH/libsgx_dcap_ql.so.1 $LIB_PATH/libsgx_dcap_ql.so
+sudo ln -s $LIB_PATH/libsgx_dcap_quoteverify.so.1 $LIB_PATH/libsgx_dcap_quoteverify.so
+```
   
 ### Install Xargo
 
@@ -113,6 +172,11 @@ We use `incubator-teaclave-sgx-sdk` as a submodule. To compile the code, you mus
 git submodule init
 git submodule update --remote
 ```
+
+## Optional (docker)
+If you plan on re-generating proto files, you need docker installed. How to install you can reference the following link: 
+[How to install docker on Ubuntu 22.04](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04)
+
 
 # Build from Source
 
@@ -133,6 +197,27 @@ Still, the non-enclave code can be modified and ran on mainnet as long as there 
 To build run all tests, use `make go-tests`
 
 ## Start local network
+
+Before you run your dev node, you need to point to the shared libraries needed by __secretd__:
+```
+export SCRT_ENCLAVE_DIR=~/SecretNetwork/go-cosmwasm
+```
+In order to run __secretd__ you need to have built _librust_cosmwasm_enclave.signed.so_ and _tendermint_enclave.so_.
+The latter can be built by cloning:
+```
+git clone git@github.com:scrtlabs/tm-secret-enclave.git ~/tm-secret-enclave
+```
+This repo also uses submodules:
+```
+cd tm-secret-enclave
+git submodule init
+git submodule update --remote
+```
+and build _tendermint_enclave.so_:
+```
+make build-rust
+```
+You may want to copy _tendermint_enclave.so_ to ~/SecretNetwork/go-cosmwasm
 
 Run `./scripts/start-node.sh`
 

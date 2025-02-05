@@ -44,6 +44,7 @@ pub mod cosmwasm {
 
 pub mod ibc {
     pub mod channel;
+    pub mod channel_upgrade;
     pub mod client;
     pub mod tx;
     pub mod upgrade;

@@ -1,16 +1,14 @@
 package cli
 
 import (
-	"encoding/hex"
-	"encoding/json"
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client/tx"
 
-	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
-
+	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -67,7 +65,6 @@ func StoreCodeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			msg, err := parseStoreCodeArgs(args, clientCtx, cmd.Flags())
 			if err != nil {
 				return err
@@ -214,9 +211,9 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		}
 	} else {
 		// if we aren't creating an offline transaction we can validate the chosen label
-		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
-		res, _, _ := cliCtx.Query(route)
-		if res != nil {
+
+		res, _ := GetContractAddressByLabel(label, cliCtx)
+		if res != "" {
 			return types.MsgInstantiateContract{}, fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
 		}
 
@@ -239,10 +236,10 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 	if err != nil {
 		return types.MsgInstantiateContract{}, fmt.Errorf("admin: %s", err)
 	}
-
+	sndr := cliCtx.GetFromAddress()
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgInstantiateContract{
-		Sender:           cliCtx.GetFromAddress(),
+		Sender:           sndr,
 		CallbackCodeHash: "",
 		CodeID:           codeID,
 		Label:            label,
@@ -274,6 +271,7 @@ func ExecuteContractCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			var contractAddr []byte
 			var msg []byte
 			var codeHash string
@@ -290,7 +288,6 @@ func ExecuteContractCmd() *cobra.Command {
 			}
 
 			if len(args) == 1 {
-
 				if genOnly {
 					return fmt.Errorf("offline transactions must contain contract address")
 				}
@@ -303,13 +300,26 @@ func ExecuteContractCmd() *cobra.Command {
 					return fmt.Errorf("label or bech32 contract address is required")
 				}
 
-				route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
-				res, _, err := cliCtx.Query(route)
+				cliCtx, err := client.GetClientQueryContext(cmd)
 				if err != nil {
 					return err
 				}
 
-				contractAddr = res
+				queryClient := types.NewQueryClient(cliCtx)
+				res, err := queryClient.AddressByLabel(
+					context.Background(),
+					&types.QueryByLabelRequest{
+						Label: label,
+					},
+				)
+				if err != nil {
+					return sdkerrors.ErrNotFound.Wrapf("Contract by label %s not found. Error:%s", label, err)
+				}
+
+				contractAddr, err = sdk.AccAddressFromBech32(res.ContractAddress)
+				if err != nil {
+					return err
+				}
 				msg = []byte(args[0])
 			} else {
 				// get the id of the code to instantiate
@@ -370,11 +380,19 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 		execMsg.CodeHash = []byte(codeHash)
 		encryptedMsg, err = wasmCtx.OfflineEncrypt(execMsg.Serialize(), ioMasterKeyPath)
 	} else {
-		execMsg.CodeHash, err = GetCodeHashByContractAddr(cliCtx, contractAddress)
+		cliCtx, err := client.GetClientQueryContext(cmd)
 		if err != nil {
 			return err
 		}
+
+		execMsg.CodeHash, err = GetCodeHashByContractAddr(cliCtx, contractAddress.String())
+		if err != nil {
+			return sdkerrors.ErrNotFound.Wrapf("Contract address %s not found. Error:%s", contractAddress.String(), err)
+		}
 		encryptedMsg, err = wasmCtx.Encrypt(execMsg.Serialize())
+		if err != nil {
+			return fmt.Errorf("failed to encrypt the message. Error:%s", err.Error())
+		}
 	}
 	if err != nil {
 		return err
@@ -392,39 +410,40 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 }
 
 func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
-	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetCode, codeID)
-	res, _, err := cliCtx.Query(route)
+	id, err := strconv.Atoi(codeID)
 	if err != nil {
 		return nil, err
 	}
-
+	queryClient := types.NewQueryClient(cliCtx)
+	res, err := queryClient.Code(
+		context.Background(),
+		&types.QueryByCodeIdRequest{
+			CodeId: uint64(id),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
 	// When querying for an unknown code id the output is an empty result (without any error)
-	if len(res) == 0 {
+	if res == nil {
 		return nil, fmt.Errorf("failed to query contract code hash, unknown code id (%s)", codeID)
 	}
 
-	var codeResp types.QueryCodeResponse
-
-	err = json.Unmarshal(res, &codeResp)
-	if err != nil {
-		return nil, err
-	}
-
-	return []byte(codeResp.CodeHash), nil
+	return []byte(res.CodeHash), nil
 }
 
-func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddress) ([]byte, error) {
-	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, contractAddr.String())
-	res, _, err := cliCtx.Query(route)
+func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr string) ([]byte, error) {
+	queryClient := types.NewQueryClient(cliCtx)
+	res, err := queryClient.CodeHashByContractAddress(
+		context.Background(),
+		&types.QueryByContractAddressRequest{
+			ContractAddress: contractAddr,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
-
-	if len(res) == 0 {
-		return nil, fmt.Errorf("contract with address %s not found", contractAddr.String())
-	}
-
-	return []byte(hex.EncodeToString(res)), nil
+	return []byte(res.CodeHash), nil
 }
 
 // MigrateContractCmd will migrate a contract to a new code version
@@ -435,19 +454,19 @@ func MigrateContractCmd() *cobra.Command {
 		Aliases: []string{"update", "mig", "m"},
 		Args:    cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			cliCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			msg, err := parseMigrateContractArgs(args, clientCtx)
+			msg, err := parseMigrateContractArgs(args, cliCtx)
 			if err != nil {
 				return err
 			}
 			if err := msg.ValidateBasic(); err != nil {
 				return nil
 			}
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
+			return tx.GenerateOrBroadcastTxCLI(cliCtx, cmd.Flags(), &msg)
 		},
 		SilenceUsage: true,
 	}
@@ -459,20 +478,20 @@ func parseMigrateContractArgs(args []string, cliCtx client.Context) (types.MsgMi
 	// get the id of the code to instantiate
 	codeID, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "code id")
+		return types.MsgMigrateContract{}, errorsmod.Wrap(err, "code id")
 	}
 	migrateMsg := types.SecretMsg{}
 
 	migrateMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[1])
 	if err != nil {
-		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "code hash")
+		return types.MsgMigrateContract{}, errorsmod.Wrap(err, "code hash")
 	}
 
 	migrateMsg.Msg = []byte(args[2])
 	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 	encryptedMsg, err := wasmCtx.Encrypt(migrateMsg.Serialize())
 	if err != nil {
-		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "encrypt")
+		return types.MsgMigrateContract{}, errorsmod.Wrap(err, "encrypt")
 	}
 	msg := types.MsgMigrateContract{
 		Sender:   cliCtx.GetFromAddress().String(),

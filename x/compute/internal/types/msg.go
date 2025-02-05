@@ -3,6 +3,7 @@ package types
 import (
 	"strings"
 
+	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
@@ -16,20 +17,20 @@ func (msg MsgStoreCode) Type() string {
 }
 
 func (msg MsgStoreCode) ValidateBasic() error {
-	if err := sdk.VerifyAddressFormat(msg.Sender); err != nil {
+	if err := sdk.VerifyAddressFormat([]byte(msg.Sender)); err != nil {
 		return err
 	}
 
 	if err := validateWasmCode(msg.WASMByteCode); err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
+		return sdkerrors.ErrInvalidRequest.Wrapf("code bytes %s", err.Error())
 	}
 
 	if err := validateSourceURL(msg.Source); err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "source %s", err.Error())
+		return sdkerrors.ErrInvalidRequest.Wrapf("source %s", err.Error())
 	}
 
 	if err := validateBuilder(msg.Builder); err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "builder %s", err.Error())
+		return sdkerrors.ErrInvalidRequest.Wrapf("builder %s", err.Error())
 	}
 
 	return nil
@@ -40,7 +41,7 @@ func (msg MsgStoreCode) GetSignBytes() []byte {
 }
 
 func (msg MsgStoreCode) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Sender}
+	return []sdk.AccAddress{[]byte(msg.Sender)}
 }
 
 func (msg MsgInstantiateContract) Route() string {
@@ -52,12 +53,12 @@ func (msg MsgInstantiateContract) Type() string {
 }
 
 func (msg MsgInstantiateContract) ValidateBasic() error {
-	if err := sdk.VerifyAddressFormat(msg.Sender); err != nil {
+	if err := sdk.VerifyAddressFormat([]byte(msg.Sender)); err != nil {
 		return err
 	}
 
 	if msg.CodeID == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "code_id is required")
+		return sdkerrors.ErrInvalidRequest.Wrap("code_id is required")
 	}
 
 	if err := validateLabel(msg.Label); err != nil {
@@ -76,7 +77,7 @@ func (msg MsgInstantiateContract) GetSignBytes() []byte {
 }
 
 func (msg MsgInstantiateContract) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Sender}
+	return []sdk.AccAddress{[]byte(msg.Sender)}
 }
 
 func (msg MsgExecuteContract) Route() string {
@@ -96,7 +97,7 @@ func (msg MsgExecuteContract) ValidateBasic() error {
 	}
 
 	if !msg.SentFunds.IsValid() {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
+		return sdkerrors.ErrInvalidCoins.Wrap("sentFunds")
 	}
 
 	return nil
@@ -120,13 +121,13 @@ func (msg MsgMigrateContract) Type() string {
 
 func (msg MsgMigrateContract) ValidateBasic() error {
 	if msg.CodeID == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
+		return sdkerrors.ErrInvalidRequest.Wrap("code id is required")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return errorsmod.Wrap(err, "sender")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
-		return sdkerrors.Wrap(err, "contract")
+		return errorsmod.Wrap(err, "contract")
 	}
 
 	return nil
@@ -159,16 +160,16 @@ func (msg MsgUpdateAdmin) Type() string {
 
 func (msg MsgUpdateAdmin) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return errorsmod.Wrap(err, "sender")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
-		return sdkerrors.Wrap(err, "contract")
+		return errorsmod.Wrap(err, "contract")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.NewAdmin); err != nil {
-		return sdkerrors.Wrap(err, "new admin")
+		return errorsmod.Wrap(err, "new admin")
 	}
 	if strings.EqualFold(msg.Sender, msg.NewAdmin) {
-		return sdkerrors.Wrap(ErrInvalidMsg, "new admin is the same as the old")
+		return errorsmod.Wrap(ErrInvalidMsg, "new admin is the same as the old")
 	}
 	return nil
 }
@@ -195,10 +196,10 @@ func (msg MsgClearAdmin) Type() string {
 
 func (msg MsgClearAdmin) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return errorsmod.Wrap(err, "sender")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
-		return sdkerrors.Wrap(err, "contract")
+		return errorsmod.Wrap(err, "contract")
 	}
 	return nil
 }

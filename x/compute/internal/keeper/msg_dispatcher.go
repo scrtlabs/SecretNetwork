@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,14 +8,17 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/gogoproto/proto"
 
+	errorsmod "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 // Messenger is an extension point for custom wasmd message handling
@@ -58,8 +60,8 @@ func sdkAttributesToWasmVMAttributes(attrs []abci.EventAttribute) []v010wasmType
 	res := make([]v010wasmTypes.LogAttribute, len(attrs))
 	for i, attr := range attrs {
 		res[i] = v010wasmTypes.LogAttribute{
-			Key:   string(attr.Key),
-			Value: string(attr.Value),
+			Key:   attr.Key,
+			Value: attr.Value,
 		}
 	}
 	return res
@@ -78,20 +80,20 @@ func sdkEventsToWasmVMEvents(events []sdk.Event) []v1wasmTypes.Event {
 
 // dispatchMsgWithGasLimit sends a message with gas limit applied
 func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msg v1wasmTypes.CosmosMsg, gasLimit uint64) (events []sdk.Event, data [][]byte, err error) {
-	limitedMeter := sdk.NewGasMeter(gasLimit)
+	limitedMeter := storetypes.NewGasMeter(gasLimit)
 	subCtx := ctx.WithGasMeter(limitedMeter)
 
 	// catch out of gas panic and just charge the entire gas limit
 	defer func() {
 		if r := recover(); r != nil {
 			// if it's not an OutOfGas error, raise it again
-			if _, ok := r.(sdk.ErrorOutOfGas); !ok {
+			if _, ok := r.(storetypes.ErrorOutOfGas); !ok {
 				// log it to get the original stack trace somewhere (as panic(r) keeps message but stacktrace to here
 				moduleLogger(ctx).Info("SubMsg rethrowing panic: %#v", r)
 				panic(r)
 			}
 			ctx.GasMeter().ConsumeGas(gasLimit, "Sub-Message OutOfGas panic")
-			err = sdkerrors.Wrap(sdkerrors.ErrOutOfGas, "SubMsg hit gas limit")
+			err = sdkerrors.ErrOutOfGas.Wrap("SubMsg hit gas limit")
 		}
 	}()
 	events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg)
@@ -175,7 +177,7 @@ func redactError(err error) (bool, error) {
 	// sdk/11 is out of gas
 	// sdk/5 is insufficient funds (on bank send)
 	// (we can theoretically redact less in the future, but this is a first step to safety)
-	codespace, code, _ := sdkerrors.ABCIInfo(err, false)
+	codespace, code, _ := errorsmod.ABCIInfo(err, false)
 
 	// In software mode, ignore redaction in order the understand the errors.
 	if os.Getenv("SGX_MODE") == "SW" {
@@ -192,7 +194,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 	for _, msg := range msgs {
 
 		if d.keeper.GetLastMsgMarkerContainer().GetMarker() {
-			return nil, sdkerrors.Wrap(sdkerrors.ErrLastTx, "Cannot send messages or submessages after last tx marker was set")
+			return nil, sdkerrors.ErrLastTx.Wrap("Cannot send messages or submessages after last tx marker was set")
 		}
 
 		if msg.Msg.FinalizeTx != nil {
@@ -206,7 +208,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		switch msg.ReplyOn {
 		case v1wasmTypes.ReplySuccess, v1wasmTypes.ReplyError, v1wasmTypes.ReplyAlways, v1wasmTypes.ReplyNever:
 		default:
-			return nil, sdkerrors.Wrap(types.ErrInvalid, "ReplyOn value")
+			return nil, errorsmod.Wrap(types.ErrInvalid, "ReplyOn value")
 		}
 
 		// first, we build a sub-context which we can use inside the submessages
@@ -240,7 +242,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 				for _, e := range filteredEvents {
 					attributes := e.Attributes
 					sort.SliceStable(attributes, func(i, j int) bool {
-						return bytes.Compare(attributes[i].Key, attributes[j].Key) < 0
+						return attributes[i].Key < attributes[j].Key
 					})
 				}
 			}
@@ -317,19 +319,53 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		if isReplyEncrypted(msg) {
 			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
+			var err error
 
+			var replyData []byte
 			if reply.Result.Ok != nil {
-				err = json.Unmarshal(reply.Result.Ok.Data, &dataWithInternalReplyInfo)
-				if err != nil {
-					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
-				}
-
-				reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
+				replyData = reply.Result.Ok.Data
 			} else {
-				err = json.Unmarshal(data[0], &dataWithInternalReplyInfo)
+				replyData = data[0]
+			}
+			switch {
+			case msg.Msg.Wasm.Execute != nil:
+				sdkMsg := []sdk.Msg{&types.MsgExecuteContractResponse{}}
+				err = proto.Unmarshal(replyData, sdkMsg[0])
 				if err != nil {
-					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
+					ctx.Logger().Error("Unmarshal MsgExecuteContractResponse", "proto", err.Error())
 				}
+				err = json.Unmarshal(sdkMsg[0].(*types.MsgExecuteContractResponse).GetData(), &dataWithInternalReplyInfo)
+			case msg.Msg.Wasm.Instantiate != nil:
+				sdkMsg := []sdk.Msg{&types.MsgInstantiateContractResponse{}}
+				err = proto.Unmarshal(replyData, sdkMsg[0])
+				if err != nil {
+					ctx.Logger().Error("Unmarshal MsgInstantiateContractResponse", "proto", err.Error())
+				}
+				err = json.Unmarshal(sdkMsg[0].(*types.MsgInstantiateContractResponse).GetData(), &dataWithInternalReplyInfo)
+			case msg.Msg.Wasm.Migrate != nil:
+				sdkMsg := []sdk.Msg{&types.MsgMigrateContract{}}
+				err = proto.Unmarshal(replyData, sdkMsg[0])
+				if err != nil {
+					ctx.Logger().Error("Unmarshal MsgMigrateContract", "proto", err.Error())
+				}
+				err = json.Unmarshal(sdkMsg[0].(*types.MsgMigrateContractResponse).GetData(), &dataWithInternalReplyInfo)
+			// case msg.Msg.Wasm.UpdateAdmin != nil:
+			// sdkMsg := []sdk.Msg{&types.MsgUpdateAdmin{}}
+			// proto.Unmarshal(replyData, sdkMsg[0])
+			// err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgUpdateAdminResponse).GetData()), &dataWithInternalReplyInfo)
+			// break;
+			// case msg.Msg.Wasm.ClearAdmin != nil:
+			// sdkMsg := []sdk.Msg{&types.MsgClearAdmin{}}
+			// proto.Unmarshal(replyData, sdkMsg[0])
+			// err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgClearAdminResponse).GetData()), &dataWithInternalReplyInfo)
+			// break;
+			default:
+			}
+			if err != nil {
+				return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
+			}
+			if reply.Result.Ok != nil {
+				reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
 			}
 
 			if len(dataWithInternalReplyInfo.InternalMsgId) == 0 || len(dataWithInternalReplyInfo.InternaReplyEnclaveSig) == 0 {

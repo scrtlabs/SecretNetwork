@@ -14,7 +14,9 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 		keeper.SetMasterKey(ctx, *data.IoMasterKey, types.MasterIoKeyId)
 		keeper.SetMasterKey(ctx, *data.NodeExchMasterKey, types.MasterNodeKeyId)
 		for _, storedRegInfo := range data.Registration {
-			keeper.SetRegistrationInfo(ctx, *storedRegInfo)
+			if err := keeper.SetRegistrationInfo(ctx, *storedRegInfo); err != nil {
+				panic(err)
+			}
 		}
 	} else {
 		panic("Cannot start without MasterKey set")
@@ -28,10 +30,14 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) *types.GenesisState {
 	genState.NodeExchMasterKey = keeper.GetMasterKey(ctx, types.MasterNodeKeyId)
 	genState.IoMasterKey = keeper.GetMasterKey(ctx, types.MasterIoKeyId)
 
-	keeper.ListRegistrationInfo(ctx, func(pubkey []byte, regInfo types.RegistrationNodeInfo) bool {
-		genState.Registration = append(genState.Registration, &regInfo)
-		return false
-	})
+	keeper.ListRegistrationInfo(
+		ctx,
+		func(_ []byte, regInfo types.RegistrationNodeInfo) bool {
+			// unused param pubkey
+			genState.Registration = append(genState.Registration, &regInfo)
+			return false
+		},
+	)
 
 	return &genState
 }

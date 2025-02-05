@@ -5,11 +5,17 @@ package types
 
 import (
 	bytes "bytes"
+	context "context"
 	fmt "fmt"
 	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/cosmos/cosmos-sdk/types/msgservice"
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	grpc1 "github.com/cosmos/gogoproto/grpc"
+	proto "github.com/cosmos/gogoproto/proto"
 	github_com_scrtlabs_SecretNetwork_x_registration_remote_attestation "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -64,6 +70,44 @@ func (m *RaAuthenticate) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_RaAuthenticate proto.InternalMessageInfo
 
+type RaAuthenticateResponse struct {
+	Data   string `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Events string `protobuf:"bytes,2,opt,name=events,proto3" json:"events,omitempty"`
+}
+
+func (m *RaAuthenticateResponse) Reset()         { *m = RaAuthenticateResponse{} }
+func (m *RaAuthenticateResponse) String() string { return proto.CompactTextString(m) }
+func (*RaAuthenticateResponse) ProtoMessage()    {}
+func (*RaAuthenticateResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_91e653c4cfa6dfea, []int{1}
+}
+func (m *RaAuthenticateResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *RaAuthenticateResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_RaAuthenticateResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *RaAuthenticateResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RaAuthenticateResponse.Merge(m, src)
+}
+func (m *RaAuthenticateResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *RaAuthenticateResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_RaAuthenticateResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RaAuthenticateResponse proto.InternalMessageInfo
+
 type MasterKey struct {
 	Bytes []byte `protobuf:"bytes,1,opt,name=bytes,proto3" json:"bytes,omitempty"`
 }
@@ -72,7 +116,7 @@ func (m *MasterKey) Reset()         { *m = MasterKey{} }
 func (m *MasterKey) String() string { return proto.CompactTextString(m) }
 func (*MasterKey) ProtoMessage()    {}
 func (*MasterKey) Descriptor() ([]byte, []int) {
-	return fileDescriptor_91e653c4cfa6dfea, []int{1}
+	return fileDescriptor_91e653c4cfa6dfea, []int{2}
 }
 func (m *MasterKey) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -109,7 +153,7 @@ func (m *Key) Reset()         { *m = Key{} }
 func (m *Key) String() string { return proto.CompactTextString(m) }
 func (*Key) ProtoMessage()    {}
 func (*Key) Descriptor() ([]byte, []int) {
-	return fileDescriptor_91e653c4cfa6dfea, []int{2}
+	return fileDescriptor_91e653c4cfa6dfea, []int{3}
 }
 func (m *Key) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -140,6 +184,7 @@ var xxx_messageInfo_Key proto.InternalMessageInfo
 
 func init() {
 	proto.RegisterType((*RaAuthenticate)(nil), "secret.registration.v1beta1.RaAuthenticate")
+	proto.RegisterType((*RaAuthenticateResponse)(nil), "secret.registration.v1beta1.RaAuthenticateResponse")
 	proto.RegisterType((*MasterKey)(nil), "secret.registration.v1beta1.MasterKey")
 	proto.RegisterType((*Key)(nil), "secret.registration.v1beta1.Key")
 }
@@ -149,29 +194,36 @@ func init() {
 }
 
 var fileDescriptor_91e653c4cfa6dfea = []byte{
-	// 344 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x91, 0xbf, 0x4e, 0xeb, 0x30,
-	0x14, 0x87, 0xe3, 0x5b, 0xdd, 0x56, 0xd7, 0xf7, 0xea, 0x0e, 0x51, 0x87, 0x02, 0x92, 0x53, 0x2a,
-	0x21, 0xb1, 0x34, 0x56, 0xc5, 0x03, 0xa0, 0x96, 0x09, 0x21, 0x40, 0x0a, 0x1b, 0x03, 0x95, 0xe3,
-	0x1c, 0xd2, 0xa8, 0x4d, 0x5c, 0xd9, 0xa7, 0x40, 0x36, 0x1e, 0x81, 0xc7, 0xe0, 0x51, 0x3a, 0x76,
-	0x64, 0x8a, 0x20, 0xdd, 0xfa, 0x08, 0x9d, 0x50, 0xfe, 0x48, 0x94, 0x91, 0xc5, 0xf6, 0xd1, 0xf9,
-	0xf9, 0x3b, 0xfa, 0x6c, 0x7a, 0x64, 0x40, 0x6a, 0x40, 0xae, 0x21, 0x8c, 0x0c, 0x6a, 0x81, 0x91,
-	0x4a, 0xf8, 0xc3, 0xc0, 0x07, 0x14, 0x03, 0x1e, 0x9b, 0xd0, 0x9d, 0x6b, 0x85, 0xca, 0x3e, 0xa8,
-	0x62, 0xee, 0x6e, 0xcc, 0xad, 0x63, 0xfb, 0xed, 0x50, 0x85, 0xaa, 0xcc, 0xf1, 0xe2, 0x54, 0x5d,
-	0xe9, 0x65, 0x84, 0xfe, 0xf7, 0xc4, 0x70, 0x81, 0x13, 0x48, 0x30, 0x92, 0x02, 0xc1, 0x3e, 0xa7,
-	0x4d, 0x03, 0x49, 0x00, 0xba, 0x43, 0xba, 0xe4, 0xf8, 0xdf, 0x68, 0xb0, 0xcd, 0x9c, 0x7e, 0x18,
-	0xe1, 0x64, 0xe1, 0xbb, 0x52, 0xc5, 0x5c, 0x2a, 0x13, 0x2b, 0x53, 0x6f, 0x7d, 0x13, 0x4c, 0x39,
-	0xa6, 0x73, 0x30, 0xee, 0x50, 0xca, 0x61, 0x10, 0x68, 0x30, 0xc6, 0xab, 0x01, 0xf6, 0x33, 0xa1,
-	0x7f, 0x25, 0x68, 0x8c, 0xee, 0x4b, 0x74, 0xe7, 0x57, 0x09, 0xbc, 0xdb, 0x64, 0x4e, 0x4b, 0x8b,
-	0x71, 0xd1, 0xd9, 0x66, 0xce, 0xf5, 0x0e, 0xdb, 0x48, 0x8d, 0x33, 0xe1, 0x1b, 0x7e, 0x53, 0x9a,
-	0x5c, 0x01, 0x3e, 0x2a, 0x3d, 0xe5, 0x4f, 0xdf, 0xcd, 0x35, 0xc4, 0x0a, 0x61, 0x2c, 0x10, 0xc1,
-	0x60, 0x65, 0x79, 0xf6, 0x35, 0xc5, 0xdb, 0x1d, 0xd9, 0x3b, 0xa4, 0x7f, 0x2e, 0x85, 0x41, 0xd0,
-	0x17, 0x90, 0xda, 0x6d, 0xfa, 0xdb, 0x4f, 0x11, 0x4c, 0x65, 0xe6, 0x55, 0x45, 0xaf, 0x4b, 0x1b,
-	0x45, 0x73, 0x8f, 0x36, 0xa6, 0x90, 0xd6, 0xd2, 0xad, 0x4d, 0xe6, 0x14, 0xa5, 0x57, 0x2c, 0x23,
-	0xb1, 0xfc, 0x60, 0xd6, 0x6b, 0xce, 0xc8, 0x32, 0x67, 0x64, 0x95, 0x33, 0xf2, 0x9e, 0x33, 0xf2,
-	0xb2, 0x66, 0xd6, 0x6a, 0xcd, 0xac, 0xb7, 0x35, 0xb3, 0x6e, 0x4f, 0x7f, 0x2c, 0x11, 0x25, 0x08,
-	0x3a, 0x11, 0xb3, 0xea, 0xf5, 0xfc, 0x66, 0xf9, 0x1f, 0x27, 0x9f, 0x01, 0x00, 0x00, 0xff, 0xff,
-	0xc1, 0x35, 0x10, 0xbc, 0xeb, 0x01, 0x00, 0x00,
+	// 449 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x52, 0xb1, 0x6e, 0x13, 0x41,
+	0x10, 0xbd, 0xc5, 0xc4, 0x91, 0x97, 0x08, 0xa4, 0x55, 0x14, 0x82, 0x91, 0xee, 0x82, 0x25, 0x24,
+	0x14, 0x94, 0x5b, 0x99, 0x74, 0x34, 0xc8, 0x81, 0x06, 0xa1, 0x80, 0xb4, 0x74, 0x14, 0x44, 0x7b,
+	0x7b, 0xc3, 0xe5, 0xe4, 0xf8, 0xd6, 0xda, 0x99, 0x18, 0xdc, 0xa0, 0x88, 0x8a, 0x92, 0x4f, 0xa0,
+	0xa4, 0xcc, 0x67, 0xa4, 0x4c, 0x49, 0x65, 0x81, 0x5d, 0x44, 0x4a, 0x43, 0x9f, 0x0a, 0xdd, 0xde,
+	0x21, 0xec, 0x26, 0x92, 0x9b, 0xbb, 0x19, 0xcd, 0xdb, 0x37, 0xef, 0xcd, 0x0c, 0x7f, 0x88, 0x60,
+	0x1c, 0x90, 0x74, 0x90, 0xe5, 0x48, 0x4e, 0x53, 0x6e, 0x0b, 0x39, 0xea, 0x26, 0x40, 0xba, 0x2b,
+	0x07, 0x98, 0xc5, 0x43, 0x67, 0xc9, 0x8a, 0xfb, 0x15, 0x2c, 0x9e, 0x87, 0xc5, 0x35, 0xac, 0xbd,
+	0x9e, 0xd9, 0xcc, 0x7a, 0x9c, 0x2c, 0xa3, 0xea, 0x49, 0xfb, 0xae, 0xb1, 0x38, 0xb0, 0x58, 0x92,
+	0xc8, 0xd1, 0x1c, 0x57, 0xe7, 0x0f, 0xe3, 0xb7, 0x95, 0xee, 0x1d, 0xd3, 0x21, 0x14, 0x94, 0x1b,
+	0x4d, 0x20, 0x5e, 0xf2, 0x26, 0x42, 0x91, 0x82, 0xdb, 0x64, 0x5b, 0xec, 0xd1, 0xda, 0x5e, 0xf7,
+	0x6a, 0x12, 0xed, 0x64, 0x39, 0x1d, 0x1e, 0x27, 0xb1, 0xb1, 0x03, 0x59, 0x53, 0x55, 0xbf, 0x1d,
+	0x4c, 0xfb, 0x92, 0xc6, 0x43, 0xc0, 0xb8, 0x67, 0x4c, 0x2f, 0x4d, 0x1d, 0x20, 0xaa, 0x9a, 0x40,
+	0x9c, 0x30, 0x7e, 0xcb, 0x80, 0xa3, 0xfc, 0x83, 0xa7, 0xde, 0xbc, 0xe1, 0x09, 0xdf, 0x5f, 0x4e,
+	0xa2, 0x55, 0xa7, 0x0f, 0xca, 0xca, 0xd5, 0x24, 0x7a, 0x33, 0xc7, 0x8d, 0xc6, 0xd1, 0x91, 0x4e,
+	0x50, 0xbe, 0xf5, 0x16, 0x5f, 0x03, 0x7d, 0xb4, 0xae, 0x2f, 0x3f, 0x2d, 0x8e, 0xc4, 0xc1, 0xc0,
+	0x12, 0x1c, 0x68, 0x22, 0x40, 0xaa, 0xec, 0x3f, 0xff, 0xdf, 0x45, 0xcd, 0xb7, 0x7c, 0x7a, 0xe7,
+	0xeb, 0xf7, 0x28, 0xf8, 0x72, 0x71, 0xba, 0x5d, 0x6b, 0xea, 0xbc, 0xe0, 0x1b, 0x8b, 0x86, 0x15,
+	0xe0, 0xd0, 0x16, 0x08, 0x42, 0xf0, 0x9b, 0xa9, 0x26, 0xed, 0x6d, 0xb7, 0x94, 0x8f, 0xc5, 0x06,
+	0x6f, 0xc2, 0x08, 0x0a, 0x42, 0xaf, 0xbd, 0xa5, 0xea, 0xac, 0xf3, 0x80, 0xb7, 0xf6, 0x35, 0x12,
+	0xb8, 0x57, 0x30, 0x16, 0xeb, 0x7c, 0x25, 0x19, 0x13, 0x60, 0x35, 0x30, 0x55, 0x25, 0x9d, 0x2d,
+	0xde, 0x28, 0x8b, 0xf7, 0x78, 0xa3, 0x0f, 0xe3, 0x7a, 0x96, 0xab, 0x97, 0x93, 0xa8, 0x4c, 0x55,
+	0xf9, 0x79, 0xf2, 0x99, 0x37, 0xf6, 0x31, 0x13, 0x43, 0xbe, 0xa6, 0xbc, 0x3d, 0x70, 0xa5, 0x2e,
+	0xf1, 0x38, 0xbe, 0x66, 0xc1, 0xf1, 0xa2, 0xf8, 0xf6, 0xee, 0x12, 0xe0, 0x7f, 0x4e, 0xdb, 0x2b,
+	0x27, 0x17, 0xa7, 0xdb, 0x6c, 0x4f, 0x9f, 0xfd, 0x0e, 0x83, 0x1f, 0xd3, 0x90, 0x9d, 0x4d, 0x43,
+	0x76, 0x3e, 0x0d, 0xd9, 0xaf, 0x69, 0xc8, 0xbe, 0xcd, 0xc2, 0xe0, 0x7c, 0x16, 0x06, 0x3f, 0x67,
+	0x61, 0xf0, 0xee, 0xd9, 0xd2, 0xbb, 0xc9, 0x0b, 0x02, 0x57, 0xe8, 0xa3, 0xea, 0x28, 0x92, 0xa6,
+	0x3f, 0xb3, 0xdd, 0xbf, 0x01, 0x00, 0x00, 0xff, 0xff, 0xf0, 0x39, 0x18, 0xd5, 0xdb, 0x02, 0x00,
+	0x00,
 }
 
 func (this *RaAuthenticate) Equal(that interface{}) bool {
@@ -197,6 +249,33 @@ func (this *RaAuthenticate) Equal(that interface{}) bool {
 		return false
 	}
 	if !bytes.Equal(this.Certificate, that1.Certificate) {
+		return false
+	}
+	return true
+}
+func (this *RaAuthenticateResponse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*RaAuthenticateResponse)
+	if !ok {
+		that2, ok := that.(RaAuthenticateResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Data != that1.Data {
+		return false
+	}
+	if this.Events != that1.Events {
 		return false
 	}
 	return true
@@ -249,6 +328,89 @@ func (this *Key) Equal(that interface{}) bool {
 	}
 	return true
 }
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// MsgClient is the client API for Msg service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type MsgClient interface {
+	// Register and authenticate new node
+	RegisterAuth(ctx context.Context, in *RaAuthenticate, opts ...grpc.CallOption) (*RaAuthenticateResponse, error)
+}
+
+type msgClient struct {
+	cc grpc1.ClientConn
+}
+
+func NewMsgClient(cc grpc1.ClientConn) MsgClient {
+	return &msgClient{cc}
+}
+
+func (c *msgClient) RegisterAuth(ctx context.Context, in *RaAuthenticate, opts ...grpc.CallOption) (*RaAuthenticateResponse, error) {
+	out := new(RaAuthenticateResponse)
+	err := c.cc.Invoke(ctx, "/secret.registration.v1beta1.Msg/RegisterAuth", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MsgServer is the server API for Msg service.
+type MsgServer interface {
+	// Register and authenticate new node
+	RegisterAuth(context.Context, *RaAuthenticate) (*RaAuthenticateResponse, error)
+}
+
+// UnimplementedMsgServer can be embedded to have forward compatible implementations.
+type UnimplementedMsgServer struct {
+}
+
+func (*UnimplementedMsgServer) RegisterAuth(ctx context.Context, req *RaAuthenticate) (*RaAuthenticateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterAuth not implemented")
+}
+
+func RegisterMsgServer(s grpc1.Server, srv MsgServer) {
+	s.RegisterService(&_Msg_serviceDesc, srv)
+}
+
+func _Msg_RegisterAuth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RaAuthenticate)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).RegisterAuth(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/secret.registration.v1beta1.Msg/RegisterAuth",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).RegisterAuth(ctx, req.(*RaAuthenticate))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Msg_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "secret.registration.v1beta1.Msg",
+	HandlerType: (*MsgServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "RegisterAuth",
+			Handler:    _Msg_RegisterAuth_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "secret/registration/v1beta1/msg.proto",
+}
+
 func (m *RaAuthenticate) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -280,6 +442,43 @@ func (m *RaAuthenticate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.Sender)
 		copy(dAtA[i:], m.Sender)
 		i = encodeVarintMsg(dAtA, i, uint64(len(m.Sender)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *RaAuthenticateResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *RaAuthenticateResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *RaAuthenticateResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Events) > 0 {
+		i -= len(m.Events)
+		copy(dAtA[i:], m.Events)
+		i = encodeVarintMsg(dAtA, i, uint64(len(m.Events)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Data) > 0 {
+		i -= len(m.Data)
+		copy(dAtA[i:], m.Data)
+		i = encodeVarintMsg(dAtA, i, uint64(len(m.Data)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -368,6 +567,23 @@ func (m *RaAuthenticate) Size() (n int) {
 		n += 1 + l + sovMsg(uint64(l))
 	}
 	l = len(m.Certificate)
+	if l > 0 {
+		n += 1 + l + sovMsg(uint64(l))
+	}
+	return n
+}
+
+func (m *RaAuthenticateResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Data)
+	if l > 0 {
+		n += 1 + l + sovMsg(uint64(l))
+	}
+	l = len(m.Events)
 	if l > 0 {
 		n += 1 + l + sovMsg(uint64(l))
 	}
@@ -502,6 +718,120 @@ func (m *RaAuthenticate) Unmarshal(dAtA []byte) error {
 			if m.Certificate == nil {
 				m.Certificate = []byte{}
 			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMsg(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthMsg
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *RaAuthenticateResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMsg
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: RaAuthenticateResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: RaAuthenticateResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsg
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsg
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsg
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Data = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Events", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsg
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsg
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsg
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Events = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
