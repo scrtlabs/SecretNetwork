@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
@@ -201,4 +202,24 @@ func (m msgServer) UpdateParams(goCtx context.Context, req *types.MsgUpdateParam
 	}
 
 	return &types.MsgUpdateParamsResponse{}, nil
+}
+
+func (m msgServer) UpgradeProposalPassed(goCtx context.Context, msg *types.MsgUpgradeProposalPassed) (*types.MsgUpgradeProposalPassedResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeExecute,
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.SenderAddress),
+		sdk.NewAttribute("mrenclave", string(msg.MrEnclaveHash)),
+	))
+
+	if err := api.OnUpgradeProposalPassed(msg.MrEnclaveHash); err != nil {
+		return nil, err
+	}
+
+	return &types.MsgUpgradeProposalPassedResponse{}, nil
 }

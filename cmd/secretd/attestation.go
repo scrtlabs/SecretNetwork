@@ -14,12 +14,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+	"github.com/scrtlabs/SecretNetwork/app"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
@@ -32,6 +34,7 @@ const (
 	flagCustomRegistrationService = "registration-service"
 	flag_no_epid                  = "no-epid"
 	flag_no_dcap                  = "no-dcap"
+	flag_is_migration_report      = "migration"
 )
 
 const (
@@ -67,7 +70,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
-			sgxSecretsPath := sgxSecretsDir + string(os.PathSeparator) + reg.EnclaveRegistrationKey
+			sgxSecretsPath := sgxSecretsDir + string(os.PathSeparator) + reg.EnclaveSealedData
 
 			resetFlag, err := cmd.Flags().GetBool(flagReset)
 			if err != nil {
@@ -99,8 +102,9 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			no_epid, _ := cmd.Flags().GetBool(flag_no_epid)
 			no_dcap, _ := cmd.Flags().GetBool(flag_no_dcap)
+			is_migration_report, _ := cmd.Flags().GetBool(flag_is_migration_report)
 
-			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap)
+			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap, is_migration_report)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
@@ -110,6 +114,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 	cmd.Flags().Bool(flagReset, false, "Optional flag to regenerate the enclave registration key")
 	cmd.Flags().Bool(flag_no_epid, false, "Optional flag to disable EPID attestation")
 	cmd.Flags().Bool(flag_no_dcap, false, "Optional flag to disable DCAP attestation")
+	cmd.Flags().Bool(flag_is_migration_report, false, "Create migration report rather then attestation")
 
 	return cmd
 }
@@ -275,19 +280,42 @@ func DumpBin() *cobra.Command {
 	return cmd
 }
 
-func MigrateSealings() *cobra.Command {
+func MigrationOp() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "migrate_sealing",
-		Short: "Migrate sealed files to the current format",
-		Long:  "Re-create SGX-sealed files according to the current format",
-		Args:  cobra.ExactArgs(0),
-		RunE: func(_ *cobra.Command, _ []string) error {
-			_, err := api.MigrateSealing()
+		Use:   "migrate_op [opcode]",
+		Short: "Migration operation",
+		Long:  "0: migrate from SGX 2.17 format, 1: create migration report, 2: export sealing key for the new enclave, 3: import sealing data",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			op_num, err := strconv.ParseUint(args[0], 10, 32)
 			if err != nil {
-				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
+				return fmt.Errorf("opcode should be a number: %s", err)
 			}
 
-			fmt.Printf("Migration succeeded\n")
+			_, err = api.MigrationOp(uint32(op_num))
+			if err != nil {
+				return fmt.Errorf("failed to migrate sealings. Enclave returned: %s", err)
+			}
+
+			fmt.Printf("Migration op succeeded\n")
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func EmergencyApproveUpgrade() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "emergency_approve_upgrade [mr_enclave]",
+		Short: "Emergency enclave upgade approval",
+		Long:  "Approve enclave upgrade in an offline mode. Need to reach consensus among network validators",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			_, err := api.EmergencyApproveUpgrade(app.DefaultNodeHome, args[0])
+			if err != nil {
+				return fmt.Errorf("failed to approve emergency upgrade: %s", err)
+			}
 			return nil
 		},
 	}
@@ -451,7 +479,7 @@ Please report any issues with this command
 				sgxSecretsFolder = os.ExpandEnv("/opt/secret/.sgx_secrets")
 			}
 
-			sgxEnclaveKeyPath := filepath.Join(sgxSecretsFolder, reg.EnclaveRegistrationKey)
+			sgxSecretPath := filepath.Join(sgxSecretsFolder, reg.EnclaveSealedData)
 			sgxAttestationCombined := filepath.Join(sgxSecretsFolder, reg.AttestationCombinedPath)
 
 			resetFlag, err := cmd.Flags().GetBool(flagReset)
@@ -460,7 +488,7 @@ Please report any issues with this command
 			}
 
 			if !resetFlag {
-				if _, err := os.Stat(sgxEnclaveKeyPath); os.IsNotExist(err) {
+				if _, err := os.Stat(sgxSecretPath); os.IsNotExist(err) {
 					fmt.Println("Creating new enclave registration key")
 					_, err := api.KeyGen()
 					if err != nil {
@@ -487,7 +515,7 @@ Please report any issues with this command
 			no_epid, _ := cmd.Flags().GetBool(flag_no_epid)
 			no_dcap, _ := cmd.Flags().GetBool(flag_no_dcap)
 
-			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap)
+			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap, false)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}

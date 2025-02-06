@@ -39,8 +39,12 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, random []byte /* valSet []byte, nextValSet []byte*/) ([]byte, error) {
-	return nil, nil
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, random []byte /* valSet []byte, nextValSet []byte*/) ([]byte, []byte, error) {
+	return nil, nil, nil
+}
+
+func SubmitValidatorSetEvidence(evidence []byte) error {
+	return nil
 }
 
 func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
@@ -49,7 +53,11 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 
 type Querier = types.Querier
 
-func MigrateSealing() (bool, error) {
+func MigrationOp(op uint32) (bool, error) {
+	return false, nil
+}
+
+func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
 	return false, nil
 }
 
@@ -260,7 +268,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // KeyGen Seng KeyGen request to enclave
-func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool) (bool, error) {
+func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
 	//errmsg := C.Buffer{}
 	//_, err := C.create_attestation_report(&errmsg)
 	//if err != nil {
@@ -295,3 +303,7 @@ func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
 //	//return fmt.Errorf("%s", string(msg))
 //	return fmt.Errorf("heelo")
 //}
+
+func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
+	return nil
+}

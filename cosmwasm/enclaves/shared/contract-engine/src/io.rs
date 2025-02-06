@@ -10,9 +10,9 @@ use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::{CanonicalAddr, Coin, LogAttribute};
 use cw_types_v1::results::{Event, Reply, ReplyOn, SubMsg, SubMsgResponse, SubMsgResult};
 
+use enclave_crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable};
 use enclave_ffi_types::EnclaveError;
-
-use enclave_crypto::{AESKey, Ed25519PublicKey, Kdf, SIVEncryptable, KEY_MANAGER};
+use enclave_utils::KEY_MANAGER;
 
 use log::*;
 use serde::{Deserialize, Serialize};

@@ -38,7 +38,7 @@ func createUpgradeHandler(mm *module.Manager, _ *keepers.SecretAppKeepers, confi
 
 		logger.Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
 
-		_, err := api.MigrateSealing()
+		_, err := api.MigrationOp(0)
 		if err != nil {
 			return nil, err
 		}

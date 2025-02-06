@@ -11,8 +11,9 @@ use enclave_cosmos_types::types::{
     VerifyParamsType,
 };
 use enclave_crypto::traits::VerifyingKey;
-use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
+use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE};
 use enclave_ffi_types::EnclaveError;
+use enclave_utils::KEY_MANAGER;
 use protobuf::Message;
 
 use crate::hardcoded_admins::is_code_hash_allowed;

@@ -12,7 +12,6 @@ extern crate sgx_tstd as std;
 pub mod consts;
 mod errors;
 pub(crate) mod kdf;
-pub mod key_manager;
 mod keys;
 mod storage;
 pub mod traits;
@@ -23,13 +22,13 @@ pub mod ed25519;
 mod hmac;
 pub mod secp256k1;
 
+pub mod dcap;
+
 mod rng;
 
 pub mod hash;
 
 pub use errors::{CryptoError, WasmApiCryptoError};
-pub use key_manager::Keychain;
-pub use key_manager::KEY_MANAGER;
 pub use keys::{AESKey, Seed, SymmetricKey, SEED_KEY_SIZE};
 
 pub use ed25519::{Ed25519PublicKey, KeyPair, PUBLIC_KEY_SIZE, SECRET_KEY_SIZE};

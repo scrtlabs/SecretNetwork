@@ -12,8 +12,8 @@ pub fn create_random_proof(
     trace!(
         "Height: {:?}\nRandom: {:?}\nApphash: {:?}",
         height,
-        random,
-        block_hash
+        hex::encode(random),
+        hex::encode(block_hash)
     );
 
     let height_bytes = height.to_be_bytes();

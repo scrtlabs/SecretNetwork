@@ -44,6 +44,7 @@ const SUPPORTED_IMPORTS_V1: &[&str] = &[
     "env.ed25519_verify",
     "env.ed25519_batch_verify",
     "env.ed25519_sign",
+    "env.dcap_quote_verify",
     "env.debug",
     "env.query_chain",
     #[cfg(feature = "iterator")]

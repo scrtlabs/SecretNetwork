@@ -2,10 +2,9 @@ use log::*;
 
 use sgx_types::{sgx_status_t, SgxResult};
 
-use enclave_crypto::{
-    AESKey, Keychain, SIVEncryptable, Seed, KEY_MANAGER, PUBLIC_KEY_SIZE, SEED_KEY_SIZE,
-};
+use enclave_crypto::{AESKey, SIVEncryptable, Seed, PUBLIC_KEY_SIZE, SEED_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
+use enclave_utils::{Keychain, KEY_MANAGER};
 
 pub enum SeedType {
     Genesis,

@@ -7,6 +7,7 @@ edition = "2018"
 [features]
 production = []
 random = []
+default = ["random"]
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.
@@ -24,10 +25,13 @@ sgx_trts = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_trts
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
 log = "0.4.17"
+hex = "0.4.2"
 lazy_static = "1.4"
+sha2 = "0.10"
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"
 ] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
-
+tendermint-proto = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.1", default-features = false }
+tendermint = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.1", default-features = false, features = ["rust-crypto"] }
 enclave_crypto = { path = "../crypto" }
