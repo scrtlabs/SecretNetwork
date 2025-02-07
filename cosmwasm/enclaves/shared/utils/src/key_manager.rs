@@ -82,7 +82,7 @@ pub struct SeedsHolder<T> {
 
 lazy_static! {
     static ref SEALING_KDK: sgx_key_128bit_t = get_key_from_seed("seal.kdk".as_bytes());
-    pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path(SEALED_FILE_UNITED);
+    pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path(&SEALED_FILE_UNITED);
     pub static ref KEY_MANAGER: Keychain = Keychain::new();
 }
 

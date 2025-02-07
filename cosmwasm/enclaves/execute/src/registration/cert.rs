@@ -16,9 +16,8 @@ use std::str;
 use std::time::{SystemTime, UNIX_EPOCH};
 use yasna::models::ObjectIdentifier;
 
-use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS, SIGNING_METHOD};
+use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS, SELF_REPORT_BODY, SIGNING_METHOD};
 use enclave_ffi_types::NodeAuthResult;
-use enclave_utils::storage::SELF_REPORT_BODY;
 
 use crate::registration::report::AdvisoryIDs;
 
@@ -282,7 +281,7 @@ pub fn verify_ra_cert(
 
 pub fn verify_ra_report(
     report_mr_signer: &[u8; 32],
-    report_mr_enclave : & [u8;32],
+    report_mr_enclave: &[u8; 32],
     override_verify_type: Option<SigningMethod>,
 ) -> NodeAuthResult {
     let signing_method: SigningMethod = match override_verify_type {
@@ -293,7 +292,9 @@ pub fn verify_ra_report(
     // verify certificate
     match signing_method {
         SigningMethod::MRENCLAVE => {
-            if (*report_mr_enclave) != SELF_REPORT_BODY.mr_enclave.m || (*report_mr_signer) != SELF_REPORT_BODY.mr_signer.m {
+            if (*report_mr_enclave) != SELF_REPORT_BODY.mr_enclave.m
+                || (*report_mr_signer) != SELF_REPORT_BODY.mr_signer.m
+            {
                 error!(
                     "Got a different mr_enclave or mr_signer than expected. Invalid certificate"
                 );
@@ -324,7 +325,6 @@ pub fn verify_ra_report(
     NodeAuthResult::Success
 }
 
-
 /// # Verifies remote attestation cert
 ///
 /// Logic:
@@ -352,7 +352,8 @@ pub fn verify_ra_cert(
     let res = verify_ra_report(
         &report.sgx_quote_body.isv_enclave_report.mr_signer,
         &report.sgx_quote_body.isv_enclave_report.mr_enclave,
-        override_verify_type);
+        override_verify_type,
+    );
 
     if res != NodeAuthResult::Success {
         return Err(res);

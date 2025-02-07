@@ -16,12 +16,14 @@ use enclave_crypto::consts::{
     SIGNATURE_TYPE,
 };
 #[cfg(feature = "random")]
-use enclave_crypto::sha_256;
-use enclave_crypto::{AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE};
+use enclave_crypto::{
+    consts::SELF_REPORT_BODY, sha_256, AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable,
+    PUBLIC_KEY_SIZE,
+};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::key_manager::KeychainMutableData;
 use enclave_utils::pointers::validate_mut_slice;
-use enclave_utils::storage::{migrate_all_from_2_17, SELF_REPORT_BODY};
+use enclave_utils::storage::migrate_all_from_2_17;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr, Keychain, KEY_MANAGER};
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else

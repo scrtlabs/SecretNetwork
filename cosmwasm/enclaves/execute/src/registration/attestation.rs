@@ -172,7 +172,7 @@ fn remove_secret_file(file_name: &str) {
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 fn remove_all_keys() {
-    remove_secret_file(SEALED_FILE_UNITED);
+    remove_secret_file(&SEALED_FILE_UNITED);
     remove_secret_file(SEALED_FILE_REGISTRATION_KEY);
     remove_secret_file(SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS);
     remove_secret_file(SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT);
