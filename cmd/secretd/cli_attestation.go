@@ -82,7 +82,7 @@ func MigrationOp() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "migrate_op [opcode]",
 		Short: "Migration operation",
-		Long:  "0: migrate from SGX 2.17 format, 1: create migration report, 2: export sealing key for the new enclave, 3: import sealing data",
+		Long:  "0: migrate from SGX 2.17 format, 1: create migration report, 2: export sealing key for the new enclave, 3: import sealing data, 4: import legacy data, 5: self target info",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			println("This is a secretd only function, yo")
