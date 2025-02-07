@@ -1055,6 +1055,7 @@ fn import_sealed_data() -> sgx_status_t {
 }
 
 fn import_sealing_legacy() -> sgx_status_t {
+    // TODO: disable in production build in the next version
     match Keychain::new_from_legacy() {
         Some(key_manager) => {
             key_manager.save();
@@ -1245,16 +1246,31 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
                     return sgx_status_t::SGX_ERROR_UNEXPECTED;
                 }
 
-                // Currently accept initial validator set. This covers the following cases:
+                // We're given an initial validator set, without evidence. This covers the following cases:
                 // 1. Start after bootstraping a new network
                 // 2. Start after registration and sync normally (without using statesync)
-                // 3. Start after upgrade
+                // in both cases the height should be 1 (i.e. we're at the very 1st block). And both cases are not applicable to production build.
 
-                // While cases 1,2 are irrelevant for production build, the (3) must be supported.
-                // After the *next* upgrade it won't need to be supported (since this version DOES store the evidence),
-                // hence the following should be disabled in the production build.
+                // Note that there MUST be a valid evidence for the following scenarios:
+                // 1. Normal operation. The evidence is computed in submit_block_signatures
+                // 2. Just after upgrate from legacy. The initial validator set is imported from legacy files, then computed as usual
+                // 3. After statesync. The evidence for the initial validator set is downloaded with the whole state
 
-                info!("Setting initial validator set");
+                if height != 1 {
+                    error!("Initial validator set height mismatch");
+                    return sgx_status_t::SGX_ERROR_UNEXPECTED;
+                }
+
+                #[cfg(feature = "production")]
+                {
+                    error!("Initial validator set can't be set in production");
+                    return sgx_status_t::SGX_ERROR_UNEXPECTED;
+                }
+
+                #[cfg(not(feature = "production"))]
+                {
+                    info!("Setting initial validator set");
+                }
             }
         }
 
