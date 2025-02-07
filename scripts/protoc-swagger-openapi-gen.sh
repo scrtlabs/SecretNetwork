@@ -9,7 +9,7 @@ for dir in $proto_dirs; do
   # generate swagger files (filter query files)
   query_file=$(find "${dir}" -maxdepth 1 \( -name 'query.proto' -o -name 'service.proto' \))
   # remove autocli, because it contains circular refs
-  if [[ ! -z "$query_file" && "$query_file" != *autocli* ]]; then
+  if [[ ! -z "$query_file" && "$query_file" != *autocli* && "$query_file" != *gov/v1beta1* ]]; then
     # 1. Get buf from https://github.com/bufbuild/buf/releases/tag/v1.0.0-rc12
     # Note that v1.0.0-rc12 is the last version with the "buf protoc" subcommand
     # 2. Get swagger protoc plugin with `go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@v1.16.0`
