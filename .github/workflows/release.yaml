@@ -60,7 +60,7 @@ jobs:
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
@@ -114,7 +114,7 @@ jobs:
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
@@ -191,7 +191,7 @@ jobs:
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
@@ -268,7 +268,7 @@ jobs:
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
@@ -288,7 +288,7 @@ jobs:
         run: |
           SGX_MODE=SW make build_cli
           cp "secretcli" "secretcli-$RUNNER_OS"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: secretcli-${{runner.os}}
           path: secretcli-${{runner.os}}
@@ -305,7 +305,7 @@ jobs:
         run: |
           SGX_MODE=SW make build_cli
           cp "secretcli" "secretcli-Ubuntu-20.04"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: secretcli-Ubuntu-20.04
           path: secretcli-Ubuntu-20.04
@@ -328,7 +328,7 @@ jobs:
         run: |
           SGX_MODE=SW make build_cli
           cp "secretcli" "secretcli-MacOS-arm64"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: secretcli-MacOS-arm64
           path: secretcli-MacOS-arm64
@@ -366,7 +366,7 @@ jobs:
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build check_hw_tool_build
           cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
           path: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
@@ -404,7 +404,7 @@ jobs:
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build check_hw_tool_build
           cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
           path: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
@@ -481,40 +481,40 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: secretcli-Linux
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: secretcli-macOS
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: secretcli-Windows
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: secretcli-MacOS-arm64
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: secretcli-Ubuntu-20.04
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-20.04.deb
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-22.04.deb
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-20.04.deb
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-22.04.deb
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
-      # - uses: actions/download-artifact@v3
+      # - uses: actions/download-artifact@v4
       #   with:
       #     name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
       - name: Release

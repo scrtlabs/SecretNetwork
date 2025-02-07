@@ -63,35 +63,35 @@ jobs:
         run: |
           make build-test-contracts
           cp x/compute/internal/keeper/testdata/erc20.wasm .
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: erc20.wasm
           path: erc20.wasm
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: contract.wasm
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: contract-v2.wasm
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract-v2/contract-v2.wasm
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: v1-contract.wasm
           path: cosmwasm/contracts/v1/compute-tests/test-compute-contract/v1-contract.wasm
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ibc.wasm
           path: cosmwasm/contracts/v1/compute-tests/ibc-test-contract/ibc.wasm
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: contract_with_floats.wasm
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract_with_floats.wasm
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: too-high-initial-memory.wasm
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/too-high-initial-memory.wasm
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: static-too-high-initial-memory.wasm
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/static-too-high-initial-memory.wasm
@@ -115,7 +115,7 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Download LocalSecret
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: localsecret
           path: /tmp
@@ -127,31 +127,31 @@ jobs:
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librandom_api.so /opt/mount/librandom_api.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/tendermint_enclave.signed.so /opt/mount/tendermint_enclave.signed.so
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: contract.wasm
           path: ./x/compute/internal/keeper/testdata/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: contract-v2.wasm
           path: ./x/compute/internal/keeper/testdata/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: v1-contract.wasm
           path: ./x/compute/internal/keeper/testdata/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ibc.wasm
           path: ./x/compute/internal/keeper/testdata/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: contract_with_floats.wasm
           path: ./x/compute/internal/keeper/testdata/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: too-high-initial-memory.wasm
           path: ./x/compute/internal/keeper/testdata/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: static-too-high-initial-memory.wasm
           path: ./x/compute/internal/keeper/testdata/
@@ -270,7 +270,7 @@ jobs:
           go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Build macos darwin/arm64
         run: SGX_MODE=SW make build_cli
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: secretcli-macos-arm64
           path: secretcli
@@ -305,7 +305,7 @@ jobs:
           # cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/localsecret.tar
       - name: Upload Image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: localsecret
           path: /tmp/localsecret.tar
@@ -328,7 +328,7 @@ jobs:
             CHAIN_ID=secretdev-1
           outputs: type=docker,dest=/tmp/hermes.tar
       - name: Upload Image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hermes
           path: /tmp/hermes.tar
@@ -341,12 +341,12 @@ jobs:
         with:
           submodules: recursive
       - name: Download Hermes
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: hermes
           path: /tmp
       - name: Download LocalSecret
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: localsecret
           path: /tmp
