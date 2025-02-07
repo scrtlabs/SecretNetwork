@@ -1,5 +1,9 @@
 # CHANGELOG
 
+# 1.16.1
+- Fix panic during `secretcli compute query` call
+- Remove gov v1beta1 endpoints from swagger and openapi
+
 # 1.16.0
 - Fix ASA-2024-0012, ASA-2024-0013
 
