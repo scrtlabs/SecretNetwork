@@ -876,8 +876,17 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
     }
 
     if approved_power * 3 < total_voting_power * 2 {
-        error!("not enogh voting power");
-        return false;
+        #[cfg(feature = "verify-validator-whitelist")]
+        let emergency_threshold_reached =
+            approved_whitelisted >= validator_whitelist::VALIDATOR_THRESHOLD_EMERGENCY;
+
+        #[cfg(not(feature = "verify-validator-whitelist"))]
+        let emergency_threshold_reached = false;
+
+        if !emergency_threshold_reached {
+            error!("not enough voting power, emergency threshold not reached");
+            return false;
+        }
     }
 
     true

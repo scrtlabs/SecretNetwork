@@ -8,9 +8,13 @@ const WHITELIST_FROM_FILE: &str = include_str!("../fixtures/validator_whitelist_
 
 #[cfg(not(feature = "production"))]
 pub const VALIDATOR_THRESHOLD: usize = 1;
+#[cfg(not(feature = "production"))]
+pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 2;
 
 #[cfg(feature = "production")]
 pub const VALIDATOR_THRESHOLD: usize = 5;
+#[cfg(feature = "production")]
+pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 25;
 
 lazy_static::lazy_static! {
     pub static ref VALIDATOR_WHITELIST: ValidatorList = ValidatorList::from_str(WHITELIST_FROM_FILE);
