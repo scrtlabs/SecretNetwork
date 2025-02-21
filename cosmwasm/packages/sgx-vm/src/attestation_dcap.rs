@@ -173,6 +173,30 @@ fn sgx_ql_qve_collateral_serialize(
     }
 }
 
+struct SafeAddition {
+    pub result: Option<u32>,
+}
+
+impl SafeAddition {
+    pub fn add(&mut self, val: u32) {
+        if let Some(x) = self.result {
+            if let Some(x2) = x.checked_add(val) {
+                self.result = Some(x2);
+            } else {
+                self.result = None;
+            }
+        }
+    }
+
+    pub fn get_safe(self) -> u32 {
+        if let Some(x) = self.result {
+            x
+        } else {
+            0
+        }
+    }
+}
+
 fn sgx_ql_qve_collateral_deserialize(p_ser: *const u8, n_ser: u32) -> sgx_ql_qve_collateral_t {
     let mut res = sgx_ql_qve_collateral_t {
         version: 0,
@@ -196,15 +220,23 @@ fn sgx_ql_qve_collateral_deserialize(p_ser: *const u8, n_ser: u32) -> sgx_ql_qve
     if n_ser >= mem::size_of::<QlQveCollateral>() as u32 {
         unsafe {
             let p_ql_col = p_ser as *const QlQveCollateral;
-            let size_extra = (*p_ql_col).pck_crl_issuer_chain_size
-                + (*p_ql_col).root_ca_crl_size
-                + (*p_ql_col).pck_crl_size
-                + (*p_ql_col).tcb_info_issuer_chain_size
-                + (*p_ql_col).tcb_info_size
-                + (*p_ql_col).qe_identity_issuer_chain_size
-                + (*p_ql_col).qe_identity_size;
 
-            if n_ser >= mem::size_of::<QlQveCollateral>() as u32 + size_extra {
+            let size_total = {
+                let mut sa = SafeAddition {
+                    result: Some(mem::size_of::<QlQveCollateral>() as u32),
+                };
+                sa.add((*p_ql_col).pck_crl_issuer_chain_size);
+                sa.add((*p_ql_col).root_ca_crl_size);
+                sa.add((*p_ql_col).pck_crl_size);
+                sa.add((*p_ql_col).tcb_info_issuer_chain_size);
+                sa.add((*p_ql_col).tcb_info_size);
+                sa.add((*p_ql_col).qe_identity_issuer_chain_size);
+                sa.add((*p_ql_col).qe_identity_size);
+
+                sa.get_safe()
+            };
+
+            if (size_total > 0) && (n_ser >= size_total) {
                 res.version = 1; // PCK Cert chain is in the Quote.
                 res.tee_type = (*p_ql_col).tee_type;
                 res.pck_crl_issuer_chain_size = (*p_ql_col).pck_crl_issuer_chain_size;
