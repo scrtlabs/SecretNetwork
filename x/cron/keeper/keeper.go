@@ -11,13 +11,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
 	"cosmossdk.io/store/prefix"
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute"
 
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/neutron-org/neutron/v5/x/cron/types"
+	"github.com/scrtlabs/SecretNetwork/x/cron/types"
 )
 
 var (
@@ -186,13 +186,12 @@ func (k *Keeper) executeSchedule(ctx sdk.Context, schedule types.Schedule) error
 	k.storeSchedule(ctx, schedule)
 
 	cacheCtx, writeFn := ctx.CacheContext()
-
 	for idx, msg := range schedule.Msgs {
 		executeMsg := wasmtypes.MsgExecuteContract{
-			Sender:   k.accountKeeper.GetModuleAddress(types.ModuleName).String(),
-			Contract: msg.Contract,
-			Msg:      []byte(msg.Msg),
-			Funds:    sdk.NewCoins(),
+			Sender:    k.accountKeeper.GetModuleAddress(types.ModuleName),
+			Contract:  sdk.AccAddress(msg.Contract),
+			Msg:       []byte(msg.Msg),
+			SentFunds: sdk.NewCoins(),
 		}
 		_, err := k.WasmMsgServer.ExecuteContract(cacheCtx, &executeMsg)
 		if err != nil {
