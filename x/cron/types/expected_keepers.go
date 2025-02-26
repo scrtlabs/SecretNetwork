@@ -3,8 +3,8 @@ package types
 import (
 	"context"
 
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute"
 )
 
 // AccountKeeper defines the expected account keeper used for simulations (noalias)
