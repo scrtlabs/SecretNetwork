@@ -20,9 +20,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	"github.com/scrtlabs/SecretNetwork/x/cron/client/cli"
-	"github.com/scrtlabs/SecretNetwork/x/cron/keeper"
-	"github.com/scrtlabs/SecretNetwork/x/cron/types"
+	"github.com/neutron-org/neutron/v5/x/cron/client/cli"
+	"github.com/neutron-org/neutron/v5/x/cron/keeper"
+	"github.com/neutron-org/neutron/v5/x/cron/types"
 )
 
 var (

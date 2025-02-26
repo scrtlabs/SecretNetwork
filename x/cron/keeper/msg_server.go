@@ -5,8 +5,9 @@ import (
 
 	"cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"github.com/scrtlabs/SecretNetwork/x/cron/types"
+	"github.com/neutron-org/neutron/v5/x/cron/types"
 )
 
 type msgServer struct {
@@ -27,10 +28,10 @@ func (k msgServer) AddSchedule(goCtx context.Context, req *types.MsgAddSchedule)
 		return nil, errors.Wrap(err, "failed to validate MsgAddSchedule")
 	}
 
-	// authority := k.keeper.GetAuthority()
-	// if authority != req.Authority {
-	// 	return nil, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid authority; expected %s, got %s", authority, req.Authority)
-	// }
+	authority := k.keeper.GetAuthority()
+	if authority != req.Authority {
+		return nil, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid authority; expected %s, got %s", authority, req.Authority)
+	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	if err := k.keeper.AddSchedule(ctx, req.Name, req.Period, req.Msgs, req.ExecutionStage); err != nil {
@@ -46,10 +47,10 @@ func (k msgServer) RemoveSchedule(goCtx context.Context, req *types.MsgRemoveSch
 		return nil, errors.Wrap(err, "failed to validate MsgRemoveSchedule")
 	}
 
-	// authority := k.keeper.GetAuthority()
-	// if authority != req.Authority {
-	// 	return nil, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid authority; expected %s, got %s", authority, req.Authority)
-	// }
+	authority := k.keeper.GetAuthority()
+	if authority != req.Authority {
+		return nil, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid authority; expected %s, got %s", authority, req.Authority)
+	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.keeper.RemoveSchedule(ctx, req.Name)
@@ -63,10 +64,10 @@ func (k msgServer) UpdateParams(goCtx context.Context, req *types.MsgUpdateParam
 		return nil, errors.Wrap(err, "failed to validate MsgUpdateParams")
 	}
 
-	// authority := k.keeper.GetAuthority()
-	// if authority != req.Authority {
-	// 	return nil, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid authority; expected %s, got %s", authority, req.Authority)
-	// }
+	authority := k.keeper.GetAuthority()
+	if authority != req.Authority {
+		return nil, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid authority; expected %s, got %s", authority, req.Authority)
+	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	if err := k.keeper.SetParams(ctx, req.Params); err != nil {

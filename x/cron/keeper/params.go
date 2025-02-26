@@ -3,7 +3,7 @@ package keeper
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/scrtlabs/SecretNetwork/x/cron/types"
+	"github.com/neutron-org/neutron/v5/x/cron/types"
 )
 
 // GetParams get all parameters as types.Params

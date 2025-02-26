@@ -80,7 +80,6 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	crontypes "github.com/scrtlabs/SecretNetwork/x/cron/types"
 
 	"cosmossdk.io/log"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
@@ -581,7 +580,6 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		compute.ModuleName,
 		reg.ModuleName,
 		ibcswitchtypes.ModuleName,
-		crontypes.ModuleName,
 	)
 }
 
@@ -615,7 +613,6 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 
 		ibcfeetypes.ModuleName,
 		feegrant.ModuleName,
-		crontypes.ModuleName,
 	)
 }
 
@@ -645,6 +642,5 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		compute.ModuleName,
 		reg.ModuleName,
 		ibcswitchtypes.ModuleName,
-		crontypes.ModuleName,
 	)
 }
