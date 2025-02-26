@@ -3,7 +3,7 @@ package keeper
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	v2 "github.com/neutron-org/neutron/v5/x/cron/migrations/v2"
+	v2 "github.com/scrtlabs/SecretNetwork/x/cron/migrations/v2"
 )
 
 // Migrator is a struct for handling in-place store migrations.
