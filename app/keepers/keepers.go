@@ -54,6 +54,9 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
+	cronkeeper "github.com/scrtlabs/SecretNetwork/x/cron/keeper"
+	crontypes "github.com/scrtlabs/SecretNetwork/x/cron/types"
+
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 
 	ibcpacketforwardkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/keeper"
@@ -80,6 +83,7 @@ type SecretAppKeepers struct {
 	AuthzKeeper      *authzkeeper.Keeper
 	BankKeeper       *bankkeeper.BaseKeeper
 	CapabilityKeeper *capabilitykeeper.Keeper
+	CronKeeper       *cronkeeper.Keeper
 	StakingKeeper    *stakingkeeper.Keeper
 	SlashingKeeper   *slashingkeeper.Keeper
 	MintKeeper       *mintkeeper.Keeper
@@ -239,6 +243,15 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		ak.AccountKeeper.AddressCodec(),
 	)
 	ak.CrisisKeeper = crisisKeeper
+
+	cronKeeper := cronkeeper.NewKeeper(
+		appCodec,
+		ak.keys[crontypes.StoreKey],
+		ak.memKeys[crontypes.StoreKey],
+		ak.AccountKeeper,
+		authtypes.NewModuleAddress(crontypes.ModuleName).String(),
+	)
+	ak.CronKeeper = cronKeeper
 
 	feegrantKeeper := feegrantkeeper.NewKeeper(
 		appCodec,
@@ -543,6 +556,8 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	ak.ComputeKeeper = &computeKeeper
 	wasmHooks.ContractKeeper = ak.ComputeKeeper
 
+	ak.CronKeeper.WasmMsgServer = compute.NewMsgServerImpl(*ak.ComputeKeeper)
+
 	// Compute receive: Switch -> Fee -> Packet Forward -> WASM Hooks
 	var computeStack porttypes.IBCModule
 	computeStack = compute.NewIBCHandler(ak.ComputeKeeper, ak.IbcKeeper.ChannelKeeper, ak.IbcFeeKeeper)
@@ -596,6 +611,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 		ibcswitch.StoreKey,
 		ibchookstypes.StoreKey,
 		crisistypes.StoreKey,
+		crontypes.StoreKey,
 	)
 
 	ak.tKeys = storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -621,6 +637,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(reg.ModuleName)
 	paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
 	paramsKeeper.Subspace(ibcswitch.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())
+	paramsKeeper.Subspace(crontypes.ModuleName)
 
 	return paramsKeeper
 }

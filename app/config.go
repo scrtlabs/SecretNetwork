@@ -33,6 +33,7 @@ import (
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+	"github.com/scrtlabs/SecretNetwork/x/cron"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -78,6 +79,7 @@ var mbasics = module.NewBasicManager(
 		ica.AppModuleBasic{},
 		packetforwardrouter.AppModuleBasic{},
 		ibcfee.AppModuleBasic{},
+		cron.AppModuleBasic{},
 	},
 		// our stuff
 		customModuleBasics()...,
