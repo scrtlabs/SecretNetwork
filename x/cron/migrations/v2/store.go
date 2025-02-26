@@ -7,7 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/neutron-org/neutron/v5/x/cron/types"
+	"github.com/scrtlabs/SecretNetwork/x/cron/types"
 )
 
 // MigrateStore performs in-place store migrations.

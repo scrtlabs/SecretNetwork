@@ -5,9 +5,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/scrtlabs/SecretNetwork/x/cron/types"
 	"github.com/spf13/cobra"
-
-	"github.com/neutron-org/neutron/v5/x/cron/types"
 )
 
 func CmdQueryParams() *cobra.Command {
