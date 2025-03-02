@@ -1,5 +1,5 @@
-//go:build !secretcli && linux && !muslc && !darwin && !sgx
-// +build !secretcli,linux,!muslc,!darwin,!sgx
+//go:build !secretcli && linux && !muslc && !darwin && sw
+// +build !secretcli,linux,!muslc,!darwin,sw
 
 package api
 
