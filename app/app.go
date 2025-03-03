@@ -58,6 +58,7 @@ import (
 	v1_15 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.15"
 	v1_16 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.16"
 	v1_17 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.17"
+	v1_17_1 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.17.1"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
@@ -131,6 +132,7 @@ var (
 		v1_15.Upgrade,
 		v1_16.Upgrade,
 		v1_17.Upgrade,
+		v1_17_1.Upgrade,
 	}
 )
 
@@ -431,7 +433,6 @@ func NewSecretNetworkApp(
 }
 
 func (app *SecretNetworkApp) Initialize() {
-
 	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
 
 	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
