@@ -1,5 +1,8 @@
 # CHANGELOG
 
+# 1.17.0
+- Fix ASA-2025-001, ASA-2025-002, ASA-2025-004, potential Denial-of-Service condition leading to temporary disability in IBC transfers to the native chain
+
 # 1.16.1
 - Fix panic during `secretcli compute query` call
 - Remove gov v1beta1 endpoints from swagger and openapi

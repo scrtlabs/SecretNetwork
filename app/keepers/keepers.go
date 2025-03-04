@@ -416,7 +416,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.keys[ibcpacketforwardtypes.StoreKey],
 		nil, // transfer keeper will be set later on
 		ak.IbcKeeper.ChannelKeeper,
-		ak.DistrKeeper,
 		ak.BankKeeper,
 		ibcHooksICS4Wrapper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
@@ -496,7 +495,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.PacketForwardKeeper,
 		0,
 		ibcpacketforwardkeeper.DefaultForwardTransferPacketTimeoutTimestamp, // 10 minutes
-		ibcpacketforwardkeeper.DefaultRefundTransferPacketTimeoutTimestamp,  // 28 days
 	)
 	transferStack = ibcfee.NewIBCMiddleware(transferStack, ak.IbcFeeKeeper)
 	transferStack = ibcswitch.NewIBCMiddleware(transferStack, ak.IbcSwitchKeeper)
@@ -552,7 +550,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.PacketForwardKeeper,
 		0,
 		ibcpacketforwardkeeper.DefaultForwardTransferPacketTimeoutTimestamp, // 10 minutes
-		ibcpacketforwardkeeper.DefaultRefundTransferPacketTimeoutTimestamp,  // 28 days
 	)
 	computeStack = ibcfee.NewIBCMiddleware(computeStack, ak.IbcFeeKeeper)
 	computeStack = ibcswitch.NewIBCMiddleware(computeStack, ak.IbcSwitchKeeper)
@@ -619,7 +616,6 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
 	paramsKeeper.Subspace(reg.ModuleName)
-	paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
 	paramsKeeper.Subspace(ibcswitch.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())
 
 	return paramsKeeper
