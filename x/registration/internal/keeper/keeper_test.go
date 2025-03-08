@@ -21,17 +21,13 @@ func init() {
 }
 
 func TestNewKeeper(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "reg")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	_, regKeeper := CreateTestInput(t, false, tempDir, true)
 	require.NotNil(t, regKeeper)
 }
 
 func TestNewKeeper_Node(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "reg")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	seedPath := filepath.Join(tempDir, types.SecretNodeCfgFolder, types.SecretNodeSeedNewConfig)
 
@@ -46,9 +42,7 @@ func TestNewKeeper_Node(t *testing.T) {
 }
 
 func TestKeeper_RegisterationStore(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
 	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
@@ -72,9 +66,7 @@ func TestKeeper_RegisterationStore(t *testing.T) {
 }
 
 func TestKeeper_RegisterNode(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
 	cert, err := os.ReadFile("../../testdata/attestation_cert_sw.combined")
