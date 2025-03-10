@@ -910,7 +910,7 @@ pub extern "C" fn emergency_approve_upgrade(data_dir: Buffer, msg: Buffer) -> bo
         let msg_str = from_utf8(unsafe { msg.read() }.unwrap()).unwrap();
         let res = hex::decode(msg_str);
         if res.is_err() {
-            error!("Couldn't base-64 decode msg: {}", msg_str);
+            error!("Couldn't decode msg: {}", msg_str);
             return false;
         }
 
