@@ -497,14 +497,12 @@ pub fn validate_basic_msg(
 
     if decoded_hash != contract_hash {
         warn!("Message contains mismatched contract hash, checking hardcoded contract hash...");
-        if is_code_hash_allowed(contract_address, &String::from_utf8_lossy(&decoded_hash)) {
+        if is_code_hash_allowed(contract_address, &hex::encode(&decoded_hash)) {
             warn!("Message contains mismatched contract hash, but it's allowed");
         } else {
             warn!("Message contains mismatched contract hash, and it's not allowed");
             return Err(EnclaveError::ValidationFailure);
         }
-
-        return Err(EnclaveError::ValidationFailure);
     }
 
     while validated_msg.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
