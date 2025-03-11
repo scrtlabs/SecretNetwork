@@ -71,8 +71,6 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -320,13 +318,9 @@ func NewSecretNetworkApp(
 	app.AppKeepers.InitCustomKeepers(appCodec, legacyAmino, bApp, bootstrap, homePath, computeConfig)
 	app.setupUpgradeStoreLoaders()
 
-	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment
-	// we prefer to be more strict in what arguments the modules expect.
-	skipGenesisInvariants := cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
-
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
-	app.mm = module.NewManager(Modules(app, appCodec, skipGenesisInvariants)...)
+	app.mm = module.NewManager(Modules(app, appCodec)...)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -348,9 +342,6 @@ func NewSecretNetworkApp(
 	// properly initialized with tokens from genesis accounts.
 	// Sets the order of Genesis - Order matters, genutil is to always come last
 	SetOrderInitGenesis(app)
-
-	// register all module routes and module queriers
-	app.mm.RegisterInvariants(app.AppKeepers.CrisisKeeper)
 
 	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
 	err = app.mm.RegisterServices(app.configurator)
@@ -571,7 +562,6 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		vestingtypes.ModuleName,
 		banktypes.ModuleName,
 		govtypes.ModuleName,
-		crisistypes.ModuleName,
 		genutiltypes.ModuleName,
 		authz.ModuleName,
 		paramstypes.ModuleName,
@@ -606,7 +596,6 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 
 		authz.ModuleName,
 		minttypes.ModuleName,
-		crisistypes.ModuleName,
 		ibcexported.ModuleName,
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
@@ -620,7 +609,6 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 
 func SetOrderEndBlockers(app *SecretNetworkApp) {
 	app.mm.SetOrderEndBlockers(
-		crisistypes.ModuleName,
 		govtypes.ModuleName,
 		authz.ModuleName,
 		feegrant.ModuleName,

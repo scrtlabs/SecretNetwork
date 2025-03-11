@@ -87,9 +87,6 @@ import (
 
 	"github.com/cosmos/ibc-go/modules/capability"
 
-	"github.com/cosmos/cosmos-sdk/x/crisis"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
-
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -234,7 +231,6 @@ var ModuleBasics = module.NewBasicManager(
 		},
 	),
 	params.AppModuleBasic{},
-	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
 	upgrade.AppModuleBasic{},
 	evidence.AppModuleBasic{},
@@ -370,7 +366,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	paramsKeeper.Subspace(minttypes.ModuleName)
 	paramsKeeper.Subspace(distrtypes.ModuleName)
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
-	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
 
 	// this is also used to initialize module accounts (so nil is meaningful here)

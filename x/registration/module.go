@@ -100,9 +100,6 @@ func (am AppModule) RegisterServices(configurator module.Configurator) {
 	types.RegisterQueryServer(configurator.QueryServer(), NewQuerier(am.keeper))
 }
 
-// RegisterInvariants registers the compute module invariants.
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
 // InitGenesis performs genesis initialization for the compute module. It returns
 // no validator updates.
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {

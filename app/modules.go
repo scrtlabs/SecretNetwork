@@ -14,8 +14,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/consensus"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
@@ -61,7 +59,6 @@ var ModuleAccountPermissions = map[string][]string{
 func Modules(
 	app *SecretNetworkApp,
 	appCodec codec.Codec,
-	skipGenesisInvariants bool,
 ) []module.AppModule {
 	return []module.AppModule{
 		genutil.NewAppModule(app.AppKeepers.AccountKeeper, app.AppKeepers.StakingKeeper, app, app.TxConfig()),
@@ -70,7 +67,6 @@ func Modules(
 		bank.NewAppModule(appCodec, *app.AppKeepers.BankKeeper, app.AppKeepers.AccountKeeper, app.AppKeepers.GetSubspace(banktypes.ModuleName)),
 		capability.NewAppModule(appCodec, *app.AppKeepers.CapabilityKeeper, false),
 		consensus.NewAppModule(appCodec, app.AppKeepers.ConsensusParamsKeeper),
-		crisis.NewAppModule(app.AppKeepers.CrisisKeeper, skipGenesisInvariants, app.AppKeepers.GetSubspace(crisistypes.ModuleName)),
 		feegrantmodule.NewAppModule(appCodec, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, *app.AppKeepers.FeegrantKeeper, app.GetInterfaceRegistry()),
 		gov.NewAppModule(appCodec, app.AppKeepers.GovKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, app.AppKeepers.GetSubspace(govtypes.ModuleName)),
 		mint.NewAppModule(appCodec, *app.AppKeepers.MintKeeper, app.AppKeepers.AccountKeeper, nil, app.AppKeepers.GetSubspace(minttypes.ModuleName)),

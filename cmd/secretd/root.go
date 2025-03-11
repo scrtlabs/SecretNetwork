@@ -11,7 +11,6 @@ import (
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
 
 	eip191 "github.com/scrtlabs/SecretNetwork/eip191"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
@@ -275,7 +274,6 @@ func genesisCommand(eCfg app.EncodingConfig, basicManager module.BasicManager, c
 }
 
 func addModuleInitFlags(startCmd *cobra.Command) {
-	crisis.AddModuleInitFlags(startCmd)
 }
 
 func queryCommand() *cobra.Command {

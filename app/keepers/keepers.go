@@ -21,8 +21,6 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
@@ -85,7 +83,6 @@ type SecretAppKeepers struct {
 	MintKeeper       *mintkeeper.Keeper
 	DistrKeeper      *distrkeeper.Keeper
 	GovKeeper        *govkeeper.Keeper
-	CrisisKeeper     *crisiskeeper.Keeper
 	UpgradeKeeper    *upgradekeeper.Keeper
 	ParamsKeeper     *paramskeeper.Keeper
 	EvidenceKeeper   *evidencekeeper.Keeper
@@ -228,17 +225,6 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	ak.SlashingKeeper = &slashingKeeper
-
-	crisisKeeper := crisiskeeper.NewKeeper(
-		appCodec,
-		runtime.NewKVStoreService(ak.keys[crisistypes.StoreKey]),
-		invCheckPeriod,
-		ak.BankKeeper,
-		authtypes.FeeCollectorName,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		ak.AccountKeeper.AddressCodec(),
-	)
-	ak.CrisisKeeper = crisisKeeper
 
 	feegrantKeeper := feegrantkeeper.NewKeeper(
 		appCodec,
@@ -592,7 +578,6 @@ func (ak *SecretAppKeepers) InitKeys() {
 		ibcfeetypes.StoreKey,
 		ibcswitch.StoreKey,
 		ibchookstypes.StoreKey,
-		crisistypes.StoreKey,
 	)
 
 	ak.tKeys = storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -613,7 +598,6 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 	paramsKeeper.Subspace(govtypes.ModuleName)
-	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
 	paramsKeeper.Subspace(reg.ModuleName)
 	paramsKeeper.Subspace(ibcswitch.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())

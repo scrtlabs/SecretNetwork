@@ -20,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
@@ -85,7 +84,6 @@ var ModuleBasics = module.NewBasicManager(
 			// upgradeclient.ProposalHandler,
 		},
 	),
-	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
 	// ibc.AppModuleBasic{},
 	upgrade.AppModuleBasic{},
