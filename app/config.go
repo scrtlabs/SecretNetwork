@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cosmossdk.io/x/circuit"
 	"cosmossdk.io/x/evidence"
 	feegrantmodule "cosmossdk.io/x/feegrant/module"
 	"cosmossdk.io/x/tx/signing"
@@ -69,6 +70,7 @@ var mbasics = module.NewBasicManager(
 		transfer.AppModuleBasic{},
 		vesting.AppModuleBasic{},
 		feegrantmodule.AppModuleBasic{},
+		circuit.AppModuleBasic{},
 
 		// ibc modules
 		ibc.AppModuleBasic{},

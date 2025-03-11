@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cosmossdk.io/x/circuit"
 	"cosmossdk.io/x/evidence"
 	feegrantmodule "cosmossdk.io/x/feegrant/module"
 	"cosmossdk.io/x/upgrade"
@@ -78,6 +79,7 @@ func Modules(
 		compute.NewAppModule(*app.AppKeepers.ComputeKeeper),
 		params.NewAppModule(*app.AppKeepers.ParamsKeeper),
 		authzmodule.NewAppModule(appCodec, *app.AppKeepers.AuthzKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, app.GetInterfaceRegistry()),
+		circuit.NewAppModule(appCodec, *app.AppKeepers.CircuitKeeper),
 		reg.NewAppModule(*app.AppKeepers.RegKeeper),
 		ibc.NewAppModule(app.AppKeepers.IbcKeeper),
 		ibctm.NewAppModule(),

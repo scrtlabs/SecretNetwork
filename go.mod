@@ -65,6 +65,7 @@ require (
 	cosmossdk.io/collections v0.4.0
 	cosmossdk.io/math v1.4.0
 	cosmossdk.io/tools/confix v0.1.2
+	cosmossdk.io/x/circuit v0.1.1
 	cosmossdk.io/x/tx v0.13.7
 	github.com/cometbft/cometbft-db v0.14.1
 	github.com/cosmos/cosmos-db v1.1.0

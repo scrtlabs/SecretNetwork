@@ -13,6 +13,7 @@ import (
 
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
+	circuittypes "cosmossdk.io/x/circuit/types"
 	txsigning "cosmossdk.io/x/tx/signing"
 	"cosmossdk.io/x/tx/signing/aminojson"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -283,6 +284,7 @@ func NewSecretNetworkApp(
 	invCheckPeriod := cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod))
 
 	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath, logger, &app.event)
+	bApp.SetCircuitBreaker(app.AppKeepers.CircuitKeeper)
 
 	enabledSignModes := authtx.DefaultSignModes
 	enabledSignModes = append(enabledSignModes, sigtypes.SignMode_SIGN_MODE_TEXTUAL)
@@ -365,6 +367,7 @@ func NewSecretNetworkApp(
 			SignModeHandler: app.txConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
+		CircuitKeeper:         app.AppKeepers.CircuitKeeper,
 		IBCKeeper:             app.AppKeepers.IbcKeeper,
 		WasmConfig:            computeConfig,
 		TXCounterStoreService: app.AppKeepers.ComputeKeeper.GetStoreService(),
@@ -572,6 +575,7 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		compute.ModuleName,
 		reg.ModuleName,
 		ibcswitchtypes.ModuleName,
+		circuittypes.ModuleName,
 	)
 }
 
@@ -604,6 +608,7 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 
 		ibcfeetypes.ModuleName,
 		feegrant.ModuleName,
+		circuittypes.ModuleName,
 	)
 }
 
@@ -632,5 +637,6 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		compute.ModuleName,
 		reg.ModuleName,
 		ibcswitchtypes.ModuleName,
+		circuittypes.ModuleName,
 	)
 }

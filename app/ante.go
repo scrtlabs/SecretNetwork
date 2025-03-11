@@ -2,6 +2,8 @@ package app
 
 import (
 	"cosmossdk.io/core/store"
+	circuitante "cosmossdk.io/x/circuit/ante"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
@@ -15,6 +17,7 @@ import (
 type HandlerOptions struct {
 	ante.HandlerOptions
 
+	CircuitKeeper         circuitante.CircuitBreaker
 	IBCKeeper             *keeper.Keeper
 	WasmConfig            *compute.WasmConfig
 	TXCounterStoreService store.KVStoreService
@@ -41,6 +44,7 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 	anteDecorators := []sdk.AnteDecorator{
 		compute.NewCountTXDecorator(options.TXCounterStoreService),
 		ante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
+		circuitante.NewCircuitBreakerDecorator(options.CircuitKeeper),
 		ante.NewExtensionOptionsDecorator(nil),
 		ante.NewValidateBasicDecorator(),
 		ante.NewTxTimeoutHeightDecorator(),
