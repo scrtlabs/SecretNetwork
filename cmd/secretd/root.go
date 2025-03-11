@@ -2,20 +2,16 @@ package main
 
 import (
 	// "context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
-	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 
 	eip191 "github.com/scrtlabs/SecretNetwork/eip191"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	txsigning "cosmossdk.io/x/tx/signing"
@@ -60,30 +56,12 @@ import (
 	secretlegacy "github.com/scrtlabs/SecretNetwork/app/migrations"
 )
 
-// thanks @terra-project for this fix
-const flagLegacyHdPath = "legacy-hd-path"
-
 const (
 	flagIsBootstrap = "bootstrap"
 	cfgFileName     = "config.toml"
 )
 
 var bootstrap bool
-
-func bindFlags(cmd *cobra.Command, v *viper.Viper) {
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		// Environment variables can't have dashes in them, so bind them to their equivalent
-		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
-		_ = v.BindEnv(f.Name, fmt.Sprintf("%s_%s", "SECRET_NETWORK", strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))))
-		_ = v.BindPFlag(f.Name, f)
-
-		// Apply the viper config value to the flag when the flag is not set and viper has a value
-		if !f.Changed && v.IsSet(f.Name) {
-			val := v.Get(f.Name)
-			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%+v", val))
-		}
-	})
-}
 
 // NewRootCmd creates a new root command for simd. It is called once in the
 // main function.
@@ -398,74 +376,4 @@ func exportAppStateAndTMValidators(
 	}
 
 	return wasmApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList, modulesToExport)
-}
-
-// writeParamsAndConfigCmd patches the write-params cmd to additionally update the app pruning config.
-func updateTmParamsAndInit(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
-	cmd := genutilcli.InitCmd(mbm, defaultNodeHome)
-	originalFunc := cmd.RunE
-
-	wrappedFunc := func(cmd *cobra.Command, args []string) error {
-		ctx := server.GetServerContextFromCmd(cmd)
-
-		// time is in NS
-		ctx.Config.Consensus.TimeoutPrecommit = 2_000_000_000
-
-		appConfigFilePath := filepath.Join(defaultNodeHome, "config/app.toml")
-		appConf, _ := serverconfig.ParseConfig(viper.GetViper())
-		appConf.MinGasPrices = "0.25uscrt"
-
-		serverconfig.WriteConfigFile(appConfigFilePath, appConf)
-
-		err := originalFunc(cmd, args)
-		return err
-	}
-
-	cmd.RunE = wrappedFunc
-	return cmd
-}
-
-func initConfig(ctx *client.Context, cmd *cobra.Command) error {
-	cmd.PersistentFlags().Bool(flagLegacyHdPath, false, "Flag to specify the command uses old HD path - use this for ledger compatibility")
-
-	_, err := cmd.PersistentFlags().GetBool(flagLegacyHdPath)
-	if err != nil {
-		return err
-	}
-	//if !oldHDPath {
-	//	config.SetPurpose(44)
-	//	config.SetCoinType(529)
-	//	//config.SetFullFundraiserPath("44'/529'/0'/0/0")
-	//}
-	//
-	//config.Seal()
-
-	cfgFilePath := filepath.Join(app.DefaultCLIHome, "config", cfgFileName)
-	if _, err := os.Stat(cfgFilePath); err == nil {
-		viper.SetConfigFile(cfgFilePath)
-
-		if err := viper.ReadInConfig(); err != nil {
-			return err
-		}
-	}
-
-	cfgFlags := []string{flags.FlagChainID, flags.FlagKeyringBackend}
-	for _, flag := range cfgFlags {
-		err = setFlagFromConfig(cmd, flag)
-		if err != nil {
-			return err
-		}
-	}
-
-	return client.SetCmdClientContextHandler(*ctx, cmd)
-}
-
-func setFlagFromConfig(cmd *cobra.Command, flag string) error {
-	if viper.GetString(flag) != "" && cmd.Flags().Lookup(flag) != nil {
-		err := cmd.Flags().Set(flag, viper.GetString(flag))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

@@ -29,11 +29,6 @@ func (k Keeper) SetMasterKey(ctx sdk.Context, key types.MasterKey, keyType strin
 	}
 }
 
-func (k Keeper) isMasterCertificateDefined(ctx sdk.Context, keyType string) bool {
-	regInfo := k.GetMasterKey(ctx, keyType)
-	return regInfo != nil
-}
-
 func (k Keeper) getRegistrationInfo(ctx sdk.Context, publicKey types.NodeID) *types.RegistrationNodeInfo {
 	store := k.storeService.OpenKVStore(ctx)
 	var nodeInfo types.RegistrationNodeInfo

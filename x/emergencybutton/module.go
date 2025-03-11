@@ -53,7 +53,9 @@ func (b AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncoding
 // Interfaces.
 
 func (b AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
-	types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx)) //nolint:errcheck
+	if err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx)); err != nil {
+		panic(err)
+	}
 }
 
 // RegisterInterfaces registers interfaces and implementations of the emergencybutton module.

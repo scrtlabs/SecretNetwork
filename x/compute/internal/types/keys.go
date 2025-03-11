@@ -46,10 +46,6 @@ func GetCodeKey(codeID uint64) []byte {
 	return append(CodeKeyPrefix, contractIDBz...)
 }
 
-func decodeCodeKey(src []byte) uint64 {
-	return binary.BigEndian.Uint64(src[len(CodeKeyPrefix):])
-}
-
 // GetContractAddressKey returns the key for the WASM contract instance
 func GetContractAddressKey(addr sdk.AccAddress) []byte {
 	return append(ContractKeyPrefix, addr...)

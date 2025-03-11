@@ -167,7 +167,7 @@ func (am AppModule) BeginBlock(c context.Context) error {
 		return err
 	}
 	if block_header.EncryptedRandom != nil {
-		randomAndProof := append(block_header.EncryptedRandom.Random, block_header.EncryptedRandom.Proof...) //nolint:all
+		randomAndProof := append(block_header.EncryptedRandom.Random, block_header.EncryptedRandom.Proof...) 
 		random, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof)
 		if err != nil {
 			ctx.Logger().Error("Failed to submit block signatures")

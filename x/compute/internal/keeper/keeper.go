@@ -55,10 +55,6 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
-type emergencyButton interface {
-	IsHalted(ctx sdk.Context) bool
-}
-
 type ResponseHandler interface {
 	// Handle processes the data returned by a contract invocation.
 	Handle(
@@ -408,7 +404,7 @@ func V010MsgToV1SubMsg(contractAddress string, msg v010wasmTypes.CosmosMsg) (v1w
 		ReplyOn:  v1wasmTypes.ReplyNever,
 	}
 
-	if msg.Bank != nil { //nolint:gocritic
+	if msg.Bank != nil { 
 		if msg.Bank.Send.FromAddress != contractAddress {
 			return v1wasmTypes.SubMsg{}, fmt.Errorf("contract doesn't have permission to send funds from another account (using BankMsg)")
 		}
@@ -558,7 +554,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	consumeGas(ctx, gasUsed)
 
 	if initError != nil {
-		switch res := response.(type) { //nolint:gocritic
+		switch res := response.(type) { 
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result, jsonError := json.Marshal(res)
 			if jsonError != nil {
@@ -721,7 +717,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if execErr != nil {
 		var result sdk.Result
 		var jsonError error
-		switch res := response.(type) { //nolint:gocritic
+		switch res := response.(type) { 
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result.Data, jsonError = json.Marshal(res)
 			if jsonError != nil {
@@ -1523,7 +1519,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if migrateErr != nil {
 		var result []byte
 		var jsonError error
-		switch res := response.(type) { //nolint:gocritic
+		switch res := response.(type) { 
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result, jsonError = json.Marshal(res)
 			if jsonError != nil {
@@ -1620,7 +1616,7 @@ func (k Keeper) appendToContractHistory(ctx sdk.Context, contractAddr sdk.AccAdd
 	for _, e := range newEntries {
 		pos++
 		key := types.GetContractCodeHistoryElementKey(contractAddr, pos)
-		err := store.Set(key, k.cdc.MustMarshal(&e)) //nolint:gosec
+		err := store.Set(key, k.cdc.MustMarshal(&e)) 
 		if err != nil {
 			ctx.Logger().Error("appendToContractHistory:", err.Error())
 		}

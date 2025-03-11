@@ -518,7 +518,7 @@ Please report any issues with this command
 				return err
 			}
 
-			if pulsarFlag { //nolint:gocritic
+			if pulsarFlag { 
 				regUrl = pulsarRegistrationService
 				log.Println("Registering node on Pulsar testnet")
 			} else if customRegUrl != "" {

@@ -34,7 +34,7 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(_ *codec.LegacyAmino) {}
 func (b AppModuleBasic) RegisterInterfaces(_ cdctypes.InterfaceRegistry) {}
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the ibc-hooks module.
-func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {} //nolint:all
+func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {} 
 
 // ___________________________________________________________________________
 

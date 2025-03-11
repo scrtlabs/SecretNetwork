@@ -148,7 +148,6 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	app *baseapp.BaseApp,
 	maccPerms map[string][]string,
 	blockedAddresses map[string]bool,
-	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
 	homePath string,
 	logger log.Logger,

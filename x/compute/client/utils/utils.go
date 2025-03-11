@@ -295,7 +295,7 @@ func encryptData(aesEncryptionKey []byte, txSenderPubKey []byte, plaintext []byt
 	}
 
 	// ciphertext = nonce(32) || wallet_pubkey(32) || ciphertext
-	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...) //nolint:gocritic
+	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...)
 
 	return ciphertext, nil
 }

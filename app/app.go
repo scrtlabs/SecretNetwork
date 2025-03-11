@@ -145,8 +145,7 @@ type SecretNetworkApp struct {
 	interfaceRegistry types.InterfaceRegistry
 	txConfig          client.TxConfig
 
-	invCheckPeriod uint
-	bootstrap      bool
+	bootstrap bool
 
 	// keepers
 	AppKeepers keepers.SecretAppKeepers
@@ -281,9 +280,8 @@ func NewSecretNetworkApp(
 		skipUpgradeHeights[int64(h)] = true
 	}
 	homePath := cast.ToString(appOpts.Get(flags.FlagHome))
-	invCheckPeriod := cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod))
 
-	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath, logger, &app.event)
+	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), skipUpgradeHeights, homePath, logger, &app.event)
 	bApp.SetCircuitBreaker(app.AppKeepers.CircuitKeeper)
 
 	enabledSignModes := authtx.DefaultSignModes
