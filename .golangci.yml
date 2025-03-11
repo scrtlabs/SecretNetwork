@@ -1,9 +1,6 @@
 run:
   tests: false
   timeout: 5m
-  skip-files:
-    - x/registration/internal/types/reg_keys.go # uses auto generated code
-    - x/registration/internal/types/ias_bin.*?.go # auto generated
 
 linters:
   disable-all: true
@@ -29,6 +26,9 @@ linters:
     - nolintlint
 
 issues:
+  skip-files:
+    - x/registration/internal/types/reg_keys.go # uses auto generated code
+    - x/registration/internal/types/ias_bin.*?.go # auto generated
   exclude-rules:
     - text: "var-naming"
       linters:
