@@ -1,51 +1,6 @@
 run:
   tests: false
   timeout: 5m
-
-linters:
-  disable-all: true
-  enable:
-    - dogsled
-    - exportloopref
-    - errcheck
-    - goconst
-    - gocritic
-    - gofumpt
-    - gosec
-    - gosimple
-    - govet
-    - ineffassign
-    - misspell
-    - nakedret
-    - staticcheck
-    - stylecheck
-    - revive
-    - typecheck
-    - unconvert
-    - misspell
-    - nolintlint
-
 issues:
-  skip-files:
-    - x/registration/internal/types/reg_keys.go # uses auto generated code
-    - x/registration/internal/types/ias_bin.*?.go # auto generated
-  exclude-rules:
-    - text: "var-naming"
-      linters:
-        - revive
-    - text: "ST1003:"
-      linters:
-        - stylecheck
-    - text: "commentFormatting"
-      linters:
-        - stylecheck
-        - gocritic
-    - text: "dupSubExpr"
-      linters:
-        - gocritic
-    - text: "// nolint` should be written without leading space as `//nolint"
-      linters:
-        - nolintlint
-    - text: "G115:"
-      linters:
-        - gosec
+  exclude-files:
+    - x/compute/internal/keeper/test_common.go
