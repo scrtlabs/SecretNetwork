@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"time"
@@ -9,14 +10,18 @@ import (
 	"github.com/hashicorp/go-metrics"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 
 	"cosmossdk.io/store/prefix"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute"
 
 	storetypes "cosmossdk.io/store/types"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
+	secp256k1 "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	"github.com/scrtlabs/SecretNetwork/x/cron/types"
 )
 
@@ -37,6 +42,7 @@ type (
 		accountKeeper types.AccountKeeper
 		WasmMsgServer types.WasmMsgServer
 		authority     string
+		txConfig      client.TxConfig
 	}
 )
 
@@ -53,7 +59,13 @@ func NewKeeper(
 		memKey:        memKey,
 		accountKeeper: accountKeeper,
 		authority:     authority,
+		txConfig:      nil,
 	}
+}
+
+// SetTxConfig injects the transaction configuration into the keeper.
+func (k *Keeper) SetTxConfig(txConfig client.TxConfig) {
+	k.txConfig = txConfig
 }
 
 func (k Keeper) GetAuthority() string {
@@ -180,20 +192,157 @@ func (k *Keeper) getSchedulesReadyForExecution(ctx sdk.Context, executionStage t
 // executeSchedule executes all msgs in a given schedule and changes LastExecuteHeight
 // if at least one msg execution fails, rollback all messages
 func (k *Keeper) executeSchedule(ctx sdk.Context, schedule types.Schedule) error {
-	// Even if contract execution returned an error, we still increase the height
-	// and execute it after this interval
+	// Update the schedule's last execution height.
 	schedule.LastExecuteHeight = uint64(ctx.BlockHeight()) //nolint:gosec
 	k.storeSchedule(ctx, schedule)
 
+	// Get the module private key once.
+	privKey := GetModulePrivateKey()
+	pubKey := privKey.PubKey()
+	senderAddr := sdk.AccAddress(pubKey.Address())
+
+	// Retrieve the account info using the derived address.
+	senderAcc := k.accountKeeper.GetAccount(ctx, senderAddr)
+	if senderAcc == nil {
+		return fmt.Errorf("account not found for address %s", senderAddr.String())
+	}
+	accountNumber := senderAcc.GetAccountNumber()
+	sequence := senderAcc.GetSequence()
+	chainID := ctx.ChainID()
+
 	cacheCtx, writeFn := ctx.CacheContext()
 	for idx, msg := range schedule.Msgs {
-		executeMsg := wasmtypes.MsgExecuteContract{
-			Sender:    k.accountKeeper.GetModuleAddress(types.ModuleName),
-			Contract:  sdk.AccAddress(msg.Contract),
-			Msg:       []byte(msg.Msg),
-			SentFunds: sdk.NewCoins(),
+		// Convert contract address from bech32.
+		contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+		if err != nil {
+			ctx.Logger().Info("executeSchedule: failed to extract contract address", "err", err)
+			return err
 		}
-		_, err := k.WasmMsgServer.ExecuteContract(cacheCtx, &executeMsg)
+
+		// zeroPrefix := make([]byte, 64)
+		// finalMsg := append(zeroPrefix, []byte(msg.Msg)...)
+		// Build the MsgExecuteContract.
+		encryptedMsg, err := base64.StdEncoding.DecodeString(msg.Msg)
+		if err != nil {
+			ctx.Logger().Info("executeSchedule: failed to decode base64 msg", "err", err)
+			return err
+		}
+		executeMsg := wasmtypes.MsgExecuteContract{
+			Sender:           senderAddr,
+			Contract:         contractAddr,
+			Msg:              encryptedMsg,
+			SentFunds:        sdk.NewCoins(),
+			CallbackCodeHash: "",
+		}
+
+		// Create a new transaction builder using the shared txConfig.
+		txBuilder := k.txConfig.NewTxBuilder()
+		if err := txBuilder.SetMsgs(&executeMsg); err != nil {
+			return err
+		}
+		// Set fee and gas (adjust as needed).
+		txBuilder.SetFeeAmount(sdk.NewCoins())
+		txBuilder.SetGasLimit(200000)
+
+		// Prepare signer data using the correct account info.
+		signerData := authsigning.SignerData{
+			Address:       senderAddr.String(),
+			ChainID:       chainID,
+			AccountNumber: accountNumber,
+			Sequence:      sequence,
+			PubKey:        pubKey,
+		}
+
+		// // Generate the sign bytes.
+		// signBytes, err := authsigning.GetSignBytesAdapter(
+		// 	ctx,
+		// 	k.txConfig.SignModeHandler(),
+		// 	sdksigning.SignMode_SIGN_MODE_DIRECT,
+		// 	signerData,
+		// 	txBuilder.GetTx(),
+		// )
+		// if err != nil {
+		// 	return err
+		// }
+
+		// // Sign the transaction using the module's private key.
+		// signature, err := privKey.Sign(signBytes)
+		// if err != nil {
+		// 	return err
+		// }
+		// sigV2 := sdksigning.SignatureV2{
+		// 	PubKey:   pubKey,
+		// 	Data:     &sdksigning.SingleSignatureData{SignMode: sdksigning.SignMode_SIGN_MODE_DIRECT, Signature: nil},
+		// 	Sequence: sequence,
+		// }
+
+		// // Attach the signature to the txBuilder.
+		// if err := txBuilder.SetSignatures(sigV2); err != nil {
+		// 	return err
+		// }
+
+		// // Encode the signed transaction.
+		// signedTxBytes, err := k.txConfig.TxEncoder()(txBuilder.GetTx())
+		// if err != nil {
+		// 	return err
+		// }
+
+		// // Update the cache context with the signed transaction bytes.
+		// cacheCtx = cacheCtx.WithTxBytes(signedTxBytes)
+
+		sigData := signing.SingleSignatureData{
+			SignMode:  signing.SignMode_SIGN_MODE_DIRECT,
+			Signature: nil,
+		}
+
+		sig := signing.SignatureV2{
+			PubKey:   pubKey,
+			Data:     &sigData,
+			Sequence: sequence,
+		}
+
+		var sigs []signing.SignatureV2
+		sigs = []signing.SignatureV2{sig}
+		if err := txBuilder.SetSignatures(sigs...); err != nil {
+			return err
+		}
+
+		bytesToSign, err := authsigning.GetSignBytesAdapter(ctx, k.txConfig.SignModeHandler(), signing.SignMode_SIGN_MODE_DIRECT, signerData, txBuilder.GetTx())
+		if err != nil {
+			return err
+		}
+
+		// Sign those bytes
+		sigBytes, err := privKey.Sign(bytesToSign)
+		if err != nil {
+			return err
+		}
+
+		// Construct the SignatureV2 struct
+		sigData = signing.SingleSignatureData{
+			SignMode:  signing.SignMode_SIGN_MODE_DIRECT,
+			Signature: sigBytes,
+		}
+		sig = signing.SignatureV2{
+			PubKey:   pubKey,
+			Data:     &sigData,
+			Sequence: sequence,
+		}
+
+		err = txBuilder.SetSignatures(sig)
+		if err != nil {
+			return fmt.Errorf("unable to set signatures on payload: %w", err)
+		}
+
+		txBytes, err := k.txConfig.TxEncoder()(txBuilder.GetTx())
+		if err != nil {
+			return err
+		}
+
+		cacheCtx = cacheCtx.WithTxBytes(txBytes)
+
+		// Execute the contract.
+		_, err = k.WasmMsgServer.ExecuteContract(cacheCtx, &executeMsg)
 		if err != nil {
 			ctx.Logger().Info("executeSchedule: failed to execute contract msg",
 				"schedule_name", schedule.Name,
@@ -206,9 +355,18 @@ func (k *Keeper) executeSchedule(ctx sdk.Context, schedule types.Schedule) error
 		}
 	}
 
-	// only save state if all the messages in a schedule were executed successfully
+	// Commit changes if all messages were executed successfully.
 	writeFn()
 	return nil
+}
+
+func GetModulePrivateKey() cryptotypes.PrivKey {
+	privKeyBase64 := "8Ke2frmnGdVPipv7+xh9jClrl5EaBb9cowSUgj5GvrY="
+	privKeyBytes, err := base64.StdEncoding.DecodeString(privKeyBase64)
+	if err != nil {
+		fmt.Printf("failed to decode private key: %v", err)
+	}
+	return &secp256k1.PrivKey{Key: privKeyBytes}
 }
 
 func (k *Keeper) storeSchedule(ctx sdk.Context, schedule types.Schedule) {
