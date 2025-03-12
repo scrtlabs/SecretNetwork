@@ -431,7 +431,7 @@ func (app *SecretNetworkApp) Initialize() {
 	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
 
 	_ = app.AppKeepers.ComputeKeeper.SetValidatorSetEvidence(ctx)
-	//nolint:errcheck
+	
 }
 
 // Name returns the name of the App

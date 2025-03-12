@@ -1104,7 +1104,7 @@ func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 	random, proof, err := tmenclave.GetRandom(blockHeader.AppHash, uint64(blockHeader.Height))
 	require.NoError(t, err)
 
-	randomAndProofBz := append(random, proof...) //nolint:all
+	randomAndProofBz := append(random, proof...) 
 
 	_, _, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
 	require.NoError(t, err)
@@ -1115,8 +1115,8 @@ func makeBlockIDRandom() tmtypes.BlockID {
 		blockHash   = make([]byte, sha256.Size)
 		partSetHash = make([]byte, sha256.Size)
 	)
-	rand.Read(blockHash)   //nolint: errcheck // ignore errcheck for read
-	rand.Read(partSetHash) //nolint: errcheck // ignore errcheck for read
+	rand.Read(blockHash)   
+	rand.Read(partSetHash) 
 	return tmtypes.BlockID{
 		Hash: blockHash,
 		PartSetHeader: tmtypes.PartSetHeader{
