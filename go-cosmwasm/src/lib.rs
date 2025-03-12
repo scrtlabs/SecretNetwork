@@ -7,31 +7,32 @@ mod logger;
 mod memory;
 mod querier;
 
-pub use api::GoApi;
-pub use db::{db_t, DB};
-use logger::get_log_level;
-pub use memory::{free_rust, Buffer};
-pub use querier::GoQuerier;
-
-use std::convert::TryInto;
-use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::str::from_utf8;
-
 use crate::error::{clear_error, handle_c_error, handle_c_error_default, set_error, Error};
-
-use cosmwasm_sgx_vm::untrusted_init_bootstrap;
+pub use api::GoApi;
+use base64;
 use cosmwasm_sgx_vm::{
     call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, call_update_admin_raw,
-    features_from_csv, Checksum, CosmCache, Extern,
+    create_attestation_report_u, features_from_csv, untrusted_approve_upgrade,
+    untrusted_get_encrypted_genesis_seed, untrusted_get_encrypted_seed, untrusted_health_check,
+    untrusted_init_bootstrap, untrusted_init_node, untrusted_key_gen, untrusted_migration_op,
+    untrusted_submit_validator_set_evidence, Checksum, CosmCache, Extern,
 };
-use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_get_encrypted_genesis_seed,
-    untrusted_get_encrypted_seed, untrusted_health_check, untrusted_init_node, untrusted_key_gen,
-    untrusted_migrate_sealing,
-};
-
 use ctor::ctor;
+pub use db::{db_t, DB};
+use ed25519_dalek::{Keypair, Signature, Signer};
+use hex;
 use log::*;
+use logger::get_log_level;
+use memory::TwoBuffers;
+pub use memory::{free_rust, Buffer};
+pub use querier::GoQuerier;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::convert::TryInto;
+use std::fs::File;
+use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::path::Path;
+use std::str::from_utf8;
 
 #[ctor]
 fn init_logger() {
@@ -248,6 +249,19 @@ pub extern "C" fn init_cache(
 }
 
 #[no_mangle]
+pub extern "C" fn submit_validator_set_evidence(evidence: Buffer, err: Option<&mut Buffer>) {
+    let evidence_slice = match unsafe { evidence.read() } {
+        None => {
+            set_error(Error::empty_arg("no evidence"), err);
+            return;
+        }
+        Some(r) => r,
+    };
+
+    untrusted_submit_validator_set_evidence(evidence_slice.try_into().unwrap()).unwrap();
+}
+
+#[no_mangle]
 pub extern "C" fn submit_block_signatures(
     header: Buffer,
     commit: Buffer,
@@ -256,13 +270,13 @@ pub extern "C" fn submit_block_signatures(
     // val_set: Buffer,
     // next_val_set: Buffer,
     err: Option<&mut Buffer>,
-) -> Buffer {
+) -> TwoBuffers {
     trace!("Hello from right before init_bootstrap");
 
     let header_slice = match unsafe { header.read() } {
         None => {
             set_error(Error::empty_arg("header"), err);
-            return Buffer::default();
+            return TwoBuffers::default();
         }
         Some(r) => r,
     };
@@ -270,7 +284,7 @@ pub extern "C" fn submit_block_signatures(
     let commit_slice = match unsafe { commit.read() } {
         None => {
             set_error(Error::empty_arg("api_key"), err);
-            return Buffer::default();
+            return TwoBuffers::default();
         }
         Some(r) => r,
     };
@@ -278,7 +292,7 @@ pub extern "C" fn submit_block_signatures(
     let txs_slice = match unsafe { txs.read() } {
         None => {
             set_error(Error::empty_arg("txs"), err);
-            return Buffer::default();
+            return TwoBuffers::default();
         }
         Some(r) => r,
     };
@@ -286,14 +300,14 @@ pub extern "C" fn submit_block_signatures(
     let random_slice = match unsafe { random.read() } {
         None => {
             set_error(Error::empty_arg("random"), err);
-            return Buffer::default();
+            return TwoBuffers::default();
         }
         Some(r) => r,
     };
     // let val_set_slice = match unsafe { val_set.read() } {
     //     None => {
     //         set_error(Error::empty_arg("api_key"), err);
-    //         return Buffer::default();
+    //         return TwoBuffers::default();
     //     }
     //     Some(r) => r,
     // };
@@ -301,7 +315,7 @@ pub extern "C" fn submit_block_signatures(
     // let next_val_set_slice = match unsafe { next_val_set.read() } {
     //     None => {
     //         set_error(Error::empty_arg("api_key"), err);
-    //         return Buffer::default();
+    //         return TwoBuffers::default();
     //     }
     //     Some(r) => r,
     // };
@@ -316,11 +330,14 @@ pub extern "C" fn submit_block_signatures(
     ) {
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
+            return TwoBuffers::default();
         }
-        Ok(r) => {
+        Ok((r1, r2)) => {
             clear_error();
-            Buffer::from_vec(r.to_vec())
+            TwoBuffers {
+                buf1: Buffer::from_vec(r1.to_vec()),
+                buf2: Buffer::from_vec(r2.to_vec()),
+            }
         }
     }
 }
@@ -844,12 +861,114 @@ pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
 }
 
 #[no_mangle]
-pub extern "C" fn migrate_sealing() -> bool {
-    if let Err(e) = untrusted_migrate_sealing() {
-        error!("migrate_sealing error: {}", e);
+pub extern "C" fn migration_op(opcode: u32) -> bool {
+    if let Err(e) = untrusted_migration_op(opcode) {
+        error!("migration op error: {}", e);
         return false;
     }
 
     clear_error();
     true
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct PrivKey {
+    #[serde(rename = "type")]
+    key_type: String,
+    value: String,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct PubKey {
+    #[serde(rename = "type")]
+    key_type: String,
+    value: String,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct PrivValidatorKey {
+    priv_key: PrivKey,
+    pub_key: PubKey,
+    address: String,
+}
+
+#[no_mangle]
+#[allow(deprecated)]
+pub extern "C" fn emergency_approve_upgrade(data_dir: Buffer, msg: Buffer) -> bool {
+    let dir_str = from_utf8(unsafe { data_dir.read() }.unwrap()).unwrap();
+    let full_path = dir_str.to_owned() + "/config/priv_validator_key.json";
+
+    if !Path::new(full_path.as_str()).exists() {
+        error!("File doesn't exist: {}", full_path);
+        return false;
+    }
+
+    let msg_bytes = {
+        let msg_str = from_utf8(unsafe { msg.read() }.unwrap()).unwrap();
+        let res = hex::decode(msg_str);
+        if res.is_err() {
+            error!("Couldn't decode msg: {}", msg_str);
+            return false;
+        }
+
+        let bytes = res.unwrap();
+        if bytes.len() != 32 {
+            error!("invalid msg (must be mr_enclave): {}", msg_str);
+            return false;
+        }
+
+        bytes
+    };
+
+    // Open the file
+    let file = File::open(full_path).unwrap();
+    let reader = std::io::BufReader::new(file);
+
+    let priv_validator_key: PrivValidatorKey = serde_json::from_reader(reader).unwrap();
+
+    let priv_key_bytes = base64::decode(priv_validator_key.priv_key.value).unwrap();
+    let keypair = Keypair::from_bytes(&priv_key_bytes).unwrap();
+
+    let signature: Signature = keypair.sign(msg_bytes.as_slice());
+
+    let mut signatures: HashMap<String, (String, String)> = HashMap::new();
+    signatures.insert(
+        priv_validator_key.address,
+        (
+            priv_validator_key.pub_key.value,
+            base64::encode(signature.to_bytes()),
+        ),
+    );
+
+    let seril = serde_json::to_string(&signatures).unwrap();
+
+    println!("Signature: {}", seril);
+
+    clear_error();
+    true
+}
+
+#[no_mangle]
+#[allow(deprecated)]
+pub extern "C" fn onchain_approve_upgrade(msg: Buffer) -> bool {
+    let msg_slice = match unsafe { msg.read() } {
+        None => {
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    match untrusted_approve_upgrade(&msg_slice) {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), None);
+            false
+        }
+        Ok(_) => {
+            clear_error();
+            true
+        }
+    }
 }

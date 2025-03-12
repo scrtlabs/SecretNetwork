@@ -759,7 +759,7 @@ pub mod tests {
     use std::io::Read;
     use std::untrusted::fs::File;
 
-    use crate::registration::attestation::verify_quote_ecdsa;
+    use crate::registration::attestation::verify_quote_sgx;
 
     use super::*;
 
@@ -960,7 +960,7 @@ pub mod tests {
     pub fn test_attestation_dcap() {
         let (vec_quote, vec_coll, time_s) = load_attestation_dcap();
 
-        let res = verify_quote_ecdsa(&vec_quote, &vec_coll, time_s);
+        let res = verify_quote_sgx(&vec_quote, &vec_coll, time_s);
         assert!(res.is_ok());
     }
 
@@ -975,7 +975,7 @@ pub mod tests {
             p_data.d[6] = p_data.d[6] ^ 4;
         };
 
-        let res = verify_quote_ecdsa(&vec_quote, &vec_coll, time_s);
+        let res = verify_quote_sgx(&vec_quote, &vec_coll, time_s);
         assert!(!res.is_ok());
     }
 }

@@ -85,6 +85,22 @@ impl Default for Buffer {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+#[repr(C)]
+pub struct TwoBuffers {
+    pub buf1: Buffer,
+    pub buf2: Buffer,
+}
+
+impl Default for TwoBuffers {
+    fn default() -> Self {
+        TwoBuffers {
+            buf1: Buffer::default(),
+            buf2: Buffer::default(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -1,11 +1,22 @@
-use crate::consts::*;
-use crate::traits::{Kdf, SealedKey};
-use crate::CryptoError;
-use crate::{AESKey, KeyPair, Seed};
+use crate::storage::get_key_from_seed;
+use crate::validator_set::ValidatorSetForHeight;
+use core::default::{self, default};
+use enclave_crypto::consts::*;
+use enclave_crypto::ed25519::Ed25519PrivateKey;
+use enclave_crypto::traits::{Kdf, SealedKey};
+use enclave_crypto::CryptoError;
+use enclave_crypto::{AESKey, KeyPair, Seed};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use log::*;
-
+use sgx_types::{sgx_key_128bit_t, sgx_measurement_t};
+use sha2::{Digest, Sha256};
+use std::io::{Read, Write};
+use std::sgxfs::SgxFile;
+use std::sync::SgxMutex;
+use tendermint::validator::Set;
+use tendermint_proto::v0_38::types::ValidatorSet as RawValidatorSet;
+use tendermint_proto::Protobuf;
 // For phase 1 of the seed rotation, all consensus secrets come in two parts:
 // 1. The genesis seed generated on 15 September 2020
 // 2. The current seed
@@ -26,6 +37,28 @@ use log::*;
 // All of this is needed because currently the encryption key of the value is derived using the
 // plaintext key, so we don't know the list of keys of any contract. The keys are stored
 // as sha256(key) encrypted with the seed.
+pub struct KeychainMutableData {
+    pub height: u64,
+    pub validator_set_serialized: Vec<u8>,
+    pub next_mr_enclave: Option<sgx_measurement_t>,
+}
+
+impl KeychainMutableData {
+    pub fn decode_validator_set_ex(ser: &[u8]) -> Option<Set> {
+        match <Set as Protobuf<RawValidatorSet>>::decode(ser) {
+            Ok(val) => Some(val),
+            Err(e) => {
+                error!("error decoding validator set: {:?}", e);
+                None
+            }
+        }
+    }
+
+    pub fn decode_validator_set(&self) -> Option<Set> {
+        KeychainMutableData::decode_validator_set_ex(self.validator_set_serialized.as_slice())
+    }
+}
+
 pub struct Keychain {
     consensus_seed_id: u16,
     consensus_seed: Option<SeedsHolder<Seed>>,
@@ -33,13 +66,12 @@ pub struct Keychain {
     consensus_seed_exchange_keypair: Option<SeedsHolder<KeyPair>>,
     consensus_io_exchange_keypair: Option<SeedsHolder<KeyPair>>,
     consensus_callback_secret: Option<SeedsHolder<AESKey>>,
-    #[cfg(feature = "random")]
     pub random_encryption_key: Option<AESKey>,
-    #[cfg(feature = "random")]
     pub initial_randomness_seed: Option<AESKey>,
     registration_key: Option<KeyPair>,
     admin_proof_secret: Option<AESKey>,
     contract_key_proof_secret: Option<AESKey>,
+    pub extra_data: SgxMutex<KeychainMutableData>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -49,21 +81,198 @@ pub struct SeedsHolder<T> {
 }
 
 lazy_static! {
+    static ref SEALING_KDK: sgx_key_128bit_t = get_key_from_seed("seal.kdk".as_bytes());
+    pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path(&SEALED_FILE_UNITED);
     pub static ref KEY_MANAGER: Keychain = Keychain::new();
 }
 
+const KEYCHAIN_DATA_VER: u32 = 1;
+
 #[allow(clippy::new_without_default)]
 impl Keychain {
-    pub fn new() -> Self {
-        let consensus_seed: Option<SeedsHolder<Seed>> = match (
-            Seed::unseal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()),
-            Seed::unseal(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()),
+    pub fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
+        writer.write_all(&KEYCHAIN_DATA_VER.to_le_bytes())?;
+
+        if let Some(seeds) = self.consensus_seed {
+            writer.write_all(&[1_u8])?;
+            writer.write_all(seeds.genesis.as_slice())?;
+            writer.write_all(seeds.current.as_slice())?;
+        } else {
+            writer.write_all(&[0_u8])?;
+        }
+
+        if let Some(kp) = self.registration_key {
+            writer.write_all(&[1_u8])?;
+            writer.write_all(kp.get_privkey())?;
+        } else {
+            writer.write_all(&[0_u8])?;
+        }
+
+        let extra = self.extra_data.lock().unwrap();
+
+        writer.write_all(&extra.height.to_le_bytes())?;
+        let val_size = extra.validator_set_serialized.len() as u64;
+        writer.write_all(&val_size.to_le_bytes())?;
+        writer.write_all(&extra.validator_set_serialized)?;
+
+        if let Some(val) = extra.next_mr_enclave {
+            writer.write_all(&[1_u8])?;
+            writer.write_all(&val.m)?;
+        } else {
+            writer.write_all(&[0_u8])?;
+        }
+
+        Ok(())
+    }
+
+    fn read_u32(reader: &mut dyn Read) -> std::io::Result<u32> {
+        let mut buf = [0u8; 4];
+        reader.read_exact(&mut buf)?;
+        Ok(u32::from_le_bytes(buf))
+    }
+
+    fn read_u64(reader: &mut dyn Read) -> std::io::Result<u64> {
+        let mut buf = [0u8; 8];
+        reader.read_exact(&mut buf)?;
+        Ok(u64::from_le_bytes(buf))
+    }
+
+    pub fn deserialize(&mut self, reader: &mut dyn Read) -> std::io::Result<()> {
+        let ver = Self::read_u32(reader)?;
+        if KEYCHAIN_DATA_VER != ver {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "unsupported ver",
+            ));
+        }
+
+        let mut flag_bytes = [0u8; 1];
+
+        reader.read_exact(&mut flag_bytes)?;
+        if flag_bytes[0] != 0 {
+            let mut buf = Ed25519PrivateKey::default();
+            reader.read_exact(buf.get_mut())?;
+            let genesis = Seed::from(buf);
+
+            reader.read_exact(buf.get_mut())?;
+            let current = Seed::from(buf);
+
+            self.consensus_seed = Some(SeedsHolder { genesis, current });
+        }
+
+        reader.read_exact(&mut flag_bytes)?;
+        if flag_bytes[0] != 0 {
+            let mut sk = Ed25519PrivateKey::default();
+            reader.read_exact(sk.get_mut())?;
+
+            self.registration_key = Some(KeyPair::from_sk(sk));
+        }
+
+        let mut extra = self.extra_data.lock().unwrap();
+
+        extra.height = Self::read_u64(reader)?;
+
+        let val_size = Self::read_u64(reader)?;
+
+        extra.validator_set_serialized = vec![0u8; val_size as usize];
+        reader.read_exact(&mut extra.validator_set_serialized)?;
+
+        reader.read_exact(&mut flag_bytes)?;
+        if flag_bytes[0] != 0 {
+            let mut val = sgx_measurement_t::default();
+            reader.read_exact(&mut val.m)?;
+            extra.next_mr_enclave = Some(val);
+        } else {
+            extra.next_mr_enclave = None;
+        }
+
+        Ok(())
+    }
+
+    pub fn save(&self) {
+        let path: &str = &SEALED_DATA_PATH;
+        let mut file = SgxFile::create_ex(path, &SEALING_KDK).unwrap();
+
+        self.serialize(&mut file).unwrap();
+    }
+
+    fn load(&mut self) -> bool {
+        let path: &str = &SEALED_DATA_PATH;
+        match SgxFile::open_ex(path, &SEALING_KDK) {
+            Ok(mut file) => {
+                println!("Sealed data opened");
+                self.deserialize(&mut file).unwrap();
+                true
+            }
+            Err(err) => {
+                println!("Seailed data can't be opened: {}", err);
+                false
+            }
+        }
+    }
+
+    pub fn encrypt_hash(&self, hv: [u8; 32], height: u64) -> [u8; 32] {
+        let mut hasher = Sha256::new();
+        hasher.update(self.consensus_seed.unwrap().current.as_slice());
+        hasher.update(hv);
+        hasher.update(height.to_le_bytes());
+
+        let mut ret: [u8; 32] = [0_u8; 32];
+        ret.copy_from_slice(&hasher.finalize());
+        ret
+    }
+
+    pub fn get_migration_keys() -> KeyPair {
+        let mut sk = Ed25519PrivateKey::default();
+        sk.get_mut()[..16].copy_from_slice(&get_key_from_seed("migrate.0.kdk".as_bytes()));
+        sk.get_mut()[16..].copy_from_slice(&get_key_from_seed("migrate.1.kdk".as_bytes()));
+
+        KeyPair::from_sk(sk)
+    }
+
+    pub fn new_empty() -> Self {
+        Keychain {
+            consensus_seed_id: CONSENSUS_SEED_VERSION,
+            consensus_seed: None,
+            registration_key: None,
+            consensus_state_ikm: None,
+            consensus_seed_exchange_keypair: None,
+            consensus_io_exchange_keypair: None,
+            consensus_callback_secret: None,
+            //#[cfg(feature = "random")]
+            initial_randomness_seed: None,
+            //#[cfg(feature = "random")]
+            random_encryption_key: None,
+            admin_proof_secret: None,
+            contract_key_proof_secret: None,
+            extra_data: SgxMutex::new(KeychainMutableData {
+                height: 0,
+                validator_set_serialized: Vec::new(),
+                next_mr_enclave: None,
+            }),
+        }
+    }
+
+    fn load_legacy_keys(&mut self) {
+        self.registration_key =
+            match KeyPair::unseal(&make_sgx_secret_path(SEALED_FILE_REGISTRATION_KEY)) {
+                Ok(k) => Some(k),
+                _ => None,
+            };
+
+        self.consensus_seed = match (
+            Seed::unseal(&make_sgx_secret_path(
+                SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS,
+            )),
+            Seed::unseal(&make_sgx_secret_path(
+                SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT,
+            )),
         ) {
             (Ok(genesis), Ok(current)) => {
                 trace!(
                     "New keychain created with the following seeds {:?}, {:?}",
-                    genesis.as_slice(),
-                    current.as_slice()
+                    hex::encode(genesis.as_slice()),
+                    hex::encode(current.as_slice())
                 );
                 Some(SeedsHolder { genesis, current })
             }
@@ -77,56 +286,38 @@ impl Keychain {
             }
         };
 
-        let registration_key = Self::unseal_registration_key();
-
-        let mut x = Keychain {
-            consensus_seed_id: CONSENSUS_SEED_VERSION,
-            consensus_seed,
-            registration_key,
-            consensus_state_ikm: None,
-            consensus_seed_exchange_keypair: None,
-            consensus_io_exchange_keypair: None,
-            consensus_callback_secret: None,
-            #[cfg(feature = "random")]
-            initial_randomness_seed: None,
-            #[cfg(feature = "random")]
-            random_encryption_key: None,
-            admin_proof_secret: None,
-            contract_key_proof_secret: None,
-        };
-
-        let _ = x.generate_consensus_master_keys();
-
-        x
-    }
-
-    fn unseal_registration_key() -> Option<KeyPair> {
-        match KeyPair::unseal(REGISTRATION_KEY_SEALING_PATH.as_str()) {
-            Ok(k) => Some(k),
-            _ => None,
+        if let Ok(res) =
+            ValidatorSetForHeight::unseal_from(&make_sgx_secret_path(SEALED_FILE_VALIDATOR_SET))
+        {
+            let mut extra = self.extra_data.lock().unwrap();
+            extra.height = res.height;
+            extra.validator_set_serialized = res.validator_set;
         }
     }
 
-    pub fn unseal_only_genesis(&mut self) -> Result<(), CryptoError> {
-        match Seed::unseal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            Ok(genesis) => {
-                let current = Seed::new()?;
-                self.consensus_seed = Some(SeedsHolder { genesis, current });
-                Ok(())
-            }
-            Err(e) => {
-                trace!("Failed to unseal consensus seed {}", e);
-                Err(CryptoError::KeyError)
-            }
+    pub fn new() -> Self {
+        let mut x = Self::new_empty();
+        x.load();
+        let _ = x.generate_consensus_master_keys();
+        x
+    }
+
+    pub fn new_from_legacy() -> Option<Self> {
+        let mut x = Self::new_empty();
+        x.load_legacy_keys();
+
+        if x.registration_key.is_some() || x.consensus_seed.is_some() {
+            let _ = x.generate_consensus_master_keys();
+            Some(x)
+        } else {
+            None
         }
     }
 
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
         match (Seed::new(), Seed::new()) {
             (Ok(genesis), Ok(current)) => {
-                if let Err(_e) = self.set_consensus_seed(genesis, current) {
-                    return Err(CryptoError::KeyError);
-                }
+                self.set_consensus_seed(genesis, current);
             }
             (Err(err), _) => return Err(err),
             (_, Err(err)) => return Err(err),
@@ -136,11 +327,7 @@ impl Keychain {
 
     pub fn create_registration_key(&mut self) -> Result<(), CryptoError> {
         match KeyPair::new() {
-            Ok(key) => {
-                if let Err(_e) = self.set_registration_key(key) {
-                    return Err(CryptoError::KeyError);
-                }
-            }
+            Ok(key) => self.set_registration_key(key),
             Err(err) => return Err(err),
         };
         Ok(())
@@ -214,30 +401,9 @@ impl Keychain {
         })
     }
 
-    pub fn reseal_registration_key(&mut self) -> Result<(), EnclaveError> {
-        match Self::unseal_registration_key() {
-            Some(kp) => {
-                if let Err(_e) = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH) {
-                    error!("Failed to reseal registration key - error code 0xC11");
-                    return Err(EnclaveError::FailedSeal);
-                };
-                if let Err(_e) = kp.seal(REGISTRATION_KEY_SEALING_PATH.as_str()) {
-                    error!("Failed to reseal registration key - error code 0xC12");
-                    return Err(EnclaveError::FailedSeal);
-                }
-                Ok(())
-            }
-            None => Ok(()),
-        }
-    }
-
-    pub fn set_registration_key(&mut self, kp: KeyPair) -> Result<(), EnclaveError> {
-        if let Err(e) = kp.seal(REGISTRATION_KEY_SEALING_PATH.as_str()) {
-            error!("Error sealing registration key - error code 0xC13");
-            return Err(e);
-        }
+    pub fn set_registration_key(&mut self, kp: KeyPair) {
         self.registration_key = Some(kp);
-        Ok(())
+        self.save();
     }
 
     pub fn set_consensus_seed_exchange_keypair(&mut self, genesis: KeyPair, current: KeyPair) {
@@ -256,57 +422,19 @@ impl Keychain {
         self.consensus_callback_secret = Some(SeedsHolder { genesis, current });
     }
 
-    /// used to remove the consensus seed - usually we don't care whether deletion was successful or not,
-    /// since we want to try and delete it either way
-    pub fn delete_consensus_seed(&mut self) -> bool {
-        debug!(
-            "Removing genesis consensus seed in {}",
-            *GENESIS_CONSENSUS_SEED_SEALING_PATH
-        );
-        if let Err(_e) = std::sgxfs::remove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            debug!("Error removing genesis consensus_seed");
-            return false;
-        }
-
-        debug!(
-            "Removing current consensus seed in {}",
-            *CURRENT_CONSENSUS_SEED_SEALING_PATH
-        );
-        if let Err(_e) = std::sgxfs::remove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            debug!("Error removing genesis consensus_seed");
-            return false;
-        }
+    pub fn delete_consensus_seed(&mut self) {
         self.consensus_seed = None;
-        true
+        self.save();
     }
 
-    pub fn set_consensus_seed(&mut self, genesis: Seed, current: Seed) -> Result<(), EnclaveError> {
+    pub fn set_consensus_seed(&mut self, genesis: Seed, current: Seed) {
         trace!(
             "Consensus seeds were set to be the following {:?}, {:?}",
             genesis.as_slice(),
             current.as_slice()
         );
-
-        debug!(
-            "Sealing genesis consensus seed in {}",
-            *GENESIS_CONSENSUS_SEED_SEALING_PATH
-        );
-        if let Err(e) = genesis.seal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            error!("Error sealing genesis consensus_seed - error code 0xC14");
-            return Err(e);
-        }
-
-        debug!(
-            "Sealing current consensus seed in {}",
-            *CURRENT_CONSENSUS_SEED_SEALING_PATH
-        );
-        if let Err(e) = current.seal(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            error!("Error sealing current consensus_seed - error code 0xC14");
-            return Err(e);
-        }
-
         self.consensus_seed = Some(SeedsHolder { genesis, current });
-        Ok(())
+        self.save();
     }
 
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
@@ -432,7 +560,7 @@ impl Keychain {
             consensus_callback_secret_current,
         );
 
-        #[cfg(feature = "random")]
+        //#[cfg(feature = "random")]
         {
             let rek =
                 self.consensus_seed.unwrap().current.derive_key_from_this(
@@ -449,8 +577,6 @@ impl Keychain {
 
             trace!("initial_randomness_seed: {:?}", hex::encode(irs.get()));
             trace!("random_encryption_key: {:?}", hex::encode(rek.get()));
-
-            self.write_randomness_keys();
         }
 
         let admin_proof_secret = self
@@ -481,23 +607,14 @@ impl Keychain {
 
         Ok(())
     }
-
-    #[cfg(feature = "random")]
-    pub fn write_randomness_keys(&self) {
-        self.random_encryption_key.unwrap().seal(&REK_PATH).unwrap();
-        self.initial_randomness_seed
-            .unwrap()
-            .seal(&IRS_PATH)
-            .unwrap();
-    }
 }
 
 #[cfg(feature = "test")]
 pub mod tests {
 
     use super::{
-        Keychain, CURRENT_CONSENSUS_SEED_SEALING_PATH, GENESIS_CONSENSUS_SEED_SEALING_PATH,
-        /*KEY_MANAGER,*/ REGISTRATION_KEY_SEALING_PATH,
+        Keychain, SEALED_DATA_PATH,
+        /*KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,*/
     };
     // use crate::crypto::CryptoError;
     // use crate::crypto::{KeyPair, Seed};
@@ -505,10 +622,7 @@ pub mod tests {
     // todo: fix test vectors to actually work
     fn _test_initial_keychain_state() {
         // clear previous data (if any)
-        let _ = std::sgxfs::remove(&*GENESIS_CONSENSUS_SEED_SEALING_PATH);
-        let _ = std::sgxfs::remove(&*CURRENT_CONSENSUS_SEED_SEALING_PATH);
-        let _ = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH);
-
+        let _ = std::sgxfs::remove(&*SEALED_DATA_PATH);
         let _keys = Keychain::new();
 
         // todo: replace with actual checks

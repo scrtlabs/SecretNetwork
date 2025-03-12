@@ -17,10 +17,7 @@ extern "C" {
         in_encrypted_random: *const u8,
         in_encrypted_random_len: u32,
         decrypted_random: &mut [u8; 32],
-        // in_validator_set: *const u8,
-        // in_validator_set_len: u32,
-        // in_next_validator_set: *const u8,
-        // in_next_validator_set_len: u32,
+        next_validator_set_evidence: &mut [u8; 32],
     ) -> sgx_status_t;
 }
 
@@ -29,7 +26,7 @@ pub fn untrusted_submit_block_signatures(
     commit: &[u8],
     txs: &[u8],
     encrypted_random: &[u8],
-) -> SgxResult<[u8; 32]> {
+) -> SgxResult<([u8; 32], [u8; 32])>{
     debug!("Hello from just before - untrusted_submit_block_signatures");
 
     const RETRY_LIMIT: i32 = 3;
@@ -38,7 +35,7 @@ pub fn untrusted_submit_block_signatures(
 
     // this is here so we can
     loop {
-        let (retval, decrypted, status) =
+        let (retval, decrypted, next_validator_set_evidence, status) =
             submit_block_signature_impl(header, commit, txs, encrypted_random)?;
         if status != sgx_status_t::SGX_SUCCESS {
             return Err(status);
@@ -59,7 +56,7 @@ pub fn untrusted_submit_block_signatures(
                 return Err(retval);
             }
         } else {
-            return Ok(decrypted);
+        return Ok((decrypted, next_validator_set_evidence));
         }
     }
 }
@@ -69,7 +66,7 @@ fn submit_block_signature_impl(
     commit: &[u8],
     txs: &[u8],
     encrypted_random: &[u8],
-) -> SgxResult<(sgx_status_t, [u8; 32], sgx_status_t)> {
+) -> SgxResult<(sgx_status_t, [u8; 32], [u8; 32], sgx_status_t)>{
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -84,6 +81,7 @@ fn submit_block_signature_impl(
 
     // unused if random feature is not turned on
     let mut random_decrypted = [0u8; 32];
+    let mut next_validator_set_evidence = [0u8; 32];
 
     // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
     let status = unsafe {
@@ -98,9 +96,10 @@ fn submit_block_signature_impl(
             txs.len() as u32,
             encrypted_random.as_ptr(),
             encrypted_random.len() as u32,
-            &mut random_decrypted
+            &mut random_decrypted,
+            &mut next_validator_set_evidence
         )
     };
 
-    Ok((retval, random_decrypted, status))
+    Ok((retval, random_decrypted, next_validator_set_evidence, status))
 }

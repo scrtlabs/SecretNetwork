@@ -1,7 +1,8 @@
 #![cfg(feature = "random")]
 
-use enclave_crypto::{SIVEncryptable, KEY_MANAGER};
+use enclave_crypto::SIVEncryptable;
 use enclave_utils::random::{create_legacy_proof, create_random_proof};
+use enclave_utils::KEY_MANAGER;
 use log::{debug, error};
 use sgx_types::sgx_status_t;
 use tendermint::Hash;

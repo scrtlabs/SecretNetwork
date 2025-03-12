@@ -72,7 +72,7 @@ require (
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
 	github.com/cosmos/rosetta v0.50.4
 	github.com/gogo/protobuf v1.3.2
-	github.com/scrtlabs/tm-secret-enclave v1.11.8
+	github.com/scrtlabs/tm-secret-enclave v1.11.9-0.20241106181222-964c7d7e9f02
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028
 )
 

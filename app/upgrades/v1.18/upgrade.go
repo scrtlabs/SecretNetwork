@@ -1,4 +1,4 @@
-package v1_13
+package v1_18
 
 import (
 	"context"
@@ -11,10 +11,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
-	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 )
 
-const upgradeName = "v1.13"
+const upgradeName = "v1.18"
 
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
@@ -33,15 +32,14 @@ func createUpgradeHandler(mm *module.Manager, _ *keepers.SecretAppKeepers, confi
 		logger.Info(`| |__| | |    | |__| | | \ \  / ____ \| |__| | |____ `)
 		logger.Info(` \____/|_|     \_____|_|  \_\/_/    \_\_____/|______|`)
 
-		// WASM Hooks doesn't require any initialization code:
-		// https://github.com/osmosis-labs/osmosis/blob/8b4c62a26/app/upgrades/v14/upgrades.go#L12-L21
-
 		logger.Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
 
-		_, err := api.MigrationOp(0)
-		if err != nil {
-			return nil, err
-		}
+		// Migration from legacy must have already be done BEFORE running this upgrade
+
+		// _, err := api.MigrationOp(4)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
 		return mm.RunMigrations(ctx, configurator, vm)
 	}

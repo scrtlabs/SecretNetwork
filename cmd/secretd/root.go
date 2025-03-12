@@ -201,7 +201,8 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basi
 		InitBootstrapCmd(),
 		ParseCert(),
 		DumpBin(),
-		MigrateSealings(),
+		MigrationOp(),
+		EmergencyApproveUpgrade(),
 		ConfigureSecret(),
 		HealthCheck(),
 		ResetEnclave(),
@@ -340,7 +341,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 		panic(err)
 	}
 
-	return app.NewSecretNetworkApp(logger, db, traceStore, true,
+	res := app.NewSecretNetworkApp(logger, db, traceStore, true,
 		bootstrap,
 		appOpts,
 		compute.GetConfig(appOpts),
@@ -357,6 +358,10 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(server.FlagDisableIAVLFastNode))),
 		baseapp.SetChainID(appGenesis.ChainID),
 	)
+
+	res.Initialize()
+
+	return res
 }
 
 func exportAppStateAndTMValidators(

@@ -43,6 +43,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	"github.com/cosmos/gogoproto/proto"
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
@@ -58,6 +59,7 @@ import (
 	v1_15 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.15"
 	v1_16 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.16"
 	v1_17 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.17"
+	v1_18 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.18"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
@@ -85,6 +87,7 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	dbm "github.com/cosmos/cosmos-db"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	stakingkeeper "github.com/cosmos/ibc-go/v8/testing/types"
@@ -128,6 +131,7 @@ var (
 		v1_15.Upgrade,
 		v1_16.Upgrade,
 		v1_17.Upgrade,
+		v1_18.Upgrade,
 	}
 )
 
@@ -175,6 +179,10 @@ func (app *SecretNetworkApp) GetStakingKeeper() stakingkeeper.StakingKeeper {
 
 func (app *SecretNetworkApp) GetIBCKeeper() *ibckeeper.Keeper {
 	return app.AppKeepers.IbcKeeper
+}
+
+func (app *SecretNetworkApp) GetGovKeeper() *govkeeper.Keeper {
+	return app.AppKeepers.GovKeeper
 }
 
 func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper {
@@ -366,6 +374,8 @@ func NewSecretNetworkApp(
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
 		CircuitKeeper:         app.AppKeepers.CircuitKeeper,
+		appCodec:              app.appCodec,
+		govkeeper:             *app.AppKeepers.GovKeeper,
 		IBCKeeper:             app.AppKeepers.IbcKeeper,
 		WasmConfig:            computeConfig,
 		TXCounterStoreService: app.AppKeepers.ComputeKeeper.GetStoreService(),
@@ -412,6 +422,16 @@ func NewSecretNetworkApp(
 	}
 
 	return app
+}
+
+func (app *SecretNetworkApp) Initialize() {
+
+	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
+
+	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
+
+	_ = app.AppKeepers.ComputeKeeper.SetValidatorSetEvidence(ctx)
+	//nolint:errcheck
 }
 
 // Name returns the name of the App

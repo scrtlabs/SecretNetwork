@@ -16,6 +16,7 @@ pub struct VerifiedBlockMessages {
     messages: VecDeque<Vec<u8>>,
     height: u64,
     time: i128,
+    pub next_validators_evidence: [u8; 32],
 }
 
 impl VerifiedBlockMessages {
