@@ -1,6 +1,6 @@
+use cw_types_v010::types::{CanonicalAddr, HumanAddr};
 use log::trace;
 use std::collections::HashMap;
-use cw_types_v010::types::{CanonicalAddr, HumanAddr};
 
 lazy_static::lazy_static! {
     /// Current hardcoded contract admins
@@ -296,7 +296,38 @@ lazy_static::lazy_static! {
     /// The entire history of contracts that were deployed before v1.10 and have been migrated using the hardcoded admin feature.
     /// These contracts might have other contracts that call them with a wrong code_hash, because those other contracts have it stored from before the migration.
     static ref ALLOWED_CONTRACT_CODE_HASH: HashMap<&'static str, &'static str> = HashMap::from([
-        ("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek", "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e"),
+        ("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek", "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e"), // code id 5
+        ("secret1chsejpk9kfj4vt9ec6xvyguw539gsdtr775us2", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SNOBLEUSDC
+        ("secret1e0y9vf4xr9wffyxsvlz35jzl5st2srkdl8frac", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SPICA
+        ("secret13lndcagy53wfzh69rtv0dex3a7cks0dv5emwke", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SDYDX
+        ("secret1v2kgmfwgd2an0l5ddralajg5wfdkemxl2vg4jp", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SWBTC
+        ("secret1vfe63g7ndhqq9qu8v4n97fj69rcmr5fy0dun75", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SDYM
+        ("secret188z7hncvphw4us4h6uy6vlq4qf20jd2vm2vu8c", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SARCH
+        ("secret1xx6m5c7d92h75evkmxqqe2xe5sk5qcqqs9t8ar", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SWSTETH
+        ("secret1lfqlcnpveh6at723h5k2nu4jjqeuz0ukpxxdtt", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SCHEQ
+        ("secret1mcd6ny9a037g0qf79mkks2tsm0kecw4pll22v7", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SSWTH
+        ("secret16dctnuy6lwydw834f4d0t3sw3f6jhav6ryhe4m", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SSTKDYDX
+        ("secret17xw4pelwmmhftscrdfntudyv77rkdxvaaelzvs", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SBINJ
+        ("secret1hhvfxy44e4gp6k7n4e37t7uyqa54dnp68egugg", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SPAGE
+        ("secret1dks96n3jz64dyulzjnjazt6cqemr0x0qgn7sd7", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SANDR
+        ("secret1l5d0vncwnlln0tz0m4tp9rgm740xl7th6es0q0", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 sstTIA
+        ("secret19gmvklys9uywk3lf2e94wqwwc97r3jr5rwa2pa", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SSAGA
+        ("secret1swrj0fqza3g98d7agm2nmukjfe44h7f5n8aavp", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SLVN
+        ("secret1htd6s29m2j9h45knwkyucz98m306n32hx8dww3", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SUSDT
+        ("secret1pcftk3ny87zm6thuxyfrtrlm2t8yev5unuvx6c", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SWHALE
+        ("secret1k644rvd979wn4erjd5g42uehayjwrq094g5uvj", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SNTRN
+        ("secret1sv0nxz6athw5qm0hsxl90376c9zhrxhhprhjph", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SORAI
+        ("secret1pf6n6j8xlkxnga5t8w8exdtvcrrjgqms5wdlnj", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SAMPKUJI
+        ("secret1f6yg0typy608r567xekwyn3qf0k902llue9w2l", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SUMEE
+        ("secret1jsaftfxnwwmjxccvc3zqaqmkcpp8fjnvvltvq6", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SAMPWHALE
+        ("secret1r4cldegd4peufgtaxf0qpagclqspeqaf8dm0l9", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 sECLIP
+        ("secret1xyhphws090fqs33sxkytmagwynz54eqnpdqfrw", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SKAVA
+        ("secret1h08ru5kul3yajg7tqj6vq9k6rccnfw2yqy8glc", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SMILKTIA
+        ("secret1x3cxgrwymk7yyelf2782r8ay020xyl96zq3rhh", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SDATOM
+        ("secret16l5g98d45gqvvn2g79q23h8flfq65cvr9r6c72", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SNSTK
+        ("secret1wzqxaa6g6xa27vrwgygex8xurxdjzjtwzlgwy3", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SBLUNA
+        ("secret1yafpcu9wpauy5ktymggzk9kmsvmce0hkl9p2h7", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SNLS
+        ("secret1ve536yukullq5rm67gdpssm23wynfv9gcqh6xn", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SBKJ
         ("secret14mzwd0ps5q277l20ly2q3aetqe3ev4m4260gf4", "ad91060456344fc8d8e93c0600a3957b8158605c044b3bef7048510b3157b807"),
         ("secret1k8cge73c3nh32d4u0dsd5dgtmk63shtlrfscj5", "ad91060456344fc8d8e93c0600a3957b8158605c044b3bef7048510b3157b807"),
         ("secret1smmc5k24lcn4j2j8f3w0yaeafga6wmzl0qct03", "ad91060456344fc8d8e93c0600a3957b8158605c044b3bef7048510b3157b807"),
@@ -313,19 +344,19 @@ lazy_static::lazy_static! {
         ("secret159p22zvq2wzsdtqhm2plp4wg33srxp2hf0qudc", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"),
         ("secret1x0dqckf2khtxyrjwhlkrx9lwwmz44k24vcv2vv", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"),
         ("secret17gg8xcx04ldqkvkrd7r9w60rdae4ck8aslt9cf", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"),
-        ("secret1h5d3555tz37crrgl5rppu2np2fhaugq3q8yvv9", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"),
-        ("secret1n4dp5dk6fufqmaalu9y7pnmk2r0hs7kc66a55f", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"),
-        ("secret15rxfz2w2tallu9gr9zjxj8wav2lnz4gl9pjccj", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"),
+        ("secret1h5d3555tz37crrgl5rppu2np2fhaugq3q8yvv9", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SDOT
+        ("secret1n4dp5dk6fufqmaalu9y7pnmk2r0hs7kc66a55f", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SKSM
+        ("secret15rxfz2w2tallu9gr9zjxj8wav2lnz4gl9pjccj", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SMNTA
         ("secret1vcau4rkn7mvfwl8hf0dqa9p0jr59983e3qqe3z", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
-        ("secret1vkq022x4q8t8kx9de3r84u669l65xnwf2lg3e6", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
-        ("secret139qfh3nmuzfgwsx2npnmnjl4hrvj3xq5rmq8a0", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
-        ("secret1guyayjwg5f84daaxl7w84skd8naxvq8vz9upqx", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
-        ("secret19xsac2kstky8nhgvvz257uszt44g0cu6ycd5e4", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
+        ("secret1vkq022x4q8t8kx9de3r84u669l65xnwf2lg3e6", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saUSDC
+        ("secret139qfh3nmuzfgwsx2npnmnjl4hrvj3xq5rmq8a0", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saWETH
+        ("secret1guyayjwg5f84daaxl7w84skd8naxvq8vz9upqx", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saWBTC
+        ("secret19xsac2kstky8nhgvvz257uszt44g0cu6ycd5e4", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saWBNB
         ("secret1t642ayn9rhl5q9vuh4n2jkx0gpa9r6c3sl96te", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
-        ("secret1c2prkwd8e6ratk42l4vrnwz34knfju6hmp7mg7", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
-        ("secret1wk5j2cntwg2fgklf0uta3tlkvt87alfj7kepuw", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
-        ("secret1egqlkasa6xe6efmfp9562sfj07lq44z7jngu5k", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
-        ("secret16e230j6qm5u5q30pcc6qv726ae30ak6lzq0zvf", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
+        ("secret1c2prkwd8e6ratk42l4vrnwz34knfju6hmp7mg7", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saDAI
+        ("secret1wk5j2cntwg2fgklf0uta3tlkvt87alfj7kepuw", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 sAXL
+        ("secret1egqlkasa6xe6efmfp9562sfj07lq44z7jngu5k", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saUNI
+        ("secret16e230j6qm5u5q30pcc6qv726ae30ak6lzq0zvf", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saFRAX
         ("secret1tqmms5awftpuhalcv5h5mg76fa0tkdz4jv9ex4", "f85b413b547b9460162958bafd51113ac266dac96a84c33b9150f68f045f2641"),
         ("secret1yxjmepvyl2c25vnt53cr2dpn8amknwausxee83", "2976a2577999168b89021ecb2e09c121737696f71c4342f9a922ce8654e98662"),
         ("secret1hvg7am0cwfu6hfnjhere35kne23f3z6z80rlty", "ec80d96d11715db8058bf3f72a41fda14b88e4d46f00f01f3ec74a49b8d2cfd5"),
@@ -375,8 +406,8 @@ lazy_static::lazy_static! {
         ("secret1lgq7h9lmvc2pf408j2st649n52w50xln529jwg", "cb4a5f472e0b6d87396e362b6c94a7000ef8748d8e80470df8e5e5d2721fbecc"),
         ("secret1aut9gnc2leamxhsa0ud76lnf4gge2y4emewrpv", "dcaa72d8ea49cdbc80ca6789b066e8f407f479f685a7c7fa654407928ca9e7f0"),
         ("secret166dngdltwaex4vfsdrv957g7qzavl309lcg3d5", "4cf6d7ef1503017dfe06087e848abca594bc1cf6a941a4d89ed65543f4d04b31"),
-        ("secret153wu605vvp934xhd4k9dtd640zsep5jkesstdm", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
-        ("secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
+        ("secret153wu605vvp934xhd4k9dtd640zsep5jkesstdm", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SHD
+        ("secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SILK
         ("secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4", "f6be719b3c6feb498d3554ca0398eb6b7e7db262acb33f84a8f12106da6bbb09"),
         ("secret1ja0hcwvy76grqkpgwznxukgd7t8a8anmmx05pp", "2ad4ed2a4a45fd6de3daca9541ba82c26bb66c76d1c3540de39b509abd26538e"),
         ("secret1pjhdug87nxzv0esxasmeyfsucaj98pw4334wyc", "448e3f6d801e453e838b7a5fbaa4dd93b84d0f1011245f0d5745366dadaf3e85"),
