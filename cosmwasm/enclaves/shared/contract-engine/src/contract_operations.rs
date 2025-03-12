@@ -25,6 +25,7 @@ use crate::external::results::{
     HandleSuccess, InitSuccess, MigrateSuccess, QuerySuccess, UpdateAdminSuccess,
 };
 use crate::message::{is_ibc_msg, parse_message};
+use crate::message_utils::try_get_decrypted_secret_msg;
 use crate::types::ParsedMessage;
 
 use crate::random::update_msg_counter;
@@ -116,7 +117,24 @@ pub fn init(
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
-    let secret_msg = SecretMessage::from_slice(msg)?;
+    let (secret_msg, decrypted_msg) =
+        if let Some(decrypted_secret_msg) = try_get_decrypted_secret_msg(msg) {
+            trace!("init input before decryption: {:?}", base64::encode(msg));
+            (
+                decrypted_secret_msg.secret_msg,
+                decrypted_secret_msg.decrypted_msg,
+            )
+        } else {
+            trace!("init input was plaintext: {:?}", base64::encode(msg));
+            let secret_msg = SecretMessage {
+                nonce: [0; 32],
+                user_public_key: [0; 32],
+                msg: msg.into(),
+            };
+
+            let decrypted_msg = secret_msg.msg.clone();
+            (secret_msg, decrypted_msg)
+        };
 
     //let start = Instant::now();
     verify_params(
@@ -135,7 +153,7 @@ pub fn init(
     // trace!("Time elapsed in verify_params: {:?}", duration);
 
     //let start = Instant::now();
-    let decrypted_msg = secret_msg.decrypt()?;
+    // let decrypted_msg = secret_msg.decrypt()?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in decrypt: {:?}", duration);
 
