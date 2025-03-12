@@ -296,6 +296,8 @@ lazy_static::lazy_static! {
     /// The entire history of contracts that were deployed before v1.10 and have been migrated using the hardcoded admin feature.
     /// These contracts might have other contracts that call them with a wrong code_hash, because those other contracts have it stored from before the migration.
     static ref ALLOWED_CONTRACT_CODE_HASH: HashMap<&'static str, &'static str> = HashMap::from([
+        ("secret1lvf7ey6p03tt9hqmqf2grscvlwehv55l5r05ls", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 107 (TESTNET) (877 on MAINNET)
+        ("secret1m3cgws8u4jytuvfq283hymqku796td5dp427np", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 107 (TESTNET) (877 on MAINNET)
         ("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek", "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e"), // code id 5
         ("secret1chsejpk9kfj4vt9ec6xvyguw539gsdtr775us2", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SNOBLEUSDC
         ("secret1e0y9vf4xr9wffyxsvlz35jzl5st2srkdl8frac", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SPICA
