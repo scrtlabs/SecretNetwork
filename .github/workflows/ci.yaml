@@ -331,6 +331,13 @@ jobs:
         run: |
           docker load --input /tmp/localsecret.tar
           docker load --input /tmp/hermes.tar
+      - name: Run secretcli tests
+        run: |
+          docker run -v $(realpath ./integration-tests):/root/integration-tests -d --name localsecret -d ghcr.io/scrtlabs/localsecret:v0.0.0
+          sleep 10
+          docker exec localsecret bash -c 'integration-tests/basic-tests.sh secretcli ~/.secretd' || exit 1
+          docker stop localsecret 
+          docker rm localsecret
       - name: Run integration tests
         run: |
           cd integration-tests

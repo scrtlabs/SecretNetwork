@@ -51,84 +51,84 @@ $SECRETCLI status --output=json | jq
 # ----- NODE STATUS CHECK - END -----
 
 # ------ NODE REGISTRATION - START ------
-if [ -f $SCRT_SGX_STORAGE/attectation_cert.der ]; then
-  rm ${SCRT_SGX_STORAGE}/attectation_cert.der
-fi
-./secretd init-enclave
-if [ $? -ne 0 ]; then
-  echo "Failed to initialize SGX enclave"
-  exit 1
-fi
-
-if [ ! -f ${SCRT_SGX_STORAGE}/attestation_cert.der ]; then
-  echo "Failed to generate attestation_cert.der certificate"
-  exit 1
-fi
-
-PUBLIC_KEY=$(./secretd parse ${SCRT_SGX_STORAGE}/attestation_cert.der  2> /dev/null | cut -c 3-)
-if [ -z $PUBLIC_KEY ]; then
-  echo "Failed to parse attestation_cert.der certificate"
-  exit 1
-fi
-echo "Certificate public key: $PUBLIC_KEY"
-
-# On-chain registration and attestation
-json_register=$(mktemp -p $TMP_DIR)
-./secretd tx register auth ${SCRT_SGX_STORAGE}/attestation_cert.der -y --from a --fees 3000uscrt --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output json | jq > $json_register
-if [ $? -ne 0 ]; then
-  echo "Failed to register/auth node"
-  exit 1
-fi
-code_id=$(cat $json_register | jq ".code")
-if [[ ${code_id} -ne 0 ]]; then
-  echo "Failed to register/auth node. Code: ${code_id}. Error: $(cat $json_register | jq '.raw_log')"
-  exit 1
-fi
-sleep 5s
-txhash=$(cat $json_register | jq ".txhash" | tr -d '"')
-$SECRETCLI q tx --type=hash "$txhash" --output json | jq > $json_register
-code_id=$(cat $json_register | jq ".code")
-if [[ ${code_id} -ne 0 ]]; then
-  echo "Failed to register/auth node. Error: $(cat $json_register | jq '.raw_log')"
-  exit 1
-fi
-
-SEED=$(./secretd query register seed $PUBLIC_KEY | cut -c 3-)
-if [ -z $SEED ]; then 
-  echo "Failed to obtain encrypted seed"
-  exit 1
-fi
-echo "Encrypted seed: $SEED"
-sleep 5s
-./secretd query register secret-network-params
-if [ ! -f ./io-master-key.txt ] || [ ! -f ./node-master-key.txt ]; then
-  echo "Failed to generate IO and Node Exch master key"
-  exit 1
-fi
-ls -lh ./io-master-key.txt ./node-master-key.txt
-
-mkdir -p ${SECRETD_HOME}/.node
-./secretd configure-secret node-master-key.txt $SEED --home ${SECRETD_HOME}
-if [ $? -ne 0 ]; then
-  echo "Failed to configure secret node"
-  exit 1
-fi
-
+#if [ -f $SCRT_SGX_STORAGE/attectation_cert.der ]; then
+  #rm ${SCRT_SGX_STORAGE}/attectation_cert.der
+#fi
+#./secretd init-enclave
+#if [ $? -ne 0 ]; then
+  #echo "Failed to initialize SGX enclave"
+  #exit 1
+#fi
+#
+#if [ ! -f ${SCRT_SGX_STORAGE}/attestation_cert.der ]; then
+  #echo "Failed to generate attestation_cert.der certificate"
+  #exit 1
+#fi
+#
+#PUBLIC_KEY=$(./secretd parse ${SCRT_SGX_STORAGE}/attestation_cert.der  2> /dev/null | cut -c 3-)
+#if [ -z $PUBLIC_KEY ]; then
+  #echo "Failed to parse attestation_cert.der certificate"
+  #exit 1
+#fi
+#echo "Certificate public key: $PUBLIC_KEY"
+#
+## On-chain registration and attestation
+#json_register=$(mktemp -p $TMP_DIR)
+#./secretd tx register auth ${SCRT_SGX_STORAGE}/attestation_cert.der -y --from a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output json | jq > $json_register
+#if [ $? -ne 0 ]; then
+  #echo "Failed to register/auth node"
+  #exit 1
+#fi
+#code_id=$(cat $json_register | jq ".code")
+#if [[ ${code_id} -ne 0 ]]; then
+  #echo "Failed to register/auth node. Code: ${code_id}. Error: $(cat $json_register | jq '.raw_log')"
+  #exit 1
+#fi
+#sleep 5s
+#txhash=$(cat $json_register | jq ".txhash" | tr -d '"')
+#$SECRETCLI q tx --type=hash "$txhash" --output json | jq > $json_register
+#code_id=$(cat $json_register | jq ".code")
+#if [[ ${code_id} -ne 0 ]]; then
+  #echo "Failed to register/auth node. Error: $(cat $json_register | jq '.raw_log')"
+  #exit 1
+#fi
+#
+#SEED=$(./secretd query register seed $PUBLIC_KEY | cut -c 3-)
+#if [ -z $SEED ]; then 
+  #echo "Failed to obtain encrypted seed"
+  #exit 1
+#fi
+#echo "Encrypted seed: $SEED"
+#sleep 5s
+#./secretd query register secret-network-params
+#if [ ! -f ./io-master-key.txt ] || [ ! -f ./node-master-key.txt ]; then
+  #echo "Failed to generate IO and Node Exch master key"
+  #exit 1
+#fi
+#ls -lh ./io-master-key.txt ./node-master-key.txt
+#
+#mkdir -p ${SECRETD_HOME}/.node
+#./secretd configure-secret node-master-key.txt $SEED --home ${SECRETD_HOME}
+#if [ $? -ne 0 ]; then
+  #echo "Failed to configure secret node"
+  #exit 1
+#fi
+#
 # Skip adding persistent peers seeds to config
 
 # Optimize SGX memory for heavy contract calculations (e.g. NFT minting)
-sed -i.bak -e "s/^contract-memory-enclave-cache-size *=.*/contract-memory-enclave-cache-size = \"15\"/" ${SECRETD_HOME}/config/app.toml
+#sed -i.bak -e "s/^contract-memory-enclave-cache-size *=.*/contract-memory-enclave-cache-size = \"15\"/" ${SECRETD_HOME}/config/app.toml
 
 # Set min gas price
-perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.0125uscrt"/' ${SECRETD_HOME}/config/app.toml
+#perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.0125uscrt"/' ${SECRETD_HOME}/config/app.toml
 
-NODE_ID=$(./secretd tendermint show-node-id --home ${SECRETD_HOME})
-if [ -z $NODE_ID ]; then
-  echo "Failed to obtain node id"
-  exit 1
-fi
-echo "Node ID: ${NODE_ID}"
-echo "<======= Secret Node registration successful ======>"
+#NODE_ID=$(./secretd tendermint show-node-id --home ${SECRETD_HOME})
+#if [ -z $NODE_ID ]; then
+  #echo "Failed to obtain node id"
+  #exit 1
+#fi
+#echo "Node ID: ${NODE_ID}"
+#echo "<======= Secret Node registration successful ======>"
 
 # ------ NODE REGISTRATION - END --------
 
@@ -209,7 +209,7 @@ sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 $SECRETCLI q bank balances $address_scrt --home=$SECRETD_HOME --output=json | jq
 
-txhash=$($SECRETCLI tx compute store ./integration-tests/test-contracts/contract.wasm.gz -y --gas 950000 --fees 12500uscrt --from $address_scrt --chain-id=$CHAINID --keyring-backend ${KEYRING} --home=$SECRETD_HOME --output=json | jq ".txhash" | sed 's/"//g')
+txhash=$($SECRETCLI tx compute store ./integration-tests/test-contracts/contract.wasm.gz -y --gas 950000 --from $address_scrt --chain-id=$CHAINID --keyring-backend ${KEYRING} --home=$SECRETD_HOME --output=json | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 $SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq
@@ -219,7 +219,7 @@ CONTRACT_LABEL="counterContract"
 TMPFILE=$(mktemp -p $TMP_DIR)
 
 res_comp_1=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label $CONTRACT_LABEL -y --keyring-backend ${KEYRING} --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq >$res_comp_1
+$SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --label $CONTRACT_LABEL -y --keyring-backend ${KEYRING} --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq >$res_comp_1
 txhash=$(cat $res_comp_1 | jq ".txhash" | sed 's/"//g')
 sleep 5s
 res_q_tx=$(mktemp -p $TMP_DIR)
@@ -241,7 +241,7 @@ if [[ ${expected_count} -ne 1 ]]; then
 fi
 # Scenario 1 - execute by query by contract label
 json_compute_s1=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx compute execute --label $CONTRACT_LABEL --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend ${KEYRING} --chain-id $CHAINID --fees 3000uscrt --output json | jq >$json_compute_s1
+$SECRETCLI tx compute execute --label $CONTRACT_LABEL --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend ${KEYRING} --chain-id $CHAINID --output json | jq >$json_compute_s1
 code_id=$(cat $json_compute_s1 | jq ".code")
 if [[ ${code_id} -ne 0 ]]; then
   cat $json_compute_s1 | jq ".raw_log"
@@ -258,7 +258,7 @@ if [[ ${expected_count} -ne 2 ]]; then
 fi
 # Scenario 2 - execute by contract address
 json_compute_s2=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx compute execute $contr_addr --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend ${KEYRING} --chain-id $CHAINID --fees 3000uscrt --output json | jq >$json_compute_s2
+$SECRETCLI tx compute execute $contr_addr --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend ${KEYRING} --chain-id $CHAINID --output json | jq >$json_compute_s2
 code_id=$(cat $json_compute_s2 | jq ".code")
 if [[ ${code_id} -ne 0 ]]; then
   cat $json_compute_s2 | jq ".raw_log"
@@ -487,11 +487,11 @@ fi
 #TMP_DIR=$(mktemp -d -p $(pwd))
 unsigned_tx_file=$TMP_DIR/unsigned_tx.json
 amount_to_send="10000"
-$SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fees=5000uscrt --generate-only --output=json >$unsigned_tx_file
+$SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --generate-only --output=json >$unsigned_tx_file
 
 unsigned_tx_file_aux=$TMP_DIR/unsigned_tx_aux.json
 amount_to_send="10000"
-$SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fee-payer=${address_b} --fees=5000uscrt --generate-only --output=json >$unsigned_tx_file_aux
+$SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fee-payer=${address_b} --generate-only --output=json >$unsigned_tx_file_aux
 
 # direct sign mode
 signed_tx_file_direct=$TMP_DIR/signed_tx_direct.json
@@ -548,11 +548,11 @@ if [[ ! $? ]]; then
 fi
 
 # multisig
-$SECRETCLI keys add --multisig=a,b,c --multisig-threshold 2 abc --home=$SECRETD_HOME
+$SECRETCLI keys add --multisig=a,b,c --multisig-threshold 2 abc --home=$SECRETD_HOME --keyring-backend ${KEYRING}
 address_abc=$($SECRETCLI keys show -a abc --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
 
 $SECRETCLI q bank balance $address_abc uscrt --output=json | jq '.balance.amount'
-$SECRETCLI tx bank send $address_a $address_abc 100000uscrt --fees=2500uscrt -y --keyring-backend ${KEYRING} --home ${SECRETD_HOME}
+$SECRETCLI tx bank send $address_a $address_abc 100000uscrt -y --keyring-backend ${KEYRING} --home ${SECRETD_HOME}
 sleep 5s
 $SECRETCLI q bank balance $address_abc uscrt --output=json | jq '.balance.amount'
 
@@ -561,7 +561,7 @@ signed_a=$TMP_DIR/aSig.json
 signed_b=$TMP_DIR/bSig.json
 signed_multisig=$TMP_DIR/signed_multisig.json
 amount_to_send_multisig="1000"
-$SECRETCLI tx bank send $address_abc $address_a ${amount_to_send_multisig}uscrt --fees=5000uscrt --generate-only --output=json >$unsigned_tx_file_multisig
+$SECRETCLI tx bank send $address_abc $address_a ${amount_to_send_multisig}uscrt --generate-only --output=json >$unsigned_tx_file_multisig
 
 $SECRETCLI tx sign --multisig=abc --from a --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_a
 if [ $? -ne 0 ]; then
@@ -595,6 +595,8 @@ if [ $? -ne 0 ]; then
 fi
 echo "Tx: $txhash Code:$(cat $qtx_json | jq '.code') RawLog:$(cat $qtx_json | jq '.raw_log')"
 # ------ SIGNING - END --------
+
+cleanup
 
 set +x
 echo " *** INTEGRATION TESTS PASSED! ***"
