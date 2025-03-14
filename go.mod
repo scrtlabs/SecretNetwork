@@ -72,7 +72,6 @@ require (
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
 	github.com/cosmos/rosetta v0.50.4
 	github.com/gogo/protobuf v1.3.2
-	github.com/scrtlabs/tm-secret-enclave v1.11.9-0.20241106181222-964c7d7e9f02
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028
 )
 
@@ -199,6 +198,7 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect
+	github.com/scrtlabs/tm-secret-enclave v1.11.9-0.20241106181222-964c7d7e9f02 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect

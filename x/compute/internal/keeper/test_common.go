@@ -20,7 +20,7 @@ import (
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
 
 	"github.com/cosmos/gogoproto/proto"
-	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -51,7 +51,7 @@ import (
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	tmenclave "github.com/scrtlabs/tm-secret-enclave"
+	// tmenclave "github.com/scrtlabs/tm-secret-enclave"
 
 	dbm "github.com/cosmos/cosmos-db"
 
@@ -1063,6 +1063,7 @@ func MakeCommit(blockID tmtypes.BlockID, height int64, round int32, valSet *tmty
 	return &tmtypes.Commit{Height: height, Round: round, BlockID: blockID, Signatures: sigs}, nil
 }
 
+/*
 func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 	blockData := tmproto.Data{
 		Txs: [][]byte{ctx.TxBytes()},
@@ -1104,19 +1105,19 @@ func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 	random, proof, err := tmenclave.GetRandom(blockHeader.AppHash, uint64(blockHeader.Height))
 	require.NoError(t, err)
 
-	randomAndProofBz := append(random, proof...) 
+	randomAndProofBz := append(random, proof...)
 
 	_, _, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
 	require.NoError(t, err)
-}
+}*/
 
 func makeBlockIDRandom() tmtypes.BlockID {
 	var (
 		blockHash   = make([]byte, sha256.Size)
 		partSetHash = make([]byte, sha256.Size)
 	)
-	rand.Read(blockHash)   
-	rand.Read(partSetHash) 
+	rand.Read(blockHash)
+	rand.Read(partSetHash)
 	return tmtypes.BlockID{
 		Hash: blockHash,
 		PartSetHeader: tmtypes.PartSetHeader{
