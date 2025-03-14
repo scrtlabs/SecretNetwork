@@ -412,7 +412,7 @@ describe("BankMsg", () => {
 describe("Env", () => {
   describe("TransactionInfo", () => {
     describe("TxCount", () => {
-      test("execute", async () => {
+      test.only("execute", async () => {
         jest.setTimeout(10 * 60 * 1_000);
         let txProm: Promise<TxResponse>[] = new Array(2);
         let success: boolean;
@@ -454,6 +454,9 @@ describe("Env", () => {
                 .length
             ).toBe(0);
           }
+          console.log("DBG:TXS0:", JSON.stringify(txs[0].events, null, 2))
+          console.log("DBG:TXS1:", JSON.stringify(txs[1].events, null, 2))
+          console.log("DBG:CNT_VALS:", count_vals);
           if (Number(count_vals[0]) > Number(count_vals[1])) {
             [count_vals[0], count_vals[1]] = [count_vals[1], count_vals[0]];
           }
