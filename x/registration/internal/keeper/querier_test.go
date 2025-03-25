@@ -16,9 +16,7 @@ import (
 // ////
 
 func TestNewQuerier_MasterKey(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	querier := NewQuerier(keeper)
@@ -45,9 +43,7 @@ func TestNewQuerier_MasterKey(t *testing.T) {
 }
 
 func TestNewQuerier_MalformedNodeID(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	nodeIdInvalid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -75,9 +71,7 @@ func TestNewQuerier_MalformedNodeID(t *testing.T) {
 }
 
 func TestNewQuerier_ValidNodeID(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	querier := NewQuerier(keeper) // TODO: Should test NewQuerier() as well
