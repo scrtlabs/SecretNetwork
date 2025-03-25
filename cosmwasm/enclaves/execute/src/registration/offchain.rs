@@ -904,7 +904,7 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
         let extra = KEY_MANAGER.extra_data.lock().unwrap();
         if let Some(val) = extra.next_mr_enclave {
             if val.m == report.mr_enclave.m {
-                println!("Migration is authorized by on-chain consensus");
+                println!("Migration is authorized by on-chain consensus.");
                 return true;
             }
         }
