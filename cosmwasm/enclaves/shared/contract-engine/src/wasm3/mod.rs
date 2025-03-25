@@ -1689,7 +1689,7 @@ fn host_ed25519_batch_verify(
     // To verify a batch of ed25519 signatures we need to provide an RNG source.
     // In theory this doesn't have to be deterministic because the same signatures
     // should produce the same output (true/false) regardless of the RNG being used.
-    // In practice I'm too afraid to do something non-deterministic in concensus code
+    // In practice I'm too afraid to do something non-deterministic in consensus code
     // So I've decided to use a PRNG instead.
     // For entropy I'm using the entire ed25519 batch verify input data + the gas consumed
     // up until now in this WASM call. This will be deterministic, but also kinda-random in
