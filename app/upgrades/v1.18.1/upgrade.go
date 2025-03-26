@@ -7,10 +7,8 @@ import (
 
 	"cosmossdk.io/log"
 	store "cosmossdk.io/store/types"
-	circuittypes "cosmossdk.io/x/circuit/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 )
@@ -20,14 +18,7 @@ const upgradeName = "v1.18.1"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
-	StoreUpgrades: store.StoreUpgrades{
-		Added: []string{
-			circuittypes.StoreKey,
-		},
-		Deleted: []string{
-			crisistypes.StoreKey,
-		},
-	},
+	StoreUpgrades:        store.StoreUpgrades{},
 }
 
 func createUpgradeHandler(mm *module.Manager, _ *keepers.SecretAppKeepers, configurator module.Configurator,
