@@ -2,11 +2,6 @@ use std::collections::HashSet;
 use tendermint_light_client_verifier::types::UntrustedBlockState;
 
 #[cfg(not(feature = "production"))]
-const WHITELIST_FROM_FILE: &str = include_str!("../fixtures/validator_whitelist.txt");
-#[cfg(feature = "production")]
-const WHITELIST_FROM_FILE: &str = include_str!("../fixtures/validator_whitelist_prod.txt");
-
-#[cfg(not(feature = "production"))]
 pub const VALIDATOR_THRESHOLD: usize = 1;
 #[cfg(not(feature = "production"))]
 pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 2;
@@ -14,10 +9,18 @@ pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 2;
 #[cfg(feature = "production")]
 pub const VALIDATOR_THRESHOLD: usize = 5;
 #[cfg(feature = "production")]
-pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 25;
+pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 11;
 
+#[cfg(not(feature = "production"))]
 lazy_static::lazy_static! {
-    pub static ref VALIDATOR_WHITELIST: ValidatorList = ValidatorList::from_str(WHITELIST_FROM_FILE);
+    pub static ref VALIDATOR_WHITELIST: ValidatorList = ValidatorList::from_str("../fixtures/validator_whitelist.txt");
+    pub static ref VALIDATOR_WHITELIST_EMERGENCY: ValidatorList = ValidatorList::from_str("../fixtures/validator_whitelist.txt");
+}
+
+#[cfg(feature = "production")]
+lazy_static::lazy_static! {
+    pub static ref VALIDATOR_WHITELIST: ValidatorList = ValidatorList::from_str("../fixtures/validator_whitelist_prod.txt");
+    pub static ref VALIDATOR_WHITELIST_EMERGENCY: ValidatorList = ValidatorList::from_str("../fixtures/validator_whitelist_emergency_prod.txt");
 }
 
 #[derive(Debug, Clone)]

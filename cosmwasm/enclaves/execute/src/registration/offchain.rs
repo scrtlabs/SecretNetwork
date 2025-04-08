@@ -772,7 +772,10 @@ pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
     sgx_types::sgx_status_t::SGX_SUCCESS
 }
 
-fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bool {
+fn load_offchain_signers(
+    mut f_in: File,
+    report: &sgx_report_body_t,
+) -> std::collections::HashSet<[u8; 20]> {
     let mut json_data = String::new();
     f_in.read_to_string(&mut json_data).unwrap();
 
@@ -780,28 +783,7 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
     let signatures: HashMap<String, (String, String)> =
         serde_json::from_str(&json_data).expect("Failed to deserialize JSON");
 
-    // Build the not-yet-voted validators map
-    let mut not_yet_voted_validators: HashMap<[u8; 20], u64> = HashMap::new();
-    let mut total_voting_power: u64 = 0;
-
-    let validator_set = {
-        let extra = KEY_MANAGER.extra_data.lock().unwrap();
-        extra.decode_validator_set().unwrap()
-    };
-
-    for validator in validator_set.validators() {
-        //println!("Address: {}", validator.address);
-        //println!("Voting Power: {}", validator.power);
-        let power: u64 = validator.power.value();
-        if power > 0 {
-            total_voting_power += power;
-            let addr: [u8; 20] = validator.address.as_bytes().try_into().unwrap();
-            not_yet_voted_validators.insert(addr, power);
-        }
-    }
-
-    let mut approved_power: u64 = 0;
-    let mut approved_whitelisted: usize = 0;
+    let mut signers = std::collections::HashSet::new();
 
     for (addr_str, (pubkey_str, sig_str)) in &signatures {
         let pubkey_bytes = base64::decode(pubkey_str).unwrap();
@@ -838,58 +820,103 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
             panic!("Incorrect signature for address: {}", addr_str);
         }
 
-        let (voter_power, is_whitelisted) =
-            if let Some((_, power)) = not_yet_voted_validators.remove_entry(&addr) {
-                //not_yet_voted_validators.remove(&addr);
-
-                #[cfg(feature = "verify-validator-whitelist")]
-                let is_whitelisted = validator_whitelist::VALIDATOR_WHITELIST.contains(addr_str);
-
-                #[cfg(not(feature = "verify-validator-whitelist"))]
-                let is_whitelisted = false;
-
-                approved_power += power;
-                if is_whitelisted {
-                    approved_whitelisted += 1;
-                }
-
-                (power, is_whitelisted)
-            } else {
-                (0, false)
-            };
-
-        println!(
-            "  Approved by {}, power = {}, whitelisted = {}",
-            addr_str, voter_power, is_whitelisted
-        );
-    }
-
-    println!(
-        "Total Power = {}, Approved Power = {}, Total whitelisted = {}",
-        total_voting_power, approved_power, approved_whitelisted
-    );
-
-    #[cfg(feature = "verify-validator-whitelist")]
-    if approved_whitelisted < validator_whitelist::VALIDATOR_THRESHOLD {
-        error!("not enogh whitelisted validators");
-        return false;
-    }
-
-    if approved_power * 3 < total_voting_power * 2 {
-        #[cfg(feature = "verify-validator-whitelist")]
-        let emergency_threshold_reached =
-            approved_whitelisted >= validator_whitelist::VALIDATOR_THRESHOLD_EMERGENCY;
-
-        #[cfg(not(feature = "verify-validator-whitelist"))]
-        let emergency_threshold_reached = false;
-
-        if !emergency_threshold_reached {
-            error!("not enough voting power, emergency threshold not reached");
-            return false;
+        if signers.insert(addr) {
+            println!("  Approved by {}", addr_str);
         }
     }
 
+    signers
+}
+
+#[cfg(feature = "verify-validator-whitelist")]
+fn count_included_addresses(
+    signers: &std::collections::HashSet<[u8; 20]>,
+    list: &validator_whitelist::ValidatorList,
+) -> usize {
+    let mut res: usize = 0;
+
+    for addr_str in &list.0 {
+        let addr_vec = hex::decode(addr_str).unwrap();
+        let addr: [u8; 20] = addr_vec.try_into().unwrap();
+
+        if signers.contains(&addr) {
+            res += 1;
+        }
+    }
+
+    res
+}
+
+fn is_standard_consensus_reached(signers: &std::collections::HashSet<[u8; 20]>) -> bool {
+    let mut total_voting_power: u64 = 0;
+    let mut approved_power: u64 = 0;
+
+    let validator_set = {
+        let extra = KEY_MANAGER.extra_data.lock().unwrap();
+        extra.decode_validator_set().unwrap()
+    };
+
+    for validator in validator_set.validators() {
+        let power: u64 = validator.power.value();
+        total_voting_power += power;
+
+        let addr: [u8; 20] = validator.address.as_bytes().try_into().unwrap();
+        if signers.contains(&addr) {
+            approved_power += power;
+        }
+    }
+
+    println!(
+        "Total Power = {}, Approved Power = {}",
+        total_voting_power, approved_power
+    );
+
+    if approved_power * 3 < total_voting_power * 2 {
+        println!(" not enogh voting power");
+        return false;
+    }
+
+    #[cfg(feature = "verify-validator-whitelist")]
+    {
+        let approved_whitelisted =
+            count_included_addresses(signers, &validator_whitelist::VALIDATOR_WHITELIST);
+        if approved_whitelisted < validator_whitelist::VALIDATOR_THRESHOLD {
+            println!(
+                " not enogh whitelisted validators: {}",
+                approved_whitelisted
+            );
+            return false;
+        }
+    }
     true
+}
+
+fn is_export_approved_offchain(f_in: File, report: &sgx_report_body_t) -> bool {
+    let signers = load_offchain_signers(f_in, report);
+
+    let b1 = is_standard_consensus_reached(&signers);
+    println!("Standard consensus reached: {}", b1);
+
+    #[cfg(not(feature = "verify-validator-whitelist"))]
+    let b2 = false;
+
+    #[cfg(feature = "verify-validator-whitelist")]
+    let b2 = {
+        let approved_whitelisted = count_included_addresses(
+            &signers,
+            &validator_whitelist::VALIDATOR_WHITELIST_EMERGENCY,
+        );
+        println!(
+            " Emergency whitelisted validators: {}",
+            approved_whitelisted
+        );
+
+        approved_whitelisted >= validator_whitelist::VALIDATOR_THRESHOLD_EMERGENCY
+    };
+
+    println!("Emergency threshold reached: {}", b2);
+
+    b1 || b2
 }
 
 fn is_export_approved(report: &sgx_report_body_t) -> bool {
