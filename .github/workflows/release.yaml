@@ -348,7 +348,6 @@ jobs:
           path: secretcli-MacOS-arm64
 
   check-hw-tool:
-    if: false
     runs-on: ubuntu-22.04
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
@@ -387,7 +386,6 @@ jobs:
           path: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
 
   check-hw-tool-2004:
-    if: false
     runs-on: ubuntu-20.04
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
@@ -481,8 +479,8 @@ jobs:
         #build-deb-mainnet-2004,
         MacOS-ARM64-CLI,
         Ubuntu-2004-CLI,
-        #check-hw-tool,
-        #check-hw-tool-2004,
+        check-hw-tool,
+        check-hw-tool-2004,
         # check-hw-tool-mainnet
       ]
     runs-on: ubuntu-22.04
@@ -518,12 +516,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-22.04.deb
-      # - uses: actions/download-artifact@v4
-      #   with:
-      #     name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
-      # - uses: actions/download-artifact@v4
-      #   with:
-      #     name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
+      - uses: actions/download-artifact@v4
+        with:
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
+      - uses: actions/download-artifact@v4
+        with:
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
       # - uses: actions/download-artifact@v4
       #   with:
       #     name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
@@ -539,7 +537,7 @@ jobs:
             secretcli-Linux
             secretcli-MacOS-arm64
             secretcli-Ubuntu-20.04
+            check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
+            check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
             # secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-20.04.deb
             # secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-22.04.deb
-            # check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
-            # check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
