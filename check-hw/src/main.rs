@@ -81,9 +81,10 @@ fn main() {
     if let Some(migrate_op) = matches.value_of("migrate_op") {
         let op = migrate_op.parse::<u32>().unwrap();
 
-        let status = unsafe { ecall_migration_op(op) };
+        let mut retval = sgx_status_t::SGX_ERROR_BUSY;
+        let status = unsafe { ecall_migration_op(eid, &mut retval, op) };
 
-        println!("Migration op reval: {}", status);
+        println!("Migration op reval: {}, {}", status, retval);
     } else {
         let mut retval = NodeAuthResult::Success;
         let status = unsafe {

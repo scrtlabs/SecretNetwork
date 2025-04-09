@@ -25,7 +25,11 @@ extern "C" {
         api_key_len: u32,
     ) -> sgx_status_t;
 
-    pub fn ecall_migration_op(opcode: u32) -> sgx_status_t;
+    pub fn ecall_migration_op(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        opcode: u32,
+    ) -> sgx_status_t;
 }
 
 // ocalls
