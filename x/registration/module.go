@@ -34,7 +34,9 @@ func (b AppModuleBasic) RegisterLegacyAminoCodec(amino *codec.LegacyAmino) {
 }
 
 func (b AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, serveMux *runtime.ServeMux) {
-	types.RegisterQueryHandlerClient(context.Background(), serveMux, types.NewQueryClient(clientCtx)) //nolint:errcheck
+	if err := types.RegisterQueryHandlerClient(context.Background(), serveMux, types.NewQueryClient(clientCtx)); err != nil {
+		panic(err)
+	}
 }
 
 // Name returns the compute module's name.
@@ -55,7 +57,7 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 }
 
 // ValidateGenesis performs genesis state validation for the compute module.
-func (AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, config client.TxEncodingConfig, message json.RawMessage) error { //nolint:all
+func (AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, config client.TxEncodingConfig, message json.RawMessage) error {
 	var data GenesisState
 	err := marshaler.UnmarshalJSON(message, &data)
 	if err != nil {
@@ -99,9 +101,6 @@ func (am AppModule) RegisterServices(configurator module.Configurator) {
 	types.RegisterMsgServer(configurator.MsgServer(), keeper.NewMsgServerImpl(am.keeper, ModuleName))
 	types.RegisterQueryServer(configurator.QueryServer(), NewQuerier(am.keeper))
 }
-
-// RegisterInvariants registers the compute module invariants.
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // InitGenesis performs genesis initialization for the compute module. It returns
 // no validator updates.

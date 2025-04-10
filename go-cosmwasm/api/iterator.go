@@ -58,7 +58,7 @@ func storeIterator(dbCounter uint64, it dbm.Iterator) uint64 {
 	iteratorStackMutex.Lock()
 	defer iteratorStackMutex.Unlock()
 
-	frame := append(iteratorStack[dbCounter], it) //nolint:gocritic
+	frame := append(iteratorStack[dbCounter], it) 
 	iteratorStack[dbCounter] = frame
 	return uint64(len(frame))
 }

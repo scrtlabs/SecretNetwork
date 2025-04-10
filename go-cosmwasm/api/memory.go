@@ -12,7 +12,7 @@ import "unsafe"
 
 func allocateRust(data []byte) C.Buffer {
 	var ret C.Buffer
-	if data == nil { //nolint:gocritic
+	if data == nil { 
 		// Just return a null buffer
 		ret = C.Buffer{
 			ptr: u8_ptr(nil),

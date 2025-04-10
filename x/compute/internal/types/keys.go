@@ -35,6 +35,7 @@ var (
 	ContractByCodeIDAndCreatedSecondaryIndexPrefix = []byte{0x0A}
 	ParamsKey                                      = []byte{0x0B}
 	RandomPrefix                                   = []byte{0xFF}
+	ValidatorSetEvidencePrefix                     = []byte{0xFE}
 
 	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
 	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)
@@ -44,10 +45,6 @@ var (
 func GetCodeKey(codeID uint64) []byte {
 	contractIDBz := sdk.Uint64ToBigEndian(codeID)
 	return append(CodeKeyPrefix, contractIDBz...)
-}
-
-func decodeCodeKey(src []byte) uint64 {
-	return binary.BigEndian.Uint64(src[len(CodeKeyPrefix):])
 }
 
 // GetContractAddressKey returns the key for the WASM contract instance

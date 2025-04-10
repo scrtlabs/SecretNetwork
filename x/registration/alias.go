@@ -16,7 +16,7 @@ const (
 	TStoreKey                  = types.TStoreKey
 	QuerierRoute               = types.QuerierRoute
 	RouterKey                  = types.RouterKey
-	EnclaveRegistrationKey     = types.EnclaveRegistrationKey
+	EnclaveSealedData          = types.EnclaveSealedData
 	SecretNodeSeedLegacyConfig = types.SecretNodeSeedLegacyConfig
 	SecretNodeSeedNewConfig    = types.SecretNodeSeedNewConfig
 	SecretNodeCfgFolder        = types.SecretNodeCfgFolder
@@ -64,5 +64,5 @@ type (
 	EnclaveApi           = enclave.Api
 	MasterKey            = types.MasterKey
 	Key                  = types.Key
-	RegistrationNodeInfo = types.RegistrationNodeInfo //nolint:all
+	RegistrationNodeInfo = types.RegistrationNodeInfo 
 )

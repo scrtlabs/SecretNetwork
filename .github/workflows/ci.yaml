@@ -126,7 +126,6 @@ jobs:
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/libgo_cosmwasm.so /opt/mount/libgo_cosmwasm.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librandom_api.so /opt/mount/librandom_api.so
-          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/tendermint_enclave.signed.so /opt/mount/tendermint_enclave.signed.so
       - uses: actions/download-artifact@v4
         with:
           name: contract.wasm
@@ -196,7 +195,6 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-          # cp tendermint_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ias_keys/develop
           mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
@@ -254,27 +252,6 @@ jobs:
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
-  MacOS-ARM64-CLI:
-    runs-on: macos-12-large
-    strategy:
-      fail-fast: false
-    timeout-minutes: 90
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          name: checkout
-          submodules: recursive
-      - uses: actions/setup-go@v5
-        with:
-          name: set up go
-          go-version: 1.21 # The Go version to download (if necessary) and use.
-      - name: Build macos darwin/arm64
-        run: SGX_MODE=SW make build_cli
-      - uses: actions/upload-artifact@v4
-        with:
-          name: secretcli-macos-arm64
-          path: secretcli
-          
   Build-LocalSecret:
     runs-on: ubuntu-22.04
     steps:
@@ -354,6 +331,13 @@ jobs:
         run: |
           docker load --input /tmp/localsecret.tar
           docker load --input /tmp/hermes.tar
+      - name: Run secretcli tests
+        run: |
+          docker run -v $(realpath ./integration-tests):/root/integration-tests -d --name localsecret -d ghcr.io/scrtlabs/localsecret:v0.0.0
+          sleep 10
+          docker exec localsecret bash -c 'integration-tests/basic-tests.sh secretcli ~/.secretd' || exit 1
+          docker stop localsecret 
+          docker rm localsecret
       - name: Run integration tests
         run: |
           cd integration-tests
@@ -364,7 +348,7 @@ jobs:
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
-          git clone --depth 1 --branch v1.15.0-beta.0 https://github.com/scrtlabs/secret.js
+          git clone --depth 1 --branch v1.18.0-beta.0 https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml

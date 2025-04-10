@@ -16,13 +16,11 @@ use std::str;
 use std::time::{SystemTime, UNIX_EPOCH};
 use yasna::models::ObjectIdentifier;
 
-use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS};
-use enclave_crypto::consts::{MRSIGNER, SIGNING_METHOD};
+use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS, SELF_REPORT_BODY, SIGNING_METHOD};
 use enclave_ffi_types::NodeAuthResult;
 
 use crate::registration::report::AdvisoryIDs;
 
-use super::attestation::get_mr_enclave;
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
 
@@ -283,7 +281,7 @@ pub fn verify_ra_cert(
 
 pub fn verify_ra_report(
     report_mr_signer: &[u8; 32],
-    report_mr_enclave : & [u8;32],
+    report_mr_enclave: &[u8; 32],
     override_verify_type: Option<SigningMethod>,
 ) -> NodeAuthResult {
     let signing_method: SigningMethod = match override_verify_type {
@@ -294,30 +292,29 @@ pub fn verify_ra_report(
     // verify certificate
     match signing_method {
         SigningMethod::MRENCLAVE => {
-            let this_mr_enclave = get_mr_enclave();
-            let this_mr_signer = MRSIGNER;
-
-            if (*report_mr_enclave) != this_mr_enclave || (*report_mr_signer) != this_mr_signer {
+            if (*report_mr_enclave) != SELF_REPORT_BODY.mr_enclave.m
+                || (*report_mr_signer) != SELF_REPORT_BODY.mr_signer.m
+            {
                 error!(
                     "Got a different mr_enclave or mr_signer than expected. Invalid certificate"
                 );
                 warn!(
                     "mr_enclave: received: {:?} \n expected: {:?}",
-                    report_mr_enclave, this_mr_enclave
+                    report_mr_enclave, SELF_REPORT_BODY.mr_enclave.m
                 );
                 warn!(
                     "mr_signer: received: {:?} \n expected: {:?}",
-                    report_mr_signer, this_mr_signer
+                    report_mr_signer, SELF_REPORT_BODY.mr_signer.m
                 );
                 return NodeAuthResult::MrEnclaveMismatch;
             }
         }
         SigningMethod::MRSIGNER => {
-            if (*report_mr_signer) != MRSIGNER {
+            if (*report_mr_signer) != SELF_REPORT_BODY.mr_signer.m {
                 error!("Got a different mrsigner than expected. Invalid certificate");
                 warn!(
                     "received: {:?} \n expected: {:?}",
-                    report_mr_signer, MRSIGNER
+                    report_mr_signer, SELF_REPORT_BODY.mr_signer.m
                 );
                 return NodeAuthResult::MrSignerMismatch;
             }
@@ -327,7 +324,6 @@ pub fn verify_ra_report(
 
     NodeAuthResult::Success
 }
-
 
 /// # Verifies remote attestation cert
 ///
@@ -356,7 +352,8 @@ pub fn verify_ra_cert(
     let res = verify_ra_report(
         &report.sgx_quote_body.isv_enclave_report.mr_signer,
         &report.sgx_quote_body.isv_enclave_report.mr_enclave,
-        override_verify_type);
+        override_verify_type,
+    );
 
     if res != NodeAuthResult::Success {
         return Err(res);

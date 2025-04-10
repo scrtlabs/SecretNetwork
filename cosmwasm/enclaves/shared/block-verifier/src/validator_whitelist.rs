@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use tendermint_light_client_verifier::types::UntrustedBlockState;
 
 #[cfg(not(feature = "production"))]
@@ -6,31 +7,43 @@ const WHITELIST_FROM_FILE: &str = include_str!("../fixtures/validator_whitelist.
 const WHITELIST_FROM_FILE: &str = include_str!("../fixtures/validator_whitelist_prod.txt");
 
 #[cfg(not(feature = "production"))]
-const VALIDATOR_THRESHOLD: usize = 1;
+const WHITELIST_EMERGENCY_FROM_FILE: &str = include_str!("../fixtures/validator_whitelist.txt");
+#[cfg(feature = "production")]
+const WHITELIST_EMERGENCY_FROM_FILE: &str =
+    include_str!("../fixtures/validator_whitelist_emergency_prod.txt");
+
+#[cfg(not(feature = "production"))]
+pub const VALIDATOR_THRESHOLD: usize = 1;
+#[cfg(not(feature = "production"))]
+pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 2;
 
 #[cfg(feature = "production")]
-const VALIDATOR_THRESHOLD: usize = 5;
+pub const VALIDATOR_THRESHOLD: usize = 5;
+#[cfg(feature = "production")]
+pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 11;
 
 lazy_static::lazy_static! {
-    static ref VALIDATOR_WHITELIST: ValidatorList = ValidatorList::from_str(WHITELIST_FROM_FILE);
+
+    pub static ref VALIDATOR_WHITELIST: ValidatorList = ValidatorList::from_str(WHITELIST_FROM_FILE);
+    pub static ref VALIDATOR_WHITELIST_EMERGENCY: ValidatorList = ValidatorList::from_str(WHITELIST_EMERGENCY_FROM_FILE);
 }
 
 #[derive(Debug, Clone)]
-struct ValidatorList(pub Vec<String>);
+pub struct ValidatorList(pub HashSet<String>);
 
 impl ValidatorList {
     fn from_str(list: &str) -> Self {
-        let addresses: Vec<String> = list.split(',').map(|s| s.to_string()).collect();
+        let addresses: HashSet<String> = list.split(',').map(|s| s.to_string()).collect();
         Self(addresses)
     }
 
     // use for tests
     #[allow(dead_code)]
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.0.len()
     }
 
-    fn contains(&self, input: &String) -> bool {
+    pub fn contains(&self, input: &String) -> bool {
         self.0.contains(input)
     }
 }

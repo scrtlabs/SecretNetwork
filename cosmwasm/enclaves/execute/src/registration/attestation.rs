@@ -1,10 +1,9 @@
-#[cfg(feature = "SGX_MODE_HW")]
 use core::mem;
 
+use enclave_crypto::dcap::verify_quote_any;
 use enclave_crypto::KeyPair;
 use std::vec::Vec;
 
-#[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -14,18 +13,14 @@ use itertools::Itertools;
 use sgx_rand::{os, Rng};
 
 #[cfg(feature = "SGX_MODE_HW")]
-use sgx_tse::{rsgx_create_report, rsgx_self_report, rsgx_verify_report};
+use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tcrypto::rsgx_sha256_slice;
 
 use sgx_tcrypto::SgxEccHandle;
 
-#[cfg(feature = "SGX_MODE_HW")]
-use sgx_types::{
-    sgx_isv_svn_t, sgx_ql_qe_report_info_t, sgx_quote3_error_t, sgx_quote_t, sgx_self_target,
-    sgx_tvl_verify_qve_report_and_identity,
-};
+use sgx_types::sgx_quote_t;
 
 use sgx_types::{sgx_ql_qv_result_t, sgx_quote_sign_type_t, sgx_report_body_t, sgx_status_t};
 
@@ -50,17 +45,7 @@ use crate::registration::cert::verify_ra_cert;
 use crate::registration::offchain::get_attestation_report_dcap;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use enclave_crypto::consts::SIGNING_METHOD;
-
-#[cfg(feature = "SGX_MODE_HW")]
-use enclave_crypto::consts::SigningMethod;
-
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-use enclave_crypto::consts::{
-    CURRENT_CONSENSUS_SEED_SEALING_PATH, DEFAULT_SGX_SECRET_PATH,
-    GENESIS_CONSENSUS_SEED_SEALING_PATH, NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE,
-    NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE, NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
-};
+use enclave_crypto::consts::*;
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use std::sgxfs::remove as SgxFsRemove;
@@ -68,11 +53,14 @@ use std::sgxfs::remove as SgxFsRemove;
 #[cfg(feature = "SGX_MODE_HW")]
 use super::ocalls::{
     ocall_get_ias_socket, ocall_get_quote, ocall_get_quote_ecdsa, ocall_get_quote_ecdsa_collateral,
-    ocall_get_quote_ecdsa_params, ocall_sgx_init_quote, ocall_verify_quote_ecdsa,
+    ocall_get_quote_ecdsa_params, ocall_sgx_init_quote,
 };
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::{hex, report::EndorsedAttestationReport};
+
+#[cfg(feature = "SGX_MODE_HW")]
+use ::hex as orig_hex;
 
 #[cfg(feature = "SGX_MODE_HW")]
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
@@ -139,7 +127,7 @@ pub fn validate_enclave_version(
     api_key: &[u8],
     challenge: Option<&[u8]>,
 ) -> Result<(), sgx_status_t> {
-    let res_dcap = unsafe { get_attestation_report_dcap(&kp) };
+    let res_dcap = unsafe { get_attestation_report_dcap(&kp.get_pubkey()) };
     if res_dcap.is_ok() {
         return Ok(());
     }
@@ -178,26 +166,19 @@ pub fn validate_enclave_version(
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+fn remove_secret_file(file_name: &str) {
+    let _ = SgxFsRemove(make_sgx_secret_path(file_name));
+}
+
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 fn remove_all_keys() {
-    info!("Error validating created certificate");
-    let _ = SgxFsRemove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str());
-    let _ = SgxFsRemove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str());
-    let _ = SgxFsRemove(REGISTRATION_KEY_SEALING_PATH.as_str());
-    let _ = SgxFsRemove(
-        std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-            .join(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE)
-            .as_path(),
-    );
-    let _ = SgxFsRemove(
-        std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-            .join(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)
-            .as_path(),
-    );
-    let _ = SgxFsRemove(
-        std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-            .join(NODE_EXCHANGE_KEY_FILE)
-            .as_path(),
-    );
+    remove_secret_file(&SEALED_FILE_UNITED);
+    remove_secret_file(SEALED_FILE_REGISTRATION_KEY);
+    remove_secret_file(SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS);
+    remove_secret_file(SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT);
+    remove_secret_file(SEALED_FILE_IRS);
+    remove_secret_file(SEALED_FILE_REK);
+    remove_secret_file(SEALED_FILE_TX_BYTES);
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -241,24 +222,7 @@ pub fn create_attestation_certificate(
 pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
     let _ = verify_ra_cert(cert, None, true).map_err(|e| {
         info!("Error validating created certificate: {:?}", e);
-        let _ = SgxFsRemove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str());
-        let _ = SgxFsRemove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str());
-        let _ = SgxFsRemove(REGISTRATION_KEY_SEALING_PATH.as_str());
-        let _ = SgxFsRemove(
-            std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-                .join(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE)
-                .as_path(),
-        );
-        let _ = SgxFsRemove(
-            std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-                .join(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)
-                .as_path(),
-        );
-        let _ = SgxFsRemove(
-            std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-                .join(NODE_EXCHANGE_KEY_FILE)
-                .as_path(),
-        );
+        remove_all_keys();
     });
 }
 
@@ -269,137 +233,12 @@ pub fn in_grace_period(timestamp: u64) -> bool {
     timestamp < 1692626400_u64
 }
 
-#[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn get_mr_enclave() -> [u8; 32] {
-    let ret: [u8; 32] = [0; 32];
-    ret
-}
-
-#[cfg(feature = "SGX_MODE_HW")]
-pub fn get_mr_enclave() -> [u8; 32] {
-    rsgx_self_report().body.mr_enclave.m
-}
-
-#[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn verify_quote_ecdsa(
-    _vec_quote: &[u8],
-    _vec_coll: &[u8],
-    _time_s: i64,
-) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
-    Err(sgx_status_t::SGX_ERROR_NO_DEVICE)
-}
-
-#[cfg(feature = "SGX_MODE_HW")]
-pub fn verify_quote_ecdsa(
+pub fn verify_quote_sgx(
     vec_quote: &[u8],
     vec_coll: &[u8],
     time_s: i64,
 ) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
-    //
-    // use sgx_types::sgx_ql_qv_supplemental_t;
-
-    let mut qe_report: sgx_ql_qe_report_info_t = sgx_ql_qe_report_info_t::default();
-    let mut p_supp: [u8; 5000] = [0; 5000];
-    let mut n_supp: u32 = 0;
-    let mut exp_time_s: i64 = 0;
-    let mut exp_status: u32 = 0;
-    let mut qv_result: sgx_ql_qv_result_t = sgx_ql_qv_result_t::default();
-    let mut rt: sgx_status_t = sgx_status_t::default();
-
-    let mut ti: sgx_target_info_t = sgx_target_info_t::default();
-    unsafe { sgx_self_target(&mut ti) };
-
-    let res = unsafe {
-        ocall_verify_quote_ecdsa(
-            &mut rt as *mut sgx_status_t,
-            vec_quote.as_ptr(),
-            vec_quote.len() as u32,
-            vec_coll.as_ptr(),
-            vec_coll.len() as u32,
-            &ti,
-            time_s,
-            &mut qe_report,
-            p_supp.as_mut_ptr(),
-            p_supp.len() as u32,
-            &mut n_supp,
-            &mut exp_time_s,
-            &mut exp_status,
-            &mut qv_result,
-        )
-    };
-
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
-    }
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
-
-    match qv_result {
-        sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK => {}
-        sgx_ql_qv_result_t::SGX_QL_QV_RESULT_SW_HARDENING_NEEDED => {}
-        _ => {
-            trace!("Quote verification result: {}", qv_result);
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-        }
-    };
-
-    // verify the qve report
-    if time_s != 0 {
-        exp_time_s = time_s; // insist on our time, if supplied
-    }
-
-    let qve_isvsvn_threshold: sgx_isv_svn_t = 3;
-    let dcap_ret: sgx_quote3_error_t = unsafe {
-        sgx_tvl_verify_qve_report_and_identity(
-            vec_quote.as_ptr(),
-            vec_quote.len() as u32,
-            &qe_report,
-            exp_time_s,
-            exp_status,
-            qv_result,
-            p_supp.as_ptr(),
-            n_supp,
-            qve_isvsvn_threshold,
-        )
-    };
-
-    if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
-        trace!("QVE report verification result: {}", dcap_ret);
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    }
-
-    trace!("n_supp = {}", n_supp);
-    trace!("exp_time_s = {}", exp_time_s);
-    trace!("exp_status = {}", exp_status);
-    trace!("qv_result = {}", qv_result);
-
-    /*
-        if n_supp >= mem::size_of::<sgx_ql_qv_supplemental_t>() as u32 {
-            let p_supp_fmt = p_supp.as_ptr() as *const sgx_ql_qv_supplemental_t;
-            let supp = unsafe { *p_supp_fmt };
-
-            trace!("supp.ver = {}", supp.version);
-            trace!("supp.earliest_issue_date = {}", supp.earliest_issue_date);
-            trace!("supp.latest_issue_date = {}", supp.latest_issue_date);
-            trace!(
-                "supp.earliest_expiration_date = {}",
-                supp.earliest_expiration_date
-            );
-            trace!("supp.tcb_level_date_tag = {}", supp.tcb_level_date_tag);
-            trace!("supp.pck_crl_num = {}", supp.pck_crl_num);
-            trace!("supp.root_ca_crl_num = {}", supp.root_ca_crl_num);
-            trace!("supp.tcb_eval_ref_num = {}", supp.tcb_eval_ref_num);
-            trace!("supp.tcb_cpusvn = {:?}", supp.tcb_cpusvn.svn);
-            trace!("supp.tcb_pce_isvsvn = {}", supp.tcb_pce_isvsvn);
-            trace!("supp.pce_id = {}", supp.pce_id);
-        }
-    */
-
-    if exp_status != 0 {
-        trace!("DCAP Collateral expired");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    }
+    let qv_result = verify_quote_any(vec_quote, vec_coll, time_s)?;
 
     if vec_quote.len() < mem::size_of::<sgx_quote_t>() {
         trace!("Quote too small");
@@ -407,13 +246,17 @@ pub fn verify_quote_ecdsa(
     }
 
     let my_p_quote = vec_quote.as_ptr() as *const sgx_quote_t;
-    let report_body = unsafe { (*my_p_quote).report_body };
 
-    trace!("body.mr_signer = {:?}", report_body.mr_signer.m);
-    trace!("body.mr_enclave = {:?}", report_body.mr_enclave.m);
-    trace!("body.report_data = {:?}", report_body.report_data.d);
-
-    Ok((report_body, qv_result))
+    unsafe {
+        let version = (*my_p_quote).version;
+        if version != 3 {
+            trace!("Unrecognized quote version: {}", version);
+            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+        } else {
+            let report_body = (*my_p_quote).report_body;
+            Ok((report_body, qv_result))
+        }
+    }
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -433,12 +276,12 @@ fn test_sgx_call_res(
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn get_quote_ecdsa(_pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa(_pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     Err(sgx_status_t::SGX_ERROR_NO_DEVICE)
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_quote_ecdsa_untested(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa_untested(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let mut qe_target_info = sgx_target_info_t::default();
     let mut quote_size: u32 = 0;
     let mut rt: sgx_status_t = sgx_status_t::default();
@@ -459,7 +302,7 @@ pub fn get_quote_ecdsa_untested(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), 
     trace!("ECDSA quote size = {}", quote_size);
 
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-    report_data.d[..32].copy_from_slice(pub_k);
+    report_data.d[..pub_k.len()].copy_from_slice(pub_k);
 
     let my_report: sgx_report_t = match rsgx_create_report(&qe_target_info, &report_data) {
         Ok(r) => r,
@@ -527,15 +370,28 @@ pub fn get_quote_ecdsa_untested(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), 
         }
     }
 
+    println!(
+        "mr_signer = {}",
+        orig_hex::encode(my_report.body.mr_signer.m)
+    );
+    println!(
+        "mr_enclave = {}",
+        orig_hex::encode(my_report.body.mr_enclave.m)
+    );
+    println!(
+        "report_data = {}",
+        orig_hex::encode(my_report.body.report_data.d)
+    );
+
     Ok((vec_quote, vec_coll))
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let (vec_quote, vec_coll) = get_quote_ecdsa_untested(pub_k)?;
 
     // test self
-    match verify_quote_ecdsa(&vec_quote, &vec_coll, 0) {
+    match verify_quote_sgx(&vec_quote, &vec_coll, 0) {
         Ok(r) => {
             trace!("Self quote verified ok");
             if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {

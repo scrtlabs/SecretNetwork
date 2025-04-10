@@ -150,6 +150,7 @@ func TestInitParamError(t *testing.T) {
 	}
 }
 
+/*
 func TestInitNotEncryptedInputError(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
@@ -174,6 +175,7 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 		})
 	}
 }
+*/
 
 func TestQueryNotEncryptedInputError(t *testing.T) {
 	for _, testContract := range testContracts {

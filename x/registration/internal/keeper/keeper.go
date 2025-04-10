@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -14,7 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
@@ -248,40 +246,6 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 // returns true when simulation mode used by gas=auto queries
 func isSimulationMode(ctx sdk.Context) bool {
 	return ctx.GasMeter().Limit() == 0 && ctx.BlockHeight() != 0
-}
-
-func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) error {
-	// make sure this account can send it
-	signers, _, err := k.cdc.GetMsgV1Signers(msg)
-	if err != nil {
-		return err
-	}
-	for _, acct := range signers {
-		if !bytes.Equal(acct, contractAddr.Bytes()) {
-			return errorsmod.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
-		}
-	}
-
-	var res *sdk.Result
-	// find the handler and execute it
-	h := k.router.Handler(msg)
-	if h == nil {
-		return sdkerrors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(msg))
-	}
-	res, err = h(ctx, msg)
-	if err != nil {
-		return err
-	}
-
-	events := make(sdk.Events, len(res.Events))
-	for i := range res.Events {
-		events[i] = sdk.Event(res.Events[i])
-	}
-
-	// redispatch all events, (type sdk.EventTypeMessage will be filtered out in the handler)
-	ctx.EventManager().EmitEvents(events)
-
-	return nil
 }
 
 func fetchPubKeyFromLegacyCert(cert []byte) ([]byte, error) {

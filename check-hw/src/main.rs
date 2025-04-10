@@ -6,7 +6,9 @@ use clap::App;
 use lazy_static::lazy_static;
 use sgx_types::sgx_status_t;
 
-use crate::{enclave_api::ecall_check_patch_level, types::EnclaveDoorbell};
+use crate::{
+    enclave_api::ecall_check_patch_level, enclave_api::ecall_migration_op, types::EnclaveDoorbell,
+};
 
 use enclave_ffi_types::NodeAuthResult;
 
@@ -34,6 +36,13 @@ fn main() {
                 .short("t")
                 .long("testnet")
                 .help("Run in testnet mode"),
+        )
+        .arg(
+            clap::Arg::with_name("migrate_op")
+                .long("migrate_op")
+                .value_name("NUMBER") // Describes the expected value
+                .help("Specify the migrate operation mode")
+                .takes_value(true), // Indicates this flag takes a value
         )
         .get_matches();
 
@@ -68,29 +77,39 @@ fn main() {
     };
 
     let eid = enclave.unwrap().geteid();
-    let mut retval = NodeAuthResult::Success;
-    let status = unsafe {
-        ecall_check_patch_level(
-            eid,
-            &mut retval,
-            api_key_bytes.as_ptr(),
-            api_key_bytes.len() as u32,
-        )
-    };
 
-    if status != sgx_status_t::SGX_SUCCESS {
-        println!(
-            "Failed to run hardware verification test (is the correct enclave in the correct path?)"
-        );
-        return;
-    }
+    if let Some(migrate_op) = matches.value_of("migrate_op") {
+        let op = migrate_op.parse::<u32>().unwrap();
 
-    if retval != NodeAuthResult::Success {
-        println!("Failed to verify platform. Please see errors above for more info on what needs to be fixed before you can run a mainnet node. \n\
-        If you require assistance or more information, please contact us on Discord or Telegram. In addition, you may use the documentation available at \
-        https://docs.scrt.network
-        ");
+        let mut retval = sgx_status_t::SGX_ERROR_BUSY;
+        let status = unsafe { ecall_migration_op(eid, &mut retval, op) };
+
+        println!("Migration op reval: {}, {}", status, retval);
     } else {
-        println!("Platform verification successful! You are able to run a mainnet Secret node")
+        let mut retval = NodeAuthResult::Success;
+        let status = unsafe {
+            ecall_check_patch_level(
+                eid,
+                &mut retval,
+                api_key_bytes.as_ptr(),
+                api_key_bytes.len() as u32,
+            )
+        };
+
+        if status != sgx_status_t::SGX_SUCCESS {
+            println!(
+                "Failed to run hardware verification test (is the correct enclave in the correct path?)"
+            );
+            return;
+        }
+
+        if retval != NodeAuthResult::Success {
+            println!("Failed to verify platform. Please see errors above for more info on what needs to be fixed before you can run a mainnet node. \n\
+            If you require assistance or more information, please contact us on Discord or Telegram. In addition, you may use the documentation available at \
+            https://docs.scrt.network
+            ");
+        } else {
+            println!("Platform verification successful! You are able to run a mainnet Secret node")
+        }
     }
 }

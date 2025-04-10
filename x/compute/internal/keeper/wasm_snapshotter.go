@@ -117,7 +117,7 @@ func (ws *WasmSnapshotter) SnapshotExtension(height uint64, payloadWriter snapsh
 }
 
 func (ws *WasmSnapshotter) RestoreExtension(
-	height uint64, format uint32, payloadReader snapshottypes.ExtensionPayloadReader, //nolint:all
+	height uint64, format uint32, payloadReader snapshottypes.ExtensionPayloadReader, 
 ) error {
 	if format != 1 {
 		return snapshottypes.ErrUnknownFormat

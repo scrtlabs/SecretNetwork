@@ -1,14 +1,14 @@
 use enclave_crypto::consts::{
     CONSENSUS_SEED_VERSION, ENCRYPTED_KEY_MAGIC_BYTES, STATE_ENCRYPTION_VERSION,
 };
-use enclave_crypto::key_manager::SeedsHolder;
 use log::*;
 
 use sgx_types::sgx_status_t;
 
+use enclave_crypto::{sha_256, AESKey, Kdf, SIVEncryptable};
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
-
-use enclave_crypto::{sha_256, AESKey, Kdf, SIVEncryptable, KEY_MANAGER};
+use enclave_utils::key_manager::SeedsHolder;
+use enclave_utils::KEY_MANAGER;
 
 use crate::external::{ecalls, ocalls};
 

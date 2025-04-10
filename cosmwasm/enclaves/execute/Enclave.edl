@@ -34,7 +34,18 @@ enclave {
             [out, count=32] uint8_t* public_key
         );
 
-        public sgx_status_t ecall_migrate_sealing(
+        // migration opcodes:
+        //  0 - convert sealed files from 2.17
+        //  1 - create migration report
+        //  2 - export sealing kdk for the next enclave
+        //  3 - migrate the sealed unified file from the previous enclave
+        public sgx_status_t ecall_migration_op(
+            uint32_t opcode
+        );
+
+        public sgx_status_t ecall_onchain_approve_upgrade(
+            [in, count=msg_len] const uint8_t* msg,
+            uint32_t msg_len
         );
 
         public sgx_status_t ecall_get_attestation_report(
@@ -151,6 +162,33 @@ enclave {
 
         public uint32_t ecall_run_tests();
 
+        public sgx_status_t ecall_generate_random(
+              [in, count=block_hash_len] const uint8_t* block_hash,
+              uint32_t block_hash_len,
+              uint64_t height,
+              [out, count=48] uint8_t* random,
+              [out, count=32] uint8_t* proof
+        );
+        public sgx_status_t ecall_submit_validator_set(
+            [in, count=val_set_len] const uint8_t* val_set,
+            uint32_t val_set_len,
+            uint64_t height
+        );
+
+        public sgx_status_t ecall_submit_validator_set_evidence(
+            [in, count=32] const uint8_t* val_set_evidence
+        );
+
+        public sgx_status_t ecall_validate_random(
+            [in, count=random_len] const uint8_t* random,
+            uint32_t random_len,
+            [in, count=proof_len] const uint8_t* proof,
+            uint32_t proof_len,
+            [in, count=block_hash_len] const uint8_t* block_hash,
+            uint32_t block_hash_len,
+            uint64_t height
+        );
+
         public sgx_status_t ecall_submit_block_signatures(
             [in, count=in_header_len] const uint8_t* in_header,
             uintptr_t in_header_len,
@@ -160,11 +198,8 @@ enclave {
             uintptr_t in_txs_len,
             [in, count=in_encrypted_random_len] const uint8_t* in_encrypted_random,
             uintptr_t in_encrypted_random_len,
-            [out, count=32] uint8_t* decrypted
-      //      [in, count=in_validator_set_len] const uint8_t* in_validator_set,
-    //        uintptr_t in_validator_set_len,
-  //          [in, count=in_next_validator_set_len] const uint8_t* in_next_validator_set,
-//            uintptr_t in_next_validator_set_len
+            [out, count=32] uint8_t* decrypted,
+            [out, count=32] uint8_t* next_validator_set_evidence
         );
     };
 

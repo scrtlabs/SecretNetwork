@@ -5,6 +5,8 @@ import (
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
+	circuitkeeper "cosmossdk.io/x/circuit/keeper"
+	circuittypes "cosmossdk.io/x/circuit/types"
 	evidencekeeper "cosmossdk.io/x/evidence/keeper"
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	"cosmossdk.io/x/feegrant"
@@ -21,8 +23,6 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
@@ -85,11 +85,11 @@ type SecretAppKeepers struct {
 	MintKeeper       *mintkeeper.Keeper
 	DistrKeeper      *distrkeeper.Keeper
 	GovKeeper        *govkeeper.Keeper
-	CrisisKeeper     *crisiskeeper.Keeper
 	UpgradeKeeper    *upgradekeeper.Keeper
 	ParamsKeeper     *paramskeeper.Keeper
 	EvidenceKeeper   *evidencekeeper.Keeper
 	FeegrantKeeper   *feegrantkeeper.Keeper
+	CircuitKeeper    *circuitkeeper.Keeper
 	ComputeKeeper    *compute.Keeper
 	RegKeeper        *reg.Keeper
 	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
@@ -148,7 +148,6 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	app *baseapp.BaseApp,
 	maccPerms map[string][]string,
 	blockedAddresses map[string]bool,
-	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
 	homePath string,
 	logger log.Logger,
@@ -229,16 +228,13 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	)
 	ak.SlashingKeeper = &slashingKeeper
 
-	crisisKeeper := crisiskeeper.NewKeeper(
+	circuitKeeper := circuitkeeper.NewKeeper(
 		appCodec,
-		runtime.NewKVStoreService(ak.keys[crisistypes.StoreKey]),
-		invCheckPeriod,
-		ak.BankKeeper,
-		authtypes.FeeCollectorName,
+		runtime.NewKVStoreService(ak.keys[circuittypes.StoreKey]),
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		ak.AccountKeeper.AddressCodec(),
 	)
-	ak.CrisisKeeper = crisisKeeper
+	ak.CircuitKeeper = &circuitKeeper
 
 	feegrantKeeper := feegrantkeeper.NewKeeper(
 		appCodec,
@@ -592,7 +588,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 		ibcfeetypes.StoreKey,
 		ibcswitch.StoreKey,
 		ibchookstypes.StoreKey,
-		crisistypes.StoreKey,
+		circuittypes.StoreKey,
 	)
 
 	ak.tKeys = storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -613,7 +609,6 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 	paramsKeeper.Subspace(govtypes.ModuleName)
-	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
 	paramsKeeper.Subspace(reg.ModuleName)
 	paramsKeeper.Subspace(ibcswitch.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())

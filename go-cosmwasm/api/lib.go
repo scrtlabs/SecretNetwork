@@ -46,7 +46,7 @@ func HealthCheck() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte /* valSet []byte, nextValSet []byte */) ([]byte, error) {
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte /* valSet []byte, nextValSet []byte */) ([]byte, []byte, error) {
 	errmsg := C.Buffer{}
 	spidSlice := sendSlice(header)
 	defer freeAfterSend(spidSlice)
@@ -59,9 +59,17 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 
 	res, err := C.submit_block_signatures(spidSlice, apiKeySlice, txsSlice, encRandomSlice /* valSetSlice, nextValSetSlice,*/, &errmsg)
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		return nil, nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), nil
+	return receiveVector(res.buf1), receiveVector(res.buf2), nil
+}
+
+func SubmitValidatorSetEvidence(evidence []byte) error {
+	errmsg := C.Buffer{}
+	evidenceSlice := sendSlice(evidence)
+	defer freeAfterSend(evidenceSlice)
+	C.submit_validator_set_evidence(evidenceSlice, &errmsg)
+	return nil
 }
 
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
@@ -94,13 +102,30 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 	return true, nil
 }
 
-func MigrateSealing() (bool, error) {
-	ret, err := C.migrate_sealing()
+func MigrationOp(op uint32) (bool, error) {
+	ret, err := C.migration_op(u32(op))
 	if err != nil {
 		return false, err
 	}
 	if !ret {
 		return false, errors.New("sealing migration failed")
+	}
+	return true, nil
+}
+
+func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
+	nodeDirBuf := sendSlice([]byte(nodeDir))
+	defer freeAfterSend(nodeDirBuf)
+
+	msgBuf := sendSlice([]byte(msg))
+	defer freeAfterSend(msgBuf)
+
+	ret, err := C.emergency_approve_upgrade(nodeDirBuf, msgBuf)
+	if err != nil {
+		return false, err
+	}
+	if !ret {
+		return false, errors.New("emergency approve upgrade failed")
 	}
 	return true, nil
 }
@@ -136,6 +161,21 @@ func InitEnclaveRuntime(moduleCacheSize uint16) error {
 		err = errorWithMessage(err, errmsg)
 		return err
 	}
+	return nil
+}
+
+func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
+	msgBuf := sendSlice(mrEnclaveHash)
+	defer freeAfterSend(msgBuf)
+
+	ret, err := C.onchain_approve_upgrade(msgBuf)
+	if err != nil {
+		return err
+	}
+	if !ret {
+		return errors.New("onchain_approve_upgrade failed")
+	}
+
 	return nil
 }
 
@@ -435,7 +475,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool) (bool, error) {
+func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
 	errmsg := C.Buffer{}
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
@@ -446,6 +486,9 @@ func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool) (bool, e
 	}
 	if no_dcap {
 		flags |= u32(2)
+	}
+	if is_migration_report {
+		flags |= u32(0x10)
 	}
 
 	_, err := C.create_attestation_report(apiKeySlice, flags, &errmsg)

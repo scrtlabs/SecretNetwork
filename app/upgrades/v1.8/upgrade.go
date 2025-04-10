@@ -21,7 +21,7 @@ var Upgrade = upgrades.Upgrade{
 	StoreUpgrades:        store.StoreUpgrades{},
 }
 
-func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator, //nolint:all
+func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator, 
 ) upgradetypes.UpgradeHandler {
 	return func(ctx context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		logger := log.NewLogger(os.Stderr)

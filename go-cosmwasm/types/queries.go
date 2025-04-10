@@ -152,7 +152,7 @@ func (v Validators) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (v *Validators) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" { //nolint:goconst
+	if string(data) == "[]" || string(data) == "null" { 
 		return nil
 	}
 	var raw []Validator

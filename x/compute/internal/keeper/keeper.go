@@ -16,8 +16,9 @@ import (
 	channelkeeper "github.com/cosmos/ibc-go/v8/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v8/modules/core/05-port/keeper"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
-	"golang.org/x/crypto/ripemd160" //nolint
+	"golang.org/x/crypto/ripemd160" //nolint:staticcheck
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
@@ -54,10 +55,6 @@ import (
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
-
-type emergencyButton interface {
-	IsHalted(ctx sdk.Context) bool
-}
 
 type ResponseHandler interface {
 	// Handle processes the data returned by a contract invocation.
@@ -162,6 +159,15 @@ func NewKeeper(
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
+}
+
+func (k Keeper) SetValidatorSetEvidence(ctx sdk.Context) error {
+	store := k.storeService.OpenKVStore(ctx)
+	validator_set_evidence, err := store.Get(types.ValidatorSetEvidencePrefix)
+	if err == nil {
+		_ = api.SubmitValidatorSetEvidence(validator_set_evidence)
+	}
+	return nil
 }
 
 func (k Keeper) GetLastMsgMarkerContainer() *baseapp.LastMsgMarkerContainer {
@@ -408,7 +414,7 @@ func V010MsgToV1SubMsg(contractAddress string, msg v010wasmTypes.CosmosMsg) (v1w
 		ReplyOn:  v1wasmTypes.ReplyNever,
 	}
 
-	if msg.Bank != nil { //nolint:gocritic
+	if msg.Bank != nil {
 		if msg.Bank.Send.FromAddress != contractAddress {
 			return v1wasmTypes.SubMsg{}, fmt.Errorf("contract doesn't have permission to send funds from another account (using BankMsg)")
 		}
@@ -558,7 +564,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	consumeGas(ctx, gasUsed)
 
 	if initError != nil {
-		switch res := response.(type) { //nolint:gocritic
+		switch res := response.(type) {
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result, jsonError := json.Marshal(res)
 			if jsonError != nil {
@@ -721,7 +727,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if execErr != nil {
 		var result sdk.Result
 		var jsonError error
-		switch res := response.(type) { //nolint:gocritic
+		switch res := response.(type) {
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result.Data, jsonError = json.Marshal(res)
 			if jsonError != nil {
@@ -930,12 +936,17 @@ func (k Keeper) GetRandomSeed(ctx sdk.Context, height int64) []byte {
 	return random
 }
 
-func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte) {
+func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte, validator_set_evidence []byte) {
 	store := k.storeService.OpenKVStore(ctx)
 
 	ctx.Logger().Info(fmt.Sprintf("Setting random: %s", hex.EncodeToString(random)))
 
 	err := store.Set(types.GetRandomKey(ctx.BlockHeight()), random)
+	if err != nil {
+		ctx.Logger().Error("SetRandomSeed:", err.Error())
+	}
+
+	err = store.Set(types.ValidatorSetEvidencePrefix, validator_set_evidence)
 	if err != nil {
 		ctx.Logger().Error("SetRandomSeed:", err.Error())
 	}
@@ -1179,8 +1190,8 @@ func contractAddress(codeID, instanceID uint64, creator sdk.AccAddress) sdk.AccA
 	hashSourceBytes = append(hashSourceBytes, creator...)
 
 	sha := sha256.Sum256(hashSourceBytes)
-	hasherRIPEMD160 := ripemd160.New() //nolint
-	hasherRIPEMD160.Write(sha[:])      // does not error
+	hasherRIPEMD160 := ripemd160.New()
+	hasherRIPEMD160.Write(sha[:]) // does not error
 	return sdk.AccAddress(hasherRIPEMD160.Sum(nil))
 }
 
@@ -1523,7 +1534,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if migrateErr != nil {
 		var result []byte
 		var jsonError error
-		switch res := response.(type) { //nolint:gocritic
+		switch res := response.(type) {
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result, jsonError = json.Marshal(res)
 			if jsonError != nil {
@@ -1620,7 +1631,7 @@ func (k Keeper) appendToContractHistory(ctx sdk.Context, contractAddr sdk.AccAdd
 	for _, e := range newEntries {
 		pos++
 		key := types.GetContractCodeHistoryElementKey(contractAddr, pos)
-		err := store.Set(key, k.cdc.MustMarshal(&e)) //nolint:gosec
+		err := store.Set(key, k.cdc.MustMarshal(&e))
 		if err != nil {
 			ctx.Logger().Error("appendToContractHistory:", err.Error())
 		}

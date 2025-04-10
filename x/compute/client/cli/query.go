@@ -670,7 +670,7 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, clientCtx c
 	if err != nil {
 		return err
 	}
-	nonce, _, _, _ := parseEncryptedBlob(queryData) //nolint:dogsled // Ignoring error since we just encrypted it
+	nonce, _, _, _ := parseEncryptedBlob(queryData) 
 
 	queryClient := types.NewQueryClient(clientCtx)
 	res, err := queryClient.QuerySecretContract(

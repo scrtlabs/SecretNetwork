@@ -1,7 +1,7 @@
 use log::warn;
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "random")]
+//#[cfg(feature = "random")]
 use cw_types_v010::encoding::Binary;
 
 use cw_types_v010::types as v010types;

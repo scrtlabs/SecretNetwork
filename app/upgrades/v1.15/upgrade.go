@@ -14,7 +14,6 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
@@ -43,7 +42,6 @@ var Upgrade = upgrades.Upgrade{
 		Added: []string{
 			icacontrollertypes.StoreKey,
 			consensusparamtypes.StoreKey,
-			crisistypes.StoreKey,
 		},
 	},
 }
@@ -81,8 +79,6 @@ func createUpgradeHandler(mm *module.Manager, appKeepers *keepers.SecretAppKeepe
 				keyTable = govv1.ParamKeyTable() //nolint:staticcheck
 			case ibcswitchtypes.ModuleName:
 				keyTable = ibcswitchtypes.ParamKeyTable()
-			case crisistypes.ModuleName:
-				keyTable = crisistypes.ParamKeyTable() //nolint:staticcheck
 			case ibcexported.ModuleName:
 				keyTable = ibcclienttypes.ParamKeyTable()
 				keyTable.RegisterParamSet(&ibcconntypes.Params{})

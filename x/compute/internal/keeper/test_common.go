@@ -20,7 +20,7 @@ import (
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
 
 	"github.com/cosmos/gogoproto/proto"
-	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -51,7 +51,7 @@ import (
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	tmenclave "github.com/scrtlabs/tm-secret-enclave"
+	// tmenclave "github.com/scrtlabs/tm-secret-enclave"
 
 	dbm "github.com/cosmos/cosmos-db"
 
@@ -86,9 +86,6 @@ import (
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
 	"github.com/cosmos/ibc-go/modules/capability"
-
-	"github.com/cosmos/cosmos-sdk/x/crisis"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
@@ -234,7 +231,6 @@ var ModuleBasics = module.NewBasicManager(
 		},
 	),
 	params.AppModuleBasic{},
-	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
 	upgrade.AppModuleBasic{},
 	evidence.AppModuleBasic{},
@@ -370,7 +366,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	paramsKeeper.Subspace(minttypes.ModuleName)
 	paramsKeeper.Subspace(distrtypes.ModuleName)
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
-	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
 
 	// this is also used to initialize module accounts (so nil is meaningful here)
@@ -607,7 +602,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	random := make([]byte, 32)
 	_, _ = rand.Read(random)
-	keeper.SetRandomSeed(ctx, random)
+	keeper.SetRandomSeed(ctx, random, random)
 	_ = keeper.SetParams(ctx, wasmtypes.DefaultParams())
 
 	govSubSp, _ := paramsKeeper.GetSubspace(govtypes.ModuleName)
@@ -1068,6 +1063,7 @@ func MakeCommit(blockID tmtypes.BlockID, height int64, round int32, valSet *tmty
 	return &tmtypes.Commit{Height: height, Round: round, BlockID: blockID, Signatures: sigs}, nil
 }
 
+/*
 func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 	blockData := tmproto.Data{
 		Txs: [][]byte{ctx.TxBytes()},
@@ -1109,19 +1105,19 @@ func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 	random, proof, err := tmenclave.GetRandom(blockHeader.AppHash, uint64(blockHeader.Height))
 	require.NoError(t, err)
 
-	randomAndProofBz := append(random, proof...) //nolint:all
+	randomAndProofBz := append(random, proof...)
 
-	_, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
+	_, _, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
 	require.NoError(t, err)
-}
+}*/
 
 func makeBlockIDRandom() tmtypes.BlockID {
 	var (
 		blockHash   = make([]byte, sha256.Size)
 		partSetHash = make([]byte, sha256.Size)
 	)
-	rand.Read(blockHash)   //nolint: errcheck // ignore errcheck for read
-	rand.Read(partSetHash) //nolint: errcheck // ignore errcheck for read
+	rand.Read(blockHash)
+	rand.Read(partSetHash)
 	return tmtypes.BlockID{
 		Hash: blockHash,
 		PartSetHeader: tmtypes.PartSetHeader{

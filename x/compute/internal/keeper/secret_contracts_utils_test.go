@@ -1104,7 +1104,7 @@ func fakeMigrate(ctx sdk.Context,
 	if migrateErr != nil {
 		var result []byte
 		var jsonError error
-		switch res := response.(type) { //nolint:gocritic
+		switch res := response.(type) { 
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result, jsonError = json.Marshal(res)
 			if jsonError != nil {

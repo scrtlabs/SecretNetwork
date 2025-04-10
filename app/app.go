@@ -13,6 +13,7 @@ import (
 
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
+	circuittypes "cosmossdk.io/x/circuit/types"
 	txsigning "cosmossdk.io/x/tx/signing"
 	"cosmossdk.io/x/tx/signing/aminojson"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -42,6 +43,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	"github.com/cosmos/gogoproto/proto"
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
@@ -57,6 +59,7 @@ import (
 	v1_15 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.15"
 	v1_16 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.16"
 	v1_17 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.17"
+	v1_18 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.18"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
@@ -71,8 +74,6 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -86,6 +87,7 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	dbm "github.com/cosmos/cosmos-db"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	stakingkeeper "github.com/cosmos/ibc-go/v8/testing/types"
@@ -129,6 +131,7 @@ var (
 		v1_15.Upgrade,
 		v1_16.Upgrade,
 		v1_17.Upgrade,
+		v1_18.Upgrade,
 	}
 )
 
@@ -146,8 +149,7 @@ type SecretNetworkApp struct {
 	interfaceRegistry types.InterfaceRegistry
 	txConfig          client.TxConfig
 
-	invCheckPeriod uint
-	bootstrap      bool
+	bootstrap bool
 
 	// keepers
 	AppKeepers keepers.SecretAppKeepers
@@ -177,6 +179,10 @@ func (app *SecretNetworkApp) GetStakingKeeper() stakingkeeper.StakingKeeper {
 
 func (app *SecretNetworkApp) GetIBCKeeper() *ibckeeper.Keeper {
 	return app.AppKeepers.IbcKeeper
+}
+
+func (app *SecretNetworkApp) GetGovKeeper() *govkeeper.Keeper {
+	return app.AppKeepers.GovKeeper
 }
 
 func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper {
@@ -282,9 +288,9 @@ func NewSecretNetworkApp(
 		skipUpgradeHeights[int64(h)] = true
 	}
 	homePath := cast.ToString(appOpts.Get(flags.FlagHome))
-	invCheckPeriod := cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod))
 
-	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath, logger, &app.event)
+	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), skipUpgradeHeights, homePath, logger, &app.event)
+	bApp.SetCircuitBreaker(app.AppKeepers.CircuitKeeper)
 
 	enabledSignModes := authtx.DefaultSignModes
 	enabledSignModes = append(enabledSignModes, sigtypes.SignMode_SIGN_MODE_TEXTUAL)
@@ -320,13 +326,9 @@ func NewSecretNetworkApp(
 	app.AppKeepers.InitCustomKeepers(appCodec, legacyAmino, bApp, bootstrap, homePath, computeConfig)
 	app.setupUpgradeStoreLoaders()
 
-	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment
-	// we prefer to be more strict in what arguments the modules expect.
-	skipGenesisInvariants := cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
-
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
-	app.mm = module.NewManager(Modules(app, appCodec, skipGenesisInvariants)...)
+	app.mm = module.NewManager(Modules(app, appCodec)...)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -348,9 +350,6 @@ func NewSecretNetworkApp(
 	// properly initialized with tokens from genesis accounts.
 	// Sets the order of Genesis - Order matters, genutil is to always come last
 	SetOrderInitGenesis(app)
-
-	// register all module routes and module queriers
-	app.mm.RegisterInvariants(app.AppKeepers.CrisisKeeper)
 
 	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
 	err = app.mm.RegisterServices(app.configurator)
@@ -374,6 +373,9 @@ func NewSecretNetworkApp(
 			SignModeHandler: app.txConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
+		CircuitKeeper:         app.AppKeepers.CircuitKeeper,
+		appCodec:              app.appCodec,
+		govkeeper:             *app.AppKeepers.GovKeeper,
 		IBCKeeper:             app.AppKeepers.IbcKeeper,
 		WasmConfig:            computeConfig,
 		TXCounterStoreService: app.AppKeepers.ComputeKeeper.GetStoreService(),
@@ -420,6 +422,14 @@ func NewSecretNetworkApp(
 	}
 
 	return app
+}
+
+func (app *SecretNetworkApp) Initialize() {
+	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
+
+	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
+
+	_ = app.AppKeepers.ComputeKeeper.SetValidatorSetEvidence(ctx)
 }
 
 // Name returns the name of the App
@@ -571,7 +581,6 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		vestingtypes.ModuleName,
 		banktypes.ModuleName,
 		govtypes.ModuleName,
-		crisistypes.ModuleName,
 		genutiltypes.ModuleName,
 		authz.ModuleName,
 		paramstypes.ModuleName,
@@ -582,6 +591,7 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		compute.ModuleName,
 		reg.ModuleName,
 		ibcswitchtypes.ModuleName,
+		circuittypes.ModuleName,
 	)
 }
 
@@ -606,7 +616,6 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 
 		authz.ModuleName,
 		minttypes.ModuleName,
-		crisistypes.ModuleName,
 		ibcexported.ModuleName,
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
@@ -615,12 +624,12 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 
 		ibcfeetypes.ModuleName,
 		feegrant.ModuleName,
+		circuittypes.ModuleName,
 	)
 }
 
 func SetOrderEndBlockers(app *SecretNetworkApp) {
 	app.mm.SetOrderEndBlockers(
-		crisistypes.ModuleName,
 		govtypes.ModuleName,
 		authz.ModuleName,
 		feegrant.ModuleName,
@@ -644,5 +653,6 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		compute.ModuleName,
 		reg.ModuleName,
 		ibcswitchtypes.ModuleName,
+		circuittypes.ModuleName,
 	)
 }

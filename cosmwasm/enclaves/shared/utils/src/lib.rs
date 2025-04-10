@@ -8,6 +8,7 @@ extern crate core;
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+pub mod key_manager;
 pub mod kv_cache;
 pub mod logger;
 pub mod macros;
@@ -18,6 +19,9 @@ mod results;
 pub mod storage;
 pub mod tx_bytes;
 pub mod validator_set;
+
+pub use key_manager::Keychain;
+pub use key_manager::KEY_MANAGER;
 
 #[cfg(feature = "random")]
 pub mod random;

@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -33,19 +32,6 @@ func NewHandler(k Keeper) baseapp.MsgServiceHandler {
 			return nil, sdkerrors.ErrUnknownRequest.Wrap(errMsg)
 		}
 	}
-}
-
-// filterMessageEvents returns the same events with all of type == EventTypeMessage removed.
-// this is so only our top-level message event comes through
-func filteredMessageEvents(manager *sdk.EventManager) []abci.Event {
-	events := manager.ABCIEvents()
-	res := make([]abci.Event, 0, len(events)+1)
-	for _, e := range events {
-		if e.Type != sdk.EventTypeMessage {
-			res = append(res, e)
-		}
-	}
-	return res
 }
 
 func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) (*sdk.Result, error) {

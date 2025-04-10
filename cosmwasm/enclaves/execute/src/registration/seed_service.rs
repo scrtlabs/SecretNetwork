@@ -1,7 +1,7 @@
 use log::*;
 
-use enclave_crypto::{consts::SIGNATURE_TYPE, CryptoError, KeyPair, Keychain, Seed};
-
+use enclave_crypto::{consts::SIGNATURE_TYPE, CryptoError, KeyPair, Seed};
+use enclave_utils::Keychain;
 use sgx_types::c_int;
 
 use crate::registration::create_attestation_certificate;

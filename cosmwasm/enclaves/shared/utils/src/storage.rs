@@ -2,21 +2,47 @@ use crate::results::UnwrapOrSgxErrorUnexpected;
 
 use core::mem;
 use core::ptr::null;
+use enclave_crypto::consts::*;
+use lazy_static::lazy_static;
 use log::*;
 use log::{error, info};
+use sgx_types::*;
+use std::env;
 use std::io::{Read, Write};
-use std::path::Path;
-use std::untrusted::path::PathEx;
+use std::os::unix::ffi::OsStrExt;
+use std::path;
 use std::ptr;
 use std::sgxfs::SgxFile;
 use std::slice;
-
-use sgx_types::*;
 use std::untrusted::fs;
 use std::untrusted::fs::File;
+use std::untrusted::path::PathEx;
 
-pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
-pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";
+pub fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
+    let mut key_request = sgx_types::sgx_key_request_t {
+        key_name: sgx_types::SGX_KEYSELECT_SEAL,
+        key_policy: sgx_types::SGX_KEYPOLICY_MRENCLAVE | sgx_types::SGX_KEYPOLICY_MRSIGNER,
+        misc_mask: sgx_types::TSEAL_DEFAULT_MISCMASK,
+        ..Default::default()
+    };
+
+    if seed.len() > key_request.key_id.id.len() {
+        panic!("seed too long: {:?}", seed);
+    }
+
+    key_request.key_id.id[..seed.len()].copy_from_slice(seed);
+
+    key_request.attribute_mask.flags = sgx_types::TSEAL_DEFAULT_FLAGSMASK;
+
+    let mut key = sgx_key_128bit_t::default();
+    let res = unsafe { sgx_get_key(&key_request, &mut key) };
+
+    if res != sgx_status_t::SGX_SUCCESS {
+        panic!("sealing key derive failed: {}", res);
+    }
+
+    key
+}
 
 pub fn write_to_untrusted(bytes: &[u8], filepath: &str) -> SgxResult<()> {
     let mut f = File::create(filepath)
@@ -387,11 +413,14 @@ pub fn unseal_file_from_2_17(
     Ok(mctx.m_res)
 }
 
-pub fn migrate_file_from_2_17_safe(
-    s_path: &str,
+fn migrate_file_from_2_17_safe(
+    file_name: &str,
     should_check_fname: bool,
 ) -> Result<(), sgx_status_t> {
-    if Path::new(s_path).exists() {
+    let str_path = make_sgx_secret_path(file_name);
+    let s_path = str_path.as_str();
+
+    if path::Path::new(s_path).exists() {
         if SgxFile::open(s_path).is_ok() {
             info!("File {} is already converted", s_path);
         } else {
@@ -423,6 +452,30 @@ pub fn migrate_file_from_2_17_safe(
     Ok(())
 }
 
+pub fn migrate_all_from_2_17() -> sgx_types::sgx_status_t {
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_REGISTRATION_KEY, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_REK, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_IRS, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_VALIDATOR_SET, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_TX_BYTES, true) {
+        return e;
+    }
+    sgx_status_t::SGX_SUCCESS
+}
 
 /*
 pub fn test_migration_once(size: usize) {

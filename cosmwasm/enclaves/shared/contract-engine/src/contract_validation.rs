@@ -11,8 +11,9 @@ use enclave_cosmos_types::types::{
     VerifyParamsType,
 };
 use enclave_crypto::traits::VerifyingKey;
-use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
+use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE};
 use enclave_ffi_types::EnclaveError;
+use enclave_utils::KEY_MANAGER;
 use protobuf::Message;
 
 use crate::hardcoded_admins::is_code_hash_allowed;
@@ -497,14 +498,12 @@ pub fn validate_basic_msg(
 
     if decoded_hash != contract_hash {
         warn!("Message contains mismatched contract hash, checking hardcoded contract hash...");
-        if is_code_hash_allowed(contract_address, &String::from_utf8_lossy(&decoded_hash)) {
+        if is_code_hash_allowed(contract_address, &hex::encode(&decoded_hash)) {
             warn!("Message contains mismatched contract hash, but it's allowed");
         } else {
             warn!("Message contains mismatched contract hash, and it's not allowed");
             return Err(EnclaveError::ValidationFailure);
         }
-
-        return Err(EnclaveError::ValidationFailure);
     }
 
     while validated_msg.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
