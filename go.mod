@@ -8,8 +8,9 @@ replace (
 	cosmossdk.io/api => github.com/scrtlabs/cosmos-sdk-api v0.7.6-secret.0
 	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v1.1.1-secret.1
 	cosmossdk.io/x/tx => github.com/scrtlabs/cosmos-sdk-x-tx v0.13.7-secret.0
-	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.17-secret.4
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.11-secret.0
+	// github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.17-secret.0
+	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.17-secret-7-add-implicit-hash
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.11-secret-4-implicit-hash
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.2.2-secret.0
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 
@@ -57,7 +58,7 @@ require (
 	cosmossdk.io/x/upgrade v0.1.4
 	github.com/cosmos/ibc-go/modules/capability v1.0.1
 	golang.org/x/text v0.21.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142
+	google.golang.org/genproto/googleapis/api v0.0.0-20241202173237-19429a94021a
 )
 
 require (
@@ -75,6 +76,7 @@ require (
 	github.com/cosmos/rosetta v0.50.4
 	github.com/gogo/protobuf v1.3.2
 	github.com/hashicorp/go-metrics v0.5.3
+	github.com/scrtlabs/tm-secret-enclave v1.12.3-implicit-hash
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028
 	gopkg.in/yaml.v2 v2.4.0
 )
