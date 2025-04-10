@@ -383,6 +383,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		bootstrap,
 	)
 	ak.RegKeeper = &regKeeper
+	ak.CronKeeper.SetRegKeeper(regKeeper)
 
 	// Assaf:
 	// Rules:
@@ -528,6 +529,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		runtime.NewKVStoreService(ak.keys[compute.StoreKey]),
 		*ak.AccountKeeper,
 		ak.BankKeeper,
+		*ak.CronKeeper,
 		*ak.GovKeeper,
 		*ak.DistrKeeper,
 		*ak.MintKeeper,
@@ -550,7 +552,11 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	ak.ComputeKeeper = &computeKeeper
 	wasmHooks.ContractKeeper = ak.ComputeKeeper
 
-	ak.CronKeeper.WasmMsgServer = compute.NewMsgServerImpl(*ak.ComputeKeeper)
+	// wasmMsgServer := compute.NewMsgServerImpl(*ak.ComputeKeeper)
+	// fmt.Printf("wasmMsgServer: %+v\n", wasmMsgServer)
+	// ak.CronKeeper.WasmMsgServer = compute.NewCronWasmMsgServerAdapter(wasmMsgServer)
+	// ak.ComputeKeeper.SetCronKeeper(*ak.CronKeeper)
+	// fmt.Printf("ak.CronKeeper.WasmMsgServer: %+v\n", ak.CronKeeper.WasmMsgServer)
 
 	// Compute receive: Switch -> Fee -> Packet Forward -> WASM Hooks
 	var computeStack porttypes.IBCModule

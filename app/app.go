@@ -326,6 +326,7 @@ func NewSecretNetworkApp(
 		panic(err)
 	}
 	app.txConfig = txConfig
+	app.AppKeepers.CronKeeper.SetTxConfig(txConfig)
 
 	app.AppKeepers.InitCustomKeepers(appCodec, legacyAmino, bApp, bootstrap, homePath, computeConfig)
 	app.setupUpgradeStoreLoaders()
