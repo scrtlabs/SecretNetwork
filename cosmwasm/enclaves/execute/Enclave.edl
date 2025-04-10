@@ -199,7 +199,9 @@ enclave {
             [in, count=in_encrypted_random_len] const uint8_t* in_encrypted_random,
             uintptr_t in_encrypted_random_len,
             [out, count=32] uint8_t* decrypted,
-            [out, count=32] uint8_t* next_validator_set_evidence
+            [out, count=32] uint8_t* next_validator_set_evidence,
+            [in, count=in_cron_msgs_len] const uint8_t* in_cron_msgs,
+            uintptr_t in_cron_msgs_len
         );
     };
 

@@ -47,11 +47,15 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm"
 
 	v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
+
+	cronkeeper "github.com/scrtlabs/SecretNetwork/x/cron/keeper"
+	crontypes "github.com/scrtlabs/SecretNetwork/x/cron/types"
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
@@ -78,6 +82,7 @@ type Keeper struct {
 	bankKeeper       bankkeeper.Keeper
 	portKeeper       portkeeper.Keeper
 	capabilityKeeper capabilitykeeper.ScopedKeeper
+	cronKeeper       cronkeeper.Keeper
 	wasmer           wasm.Wasmer
 	queryPlugins     QueryPlugins
 	messenger        Messenger
@@ -106,6 +111,7 @@ func NewKeeper(
 	storeService store.KVStoreService,
 	accountKeeper authkeeper.AccountKeeper,
 	bankKeeper bankkeeper.Keeper,
+	cronKeeper cronkeeper.Keeper,
 	govKeeper govkeeper.Keeper,
 	distKeeper distrkeeper.Keeper,
 	mintKeeper mintkeeper.Keeper,
@@ -137,6 +143,7 @@ func NewKeeper(
 		wasmer:           *wasmer,
 		accountKeeper:    accountKeeper,
 		bankKeeper:       bankKeeper,
+		cronKeeper:       cronKeeper,
 		portKeeper:       portKeeper,
 		capabilityKeeper: capabilityKeeper,
 		messenger: NewMessageHandler(
@@ -159,6 +166,10 @@ func NewKeeper(
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
+}
+
+func (k *Keeper) SetCronKeeper(cronKeeper cronkeeper.Keeper) {
+	k.cronKeeper = cronKeeper
 }
 
 func (k Keeper) SetValidatorSetEvidence(ctx sdk.Context) error {
@@ -994,6 +1005,144 @@ func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress)
 	}
 	k.cdc.MustUnmarshal(contractBz, &contract)
 	return &contract
+}
+
+func (k Keeper) GetScheduledMsgs(ctx sdk.Context, execution_stage crontypes.ExecutionStage) ([]types.MsgExecuteContract, [][]byte, error) {
+	cronScheduledMsgs := k.cronKeeper.GetScheduledMsgs(ctx, execution_stage)
+
+	// // Update the schedule's last execution height.
+	// schedule.LastExecuteHeight = uint64(ctx.BlockHeight()) //nolint:gosec
+	// k.storeSchedule(ctx, schedule)
+
+	// Get the module private key once.
+	var txBytesList [][]byte
+	var executeMsgList []types.MsgExecuteContract
+	privKey := cronkeeper.GetModulePrivateKey()
+	pubKey := privKey.PubKey()
+	senderAddr := sdk.AccAddress(pubKey.Address())
+
+	// Retrieve the account info using the derived address.
+	senderAcc := k.accountKeeper.GetAccount(ctx, senderAddr)
+	if senderAcc == nil {
+		return nil, nil, fmt.Errorf("account not found for address %s", senderAddr.String())
+	}
+	accountNumber := senderAcc.GetAccountNumber()
+	sequence := senderAcc.GetSequence()
+	chainID := ctx.ChainID()
+
+	cacheCtx, writeFn := ctx.CacheContext()
+	for _, msg := range cronScheduledMsgs {
+		// Convert contract address from bech32.
+		contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+		if err != nil {
+			ctx.Logger().Info("executeSchedule: failed to convert contract address from bech32.", "err", err)
+			return nil, nil, err
+		}
+		// contractAddr := msg.Contract
+		fmt.Printf("contractAddr: %s\n", contractAddr.String())
+
+		encryptedMsg, err := cronkeeper.Encrypt(ctx, &k.cronKeeper, []byte(msg.Msg))
+		// encryptedMsg := msg.Msg
+		if err != nil {
+			ctx.Logger().Info("executeSchedule: failed to decode base64 msg", "err", err)
+			return nil, nil, err
+		}
+		executeMsg := types.MsgExecuteContract{
+			Sender:           senderAddr,
+			Contract:         contractAddr,
+			Msg:              encryptedMsg,
+			SentFunds:        sdk.NewCoins(),
+			CallbackCodeHash: "",
+		}
+
+		// Create a new transaction builder using the shared txConfig.
+		txBuilder := k.cronKeeper.GetTxConfig().NewTxBuilder()
+		if err := txBuilder.SetMsgs(&executeMsg); err != nil {
+			return nil, nil, err
+		}
+		// Set fee and gas (adjust as needed).
+		txBuilder.SetFeeAmount(sdk.NewCoins())
+		txBuilder.SetGasLimit(0)
+
+		// Prepare signer data using the correct account info.
+		signerData := authsigning.SignerData{
+			Address:       senderAddr.String(),
+			ChainID:       chainID,
+			AccountNumber: accountNumber,
+			Sequence:      sequence,
+			PubKey:        pubKey,
+		}
+
+		sigData := signing.SingleSignatureData{
+			SignMode:  signing.SignMode_SIGN_MODE_DIRECT,
+			Signature: nil,
+		}
+
+		sig := signing.SignatureV2{
+			PubKey:   pubKey,
+			Data:     &sigData,
+			Sequence: sequence,
+		}
+
+		sigs := []signing.SignatureV2{sig}
+		if err := txBuilder.SetSignatures(sigs...); err != nil {
+			return nil, nil, err
+		}
+
+		bytesToSign, err := authsigning.GetSignBytesAdapter(ctx, k.cronKeeper.GetTxConfig().SignModeHandler(), signing.SignMode_SIGN_MODE_DIRECT, signerData, txBuilder.GetTx())
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// Sign those bytes
+		sigBytes, err := privKey.Sign(bytesToSign)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// Construct the SignatureV2 struct
+		sigData = signing.SingleSignatureData{
+			SignMode:  signing.SignMode_SIGN_MODE_DIRECT,
+			Signature: sigBytes,
+		}
+		sig = signing.SignatureV2{
+			PubKey:   pubKey,
+			Data:     &sigData,
+			Sequence: sequence,
+		}
+
+		err = txBuilder.SetSignatures(sig)
+		if err != nil {
+			return nil, nil, fmt.Errorf("unable to set signatures on payload: %w", err)
+		}
+
+		txBytes, err := k.cronKeeper.GetTxConfig().TxEncoder()(txBuilder.GetTx())
+		if err != nil {
+			return nil, nil, err
+		}
+
+		cacheCtx = cacheCtx.WithTxBytes(txBytes)
+
+		txBytesList = append(txBytesList, txBytes)
+		executeMsgList = append(executeMsgList, executeMsg)
+
+		// Execute the contract.
+		// _, err = k.Execute(cacheCtx, executeMsg.Contract, executeMsg.Sender, executeMsg.Msg, executeMsg.SentFunds, executeMsg.CallbackSig, wasmTypes.HandleTypeExecute)
+		// if err != nil {
+		// 	ctx.Logger().Info("executeSchedule: failed to execute contract msg",
+		// 		"schedule_name", ExecuteScheduledMsgs.Name,
+		// 		"msg_idx", idx,
+		// 		"msg_contract", msg.Contract,
+		// 		"msg", msg.Msg,
+		// 		"error", err,
+		// 	)
+		// 	return err
+		// }
+	}
+
+	// Commit changes if all messages were executed successfully.
+	writeFn()
+	return executeMsgList, txBytesList, nil
 }
 
 func (k Keeper) containsContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) bool {

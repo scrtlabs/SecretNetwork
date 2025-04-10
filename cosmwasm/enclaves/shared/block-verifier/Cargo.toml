@@ -18,6 +18,7 @@ sgx_trts = {rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://git
 sgx_types = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
+sha2 = "0.10"
 tendermint = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.4", default-features = false, features = ["rust-crypto"] }
 tendermint-proto = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.4", default-features = false }
 tendermint-light-client-verifier = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.4", default-features = false, features = ["rust-crypto"] }
