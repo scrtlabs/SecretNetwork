@@ -116,6 +116,9 @@ import (
 
 	"cosmossdk.io/x/upgrade"
 
+	cronkeeper "github.com/scrtlabs/SecretNetwork/x/cron/keeper"
+	crontypes "github.com/scrtlabs/SecretNetwork/x/cron/types"
+
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
 )
@@ -497,6 +500,14 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	)
 	govKeeper.SetLegacyRouter(govRouter)
 
+	cronKeeper := cronkeeper.NewKeeper(
+		encodingConfig.Codec,
+		keys[crontypes.StoreKey],
+		memKeys[crontypes.StoreKey],
+		authKeeper,
+		authtypes.NewModuleAddress(crontypes.ModuleName).String(),
+	)
+
 	// bank := bankKeeper.
 	// bk := bank.Keeper(bankKeeper)
 
@@ -577,6 +588,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		runtime.NewKVStoreService(keys[wasmtypes.StoreKey]),
 		authKeeper,
 		bankKeeper,
+		*cronKeeper,
 		*govKeeper,
 		distKeeper,
 		mintKeeper,
@@ -1105,8 +1117,9 @@ func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 	require.NoError(t, err)
 
 	randomAndProofBz := append(random, proof...) //nolint:all
+	cronmsgs := []byte{}
 
-	_, _, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
+	_, _, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz, cronmsgs)
 	require.NoError(t, err)
 }
 
