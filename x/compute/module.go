@@ -203,12 +203,11 @@ func (am AppModule) BeginBlock(c context.Context) error {
 		for idx, msg := range execCronMsgs {
 			fmt.Printf("idx, msg: %+v %+v\n", idx, msg)
 			ctx = ctx.WithTxBytes(bytesCronMsgs[idx])
-			res, err := am.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, wasmtypes.HandleTypeExecute)
+			_, err := am.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, wasmtypes.HandleTypeExecute)
 			if err != nil {
 				ctx.Logger().Error("Failed to execute cron message", "error", err)
-				return err
+				// return err
 			}
-			fmt.Printf("res: %+v\n", res)
 		}
 
 		fmt.Printf("setRandomSeed\n")
