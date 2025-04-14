@@ -9,11 +9,10 @@ use core::convert::TryInto;
 use core::ptr::null;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
-    make_sgx_secret_path, ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, COLLATERAL_DCAP_PATH,
-    CONSENSUS_SEED_VERSION, FILE_CERT_COMBINED, FILE_MIGRATION_CERT_LOCAL,
-    FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO,
-    INPUT_ENCRYPTED_SEED_SIZE, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH,
-    SIGNATURE_TYPE,
+    make_sgx_secret_path, CONSENSUS_SEED_VERSION, FILE_ATTESTATION_CERTIFICATE, FILE_CERT_COMBINED,
+    FILE_MIGRATION_CERT_LOCAL, FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS,
+    FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY, INPUT_ENCRYPTED_SEED_SIZE,
+    SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 #[cfg(feature = "random")]
 use enclave_crypto::{
@@ -402,18 +401,17 @@ pub fn save_attestation_combined(
         size_epid = vec_cert.len() as u32;
 
         if !is_migration_report {
-            write_to_untrusted(vec_cert.as_slice(), ATTESTATION_CERT_PATH.as_str()).unwrap();
+            write_to_untrusted(
+                vec_cert.as_slice(),
+                make_sgx_secret_path(FILE_ATTESTATION_CERTIFICATE).as_str(),
+            )
+            .unwrap();
         }
     }
 
     if let Ok((ref vec_quote, ref vec_coll)) = res_dcap {
         size_dcap_q = vec_quote.len() as u32;
         size_dcap_c = vec_coll.len() as u32;
-
-        if !is_migration_report {
-            write_to_untrusted(vec_quote, ATTESTATION_DCAP_PATH.as_str()).unwrap();
-            write_to_untrusted(vec_coll, COLLATERAL_DCAP_PATH.as_str()).unwrap();
-        }
     }
 
     let out_path = make_sgx_secret_path(if is_migration_report {
@@ -528,7 +526,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
                 hex::encode(kp.get_pubkey())
             );
 
-            let mut f_out = match File::create(PUBKEY_PATH.as_str()) {
+            let mut f_out = match File::create(make_sgx_secret_path(FILE_PUBKEY).as_str()) {
                 Ok(f) => f,
                 Err(e) => {
                     error!("failed to create file {}", e);
@@ -937,7 +935,7 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
         }
     }
 
-    if let Ok(f_in) = File::open(MIGRATION_CONSENSUS_PATH.as_str()) {
+    if let Ok(f_in) = File::open(make_sgx_secret_path(FILE_MIGRATION_CONSENSUS).as_str()) {
         if is_export_approved_offchain(f_in, report) {
             println!("Migration is authorized by off-chain (emergency) consensus");
             return true;
