@@ -22,7 +22,7 @@ use enclave_crypto::{
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::key_manager::KeychainMutableData;
 use enclave_utils::pointers::validate_mut_slice;
-use enclave_utils::storage::migrate_all_from_2_17;
+use enclave_utils::storage::{get_key_from_seed, migrate_all_from_2_17};
 use enclave_utils::{validate_const_ptr, validate_mut_ptr, Keychain, KEY_MANAGER};
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
@@ -38,6 +38,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::panic;
+use std::sgxfs::SgxFile;
 use std::slice;
 use tendermint::Hash::Sha256 as tm_Sha256;
 
@@ -684,6 +685,18 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
             println!("Export self target info");
             export_self_target_info()
         }
+        6 => {
+            println!("Generate true random seed for rotation");
+            generate_rot_seed()
+        }
+        7 => {
+            println!("Export rotation seed");
+            export_rot_seed()
+        }
+        8 => {
+            println!("Import rotation seed");
+            import_rot_seed()
+        }
         _ => sgx_status_t::SGX_ERROR_UNEXPECTED,
     }
 }
@@ -970,6 +983,129 @@ fn export_self_target_info() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
+fn get_rot_seed_file_params() -> (String, [u8; 16]) {
+    let kdk = get_key_from_seed("seal.rot_seed".as_bytes());
+    (make_sgx_secret_path("rot_seed.sealed"), kdk)
+}
+
+fn get_rot_seed_encrypted_path() -> String {
+    make_sgx_secret_path("rot_seed_encr.bin")
+}
+
+fn save_rot_seed(rot_seed: &[u8; 32]) {
+    let (path, kdk) = get_rot_seed_file_params();
+    let mut file = SgxFile::create_ex(path, &kdk).unwrap();
+    file.write_all(rot_seed.as_slice()).unwrap();
+}
+
+fn generate_rot_seed() -> sgx_status_t {
+    let mut rot_seed: [u8; 32] = [0; 32];
+
+    if let Err(e) = rsgx_read_rand(&mut rot_seed) {
+        error!("Error generating random: {}", e);
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    };
+
+    save_rot_seed(&rot_seed);
+    println!("New seed generated");
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+fn get_dh_aes_key_from_report(other_report: &sgx_report_body_t, kp: &KeyPair) -> AESKey {
+    let other_pub_k = &other_report.report_data.d[0..32].try_into().unwrap();
+    AESKey::new_from_slice(&kp.diffie_hellman(other_pub_k))
+}
+
+fn get_seed_rot_report() -> SgxResult<sgx_report_body_t> {
+    let next_report = match get_verified_migration_report_body() {
+        Ok(report) => report,
+        Err(e) => {
+            error!("No migration report: {}", e);
+            return Err(e);
+        }
+    };
+
+    if next_report.mr_enclave.m != SELF_REPORT_BODY.mr_enclave.m {
+        println!("Not eligible");
+        return Err(sgx_status_t::SGX_ERROR_NO_PRIVILEGE);
+    }
+
+    Ok(next_report)
+}
+
+fn get_dh_aes_key_from_rot_report() -> SgxResult<AESKey> {
+    match get_seed_rot_report() {
+        Ok(r) => {
+            let kp = Keychain::get_migration_keys();
+            Ok(get_dh_aes_key_from_report(&r, &kp))
+        }
+        Err(e) => Err(e),
+    }
+}
+
+fn export_rot_seed() -> sgx_status_t {
+    let rot_seed = {
+        let (path, kdk) = get_rot_seed_file_params();
+        let mut file = SgxFile::open_ex(path, &kdk).unwrap();
+
+        let mut rot_seed: [u8; 32] = [0; 32];
+
+        file.read_exact(&mut rot_seed).unwrap();
+        rot_seed
+    };
+
+    let aes_key = match get_dh_aes_key_from_rot_report() {
+        Ok(k) => k,
+        Err(e) => return e,
+    };
+
+    let data_encrypted = aes_key.encrypt_siv(&rot_seed, None).unwrap();
+
+    //println!("ecnrypted seed candidate: {}", hex::encode(data_encrypted));
+
+    let mut f_out = File::create(make_sgx_secret_path(&get_rot_seed_encrypted_path())).unwrap();
+    f_out.write_all(&data_encrypted).unwrap();
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+fn import_rot_seed() -> sgx_status_t {
+    let mut f_in = match File::open(get_rot_seed_encrypted_path()) {
+        Err(e) => {
+            error!("can't find encrypted seed: {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+        Ok(f) => f,
+    };
+
+    let mut data_encrypted = Vec::new();
+    f_in.read_to_end(&mut data_encrypted).unwrap();
+
+    let aes_key = match get_dh_aes_key_from_rot_report() {
+        Ok(k) => k,
+        Err(e) => return e,
+    };
+
+    let data_plain = match aes_key.decrypt_siv(&data_encrypted, None) {
+        Ok(res) => res,
+        Err(err) => {
+            error!("Can't decrypt: {}", err);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    if 32 != data_plain.len() {
+        error!("seed len mismatch");
+    }
+
+    let rot_seed: [u8; 32] = data_plain.try_into().unwrap();
+    save_rot_seed(&rot_seed);
+
+    println!("Seed imported");
+    sgx_status_t::SGX_SUCCESS
+}
+
 fn export_local_migration_report() -> sgx_status_t {
     if let Ok(mut f_in) = File::open(make_sgx_secret_path(FILE_MIGRATION_TARGET_INFO)) {
         let mut buffer = vec![0u8; std::mem::size_of::<sgx_target_info_t>()];
@@ -1026,8 +1162,7 @@ fn export_sealed_data() -> sgx_status_t {
     }
 
     let kp = KeyPair::new().unwrap();
-    let other_pub_k = &next_report.report_data.d[0..32].try_into().unwrap();
-    let aes_key = AESKey::new_from_slice(&kp.diffie_hellman(other_pub_k));
+    let aes_key = get_dh_aes_key_from_report(&next_report, &kp);
 
     let mut data_plain = Vec::new();
     KEY_MANAGER.serialize(&mut data_plain).unwrap();
