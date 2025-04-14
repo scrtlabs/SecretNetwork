@@ -1126,18 +1126,6 @@ func (k Keeper) GetScheduledMsgs(ctx sdk.Context, execution_stage crontypes.Exec
 		txBytesList = append(txBytesList, txBytes)
 		executeMsgList = append(executeMsgList, executeMsg)
 
-		// Execute the contract.
-		// _, err = k.Execute(cacheCtx, executeMsg.Contract, executeMsg.Sender, executeMsg.Msg, executeMsg.SentFunds, executeMsg.CallbackSig, wasmTypes.HandleTypeExecute)
-		// if err != nil {
-		// 	ctx.Logger().Info("executeSchedule: failed to execute contract msg",
-		// 		"schedule_name", ExecuteScheduledMsgs.Name,
-		// 		"msg_idx", idx,
-		// 		"msg_contract", msg.Contract,
-		// 		"msg", msg.Msg,
-		// 		"error", err,
-		// 	)
-		// 	return err
-		// }
 	}
 
 	// Commit changes if all messages were executed successfully.
