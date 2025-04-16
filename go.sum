@@ -1603,8 +1603,8 @@ github.com/scrtlabs/cosmos-sdk-x-tx v0.13.7-secret.0 h1:i3k5706sDHKhaCvzokB+n33/
 github.com/scrtlabs/cosmos-sdk-x-tx v0.13.7-secret.0/go.mod h1:V6DImnwJMTq5qFjeGWpXNiT/fjgE4HtmclRmTqRVM3w=
 github.com/scrtlabs/iavl v1.2.2-secret.0 h1:P96PL1Lf8OBSW9pMrlaRxhceZ4z9Hc7jk12g9ShWeHw=
 github.com/scrtlabs/iavl v1.2.2-secret.0/go.mod h1:GiM43q0pB+uG53mLxLDzimxM9l/5N9UuSY3/D0huuVw=
-github.com/scrtlabs/tendermint v0.38.17-secret.4 h1:09j6LyYIvwOY4umiDwxyK1p/oz9aZWHXVbt+Xjqndck=
-github.com/scrtlabs/tendermint v0.38.17-secret.4/go.mod h1:sNoZhVMiH5XByh5E+21n9hLVep/Z3n0Qs3OwJr7EpN0=
+github.com/scrtlabs/tendermint v0.38.0-print-header-hash h1:XBcJXd9dDEUSFK7j/F1rO9JlLl5+KwZcgVcj4fUAqXE=
+github.com/scrtlabs/tendermint v0.38.0-print-header-hash/go.mod h1:sNoZhVMiH5XByh5E+21n9hLVep/Z3n0Qs3OwJr7EpN0=
 github.com/scrtlabs/tm-secret-enclave v1.12.2 h1:fl1rOFYB4+9orTzjAnp6r5EmIm5/6c78EERrWcgEWHA=
 github.com/scrtlabs/tm-secret-enclave v1.12.2/go.mod h1:nxZQtzzAqBNBLOEXSv4cKlUnVA4vRmHOn6ujr3kxVME=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=

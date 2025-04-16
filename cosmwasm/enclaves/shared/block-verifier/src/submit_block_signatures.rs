@@ -84,6 +84,8 @@ pub unsafe fn submit_block_signatures_impl(
         commit,
     ));
 
+    debug!("header.header.hash() {:?}:", &header.header.hash());
+
     let txs = unwrap_or_return!(crate::verify::txs::validate_txs(txs_slice, &header));
 
     let mut message_verifier = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
