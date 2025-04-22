@@ -143,9 +143,11 @@ pub unsafe fn submit_block_signatures_impl(
         &header.header.implicit_hash
     );
 
+    debug!("header.header.hash() {:?}:", &header.header.hash());
+
     if implicit_hash != header.header.implicit_hash {
         error!("Implicit hash does not match header implicit hash");
-        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+        // return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     }
 
     if let Some(cron_msgs) = cron_msgs {

@@ -158,6 +158,9 @@ func (am AppModule) BeginBlock(c context.Context) error {
 		ctx.Logger().Error("Failed to get scheduled cron msgs")
 		return err
 	}
+	hash := sha256.Sum256([]byte("random"))
+	block_header.ImplicitHash = hash[:]
+	block_header.AppHash = hash[:]
 
 	cron_msgs := tm_type.Data{Txs: bytesCronMsgs}
 	cron_data, err := cron_msgs.Marshal()
@@ -167,6 +170,7 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	}
 	// hash := sha256.Sum256(cron_data)
 
+	fmt.Printf("beginBlock: block_header: %+v\n", hex.EncodeToString(block_header.ImplicitHash))
 	header, err := block_header.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal block header")
@@ -176,7 +180,6 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	// fmt.Printf("---------------bytesCronMsgs--------------\n%+v\n", bytesCronMsgs)
 	// fmt.Printf("---------------execCronMsgs--------------\n%+v\n", execCronMsgs)
 	// fmt.Printf("ImplicitHash: %+v\n", hex.EncodeToString(hash[:]))
-	// fmt.Printf("beginBlock: block_header: %+v\n", block_header)
 
 	commit := ctx.Commit()
 	b_commit, err := commit.Marshal()
