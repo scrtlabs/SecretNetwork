@@ -1184,6 +1184,12 @@ pub unsafe extern "C" fn ecall_generate_random(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     };
 
+    // Entropy detection - verify that the generated random bytes have sufficient entropy
+    if !has_sufficient_entropy(&rand_buf) {
+        error!("Generated random value has insufficient entropy");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
     let validator_set_hash = {
         let extra = KEY_MANAGER.extra_data.lock().unwrap();
 
@@ -1195,8 +1201,6 @@ pub unsafe extern "C" fn ecall_generate_random(
             }
         }
     };
-
-    // todo: add entropy detection
 
     let encrypted: Vec<u8> = if let Ok(res) =
         KEY_MANAGER.random_encryption_key.unwrap().encrypt_siv(
@@ -1229,6 +1233,106 @@ pub unsafe extern "C" fn ecall_generate_random(
     // debug!("Calculated proof: {:?}", proof_computed);
 
     sgx_status_t::SGX_SUCCESS
+}
+
+/// Checks whether a buffer has sufficient entropy to be used as a random value
+/// Returns true if the entropy is sufficient, false otherwise
+fn has_sufficient_entropy(buffer: &[u8]) -> bool {
+    // Simple entropy estimation using byte frequency analysis
+    let mut byte_counts = [0u32; 256];
+
+    // Count occurrences of each byte value
+    for &byte in buffer {
+        byte_counts[byte as usize] += 1;
+    }
+
+    // Calculate Shannon entropy
+    let len = buffer.len() as f64;
+    let mut entropy = 0.0;
+
+    for &count in &byte_counts {
+        if count > 0 {
+            let probability = count as f64 / len;
+            entropy -= probability * probability.log2();
+        }
+    }
+
+    // Maximum entropy for a uniform distribution is log2(256) ≈ 8 bits per byte
+    // We'll require at least 7.0 bits of entropy per byte (87.5% of maximum)
+    let entropy_per_byte = entropy / len;
+    let min_acceptable_entropy = 7.0;
+
+    // Add additional heuristic checks
+    let sequential_bytes = has_sequential_bytes(buffer);
+    let repeating_patterns = has_repeating_patterns(buffer);
+
+    // Log the entropy details for debugging
+    debug!(
+        "Random buffer entropy: {:.4} bits per byte (min: {:.4}), sequential bytes: {}, repeating patterns: {}",
+        entropy_per_byte, min_acceptable_entropy, sequential_bytes, repeating_patterns
+    );
+
+    // Return true if entropy is sufficient and no suspicious patterns are found
+    entropy_per_byte >= min_acceptable_entropy && !sequential_bytes && !repeating_patterns
+}
+
+/// Checks if there are sequential bytes in the buffer (like 1,2,3,4...)
+fn has_sequential_bytes(buffer: &[u8]) -> bool {
+    if buffer.len() < 4 {
+        return false;
+    }
+
+    // Check for sequences of at least 4 bytes in a row
+    for window in buffer.windows(4) {
+        if window[1] == window[0] + 1 && window[2] == window[1] + 1 && window[3] == window[2] + 1 {
+            return true;
+        }
+
+        if window[1] == window[0] - 1 && window[2] == window[1] - 1 && window[3] == window[2] - 1 {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Checks if there are repeating patterns in the buffer
+fn has_repeating_patterns(buffer: &[u8]) -> bool {
+    if buffer.len() < 8 {
+        return false;
+    }
+
+    // Check for repeating patterns of 2-byte length
+    for pattern_len in 2..=4 {
+        for i in 0..buffer.len() - pattern_len * 2 {
+            let pattern = &buffer[i..i + pattern_len];
+            let next_pattern = &buffer[i + pattern_len..i + pattern_len * 2];
+
+            if pattern == next_pattern {
+                return true;
+            }
+        }
+    }
+
+    // Check for too many identical bytes
+    let mut max_same_byte_count = 0;
+    let mut current_byte = buffer[0];
+    let mut current_count = 1;
+
+    for &byte in &buffer[1..] {
+        if byte == current_byte {
+            current_count += 1;
+        } else {
+            max_same_byte_count = max_same_byte_count.max(current_count);
+            current_byte = byte;
+            current_count = 1;
+        }
+    }
+
+    max_same_byte_count = max_same_byte_count.max(current_count);
+
+    // If more than 25% of the buffer is the same byte, that's suspicious
+    max_same_byte_count > buffer.len() / 4
 }
 
 /// # Safety
