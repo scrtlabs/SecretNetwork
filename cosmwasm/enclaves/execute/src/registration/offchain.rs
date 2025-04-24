@@ -939,7 +939,7 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
 
     if let Ok(f_in) = File::open(MIGRATION_CONSENSUS_PATH.as_str()) {
         if is_export_approved_offchain(f_in, report) {
-            println!("Migration is authorized by off-chain (emergency) consensus");
+            println!("Migration is authorized by off-chain (Emergency) consensus");
             return true;
         }
     }
