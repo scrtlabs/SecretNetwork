@@ -1,4 +1,4 @@
-FROM rust:1.83.0-slim-bullseye
+FROM rust:1.86.0-slim-bookworm
 
 RUN rustup target add wasm32-unknown-unknown
 RUN apt update && apt install -y binaryen clang && rm -rf /var/lib/apt/lists/*
@@ -9,7 +9,7 @@ ENTRYPOINT ["/bin/bash", "-c", "\
     RUSTFLAGS='-C link-arg=-s' cargo build --release --lib --target wasm32-unknown-unknown --locked && \
     (mkdir -p ./optimized-wasm/ && rm -f ./optimized-wasm/* && cp ./target/wasm32-unknown-unknown/release/*.wasm ./optimized-wasm/) && \
     for w in ./optimized-wasm/*.wasm; do \
-        wasm-opt -Oz $w -o $w ; \
+        wasm-opt -Oz $w -o $w --all-features ; \
     done && \
     (cd ./optimized-wasm && gzip -n -9 -f *) \
 "]
