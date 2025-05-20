@@ -5,6 +5,7 @@ use std::collections::HashMap;
 lazy_static::lazy_static! {
     /// Current hardcoded contract admins
     static ref HARDCODED_CONTRACT_ADMINS: HashMap<&'static str, &'static str> = HashMap::from([
+        ("secret1hg83qtpn0444k7shhmuawhykklycd7qt24z34g", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
         ("secret1jr05klxup5285wv2w24x3rs6rr37c8fyz39evd", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
         ("secret1my2ycry070nsgugw67k4ej93ttsgut5yd8xnhj", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
         ("secret1rekrj69d9kl7p5gpcq7d0qrwdrw0hmszrv5hy3", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
