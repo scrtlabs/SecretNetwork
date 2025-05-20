@@ -147,6 +147,39 @@ func (m Migrator) Migrate5to6(ctx sdk.Context) error {
 	return err
 }
 
+// migrate6to7 migrates from version 6 to 7. The migration includes setting the admin for shade contracts
+func (m Migrator) Migrate6to7(ctx sdk.Context) error {
+	store := prefix.NewStore(runtime.KVStoreAdapter(m.keeper.storeService.OpenKVStore(ctx)), types.ContractKeyPrefix)
+	iter := store.Iterator(nil, nil)
+	defer iter.Close()
+
+	formatter := message.NewPrinter(language.English)
+	migratedContracts := uint64(0)
+	totalContracts := m.keeper.peekAutoIncrementID(ctx, types.KeyLastInstanceID) - 1
+	previousTime := time.Now().UnixNano()
+	for ; iter.Valid(); iter.Next() {
+		var contractAddress sdk.AccAddress = iter.Key()
+
+		var contractInfo types.ContractInfo
+		m.keeper.cdc.MustUnmarshal(iter.Value(), &contractInfo)
+
+		newAdmin := hardcodedContractAdmins[contractAddress.String()]
+		if newAdmin != "" {
+			contractInfo.Admin = newAdmin
+			contractInfo.AdminProof = make([]byte, 32) // Dummy proof, ignored by enclave
+
+			updatedBz := m.keeper.cdc.MustMarshal(&contractInfo)
+			store.Set(iter.Key(), updatedBz)
+		}
+
+		migratedContracts++
+		logMigrationProgress(ctx, formatter, migratedContracts, totalContracts, previousTime)
+		previousTime = time.Now().UnixNano()
+	}
+
+	return nil
+}
+
 const progressPartSize = 1000
 
 func logMigrationProgress(ctx sdk.Context, formatter *message.Printer, migratedContracts uint64, totalContracts uint64, previousTime int64) {
