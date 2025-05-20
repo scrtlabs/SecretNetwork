@@ -557,7 +557,7 @@ lazy_static::lazy_static! {
     static ref ALLOWED_CONTRACT_CODE_HASH: HashMap<&'static str, &'static str> = HashMap::from([
         ("secret1lvf7ey6p03tt9hqmqf2grscvlwehv55l5r05ls", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 107 (TESTNET) (877 on MAINNET)
         ("secret1m3cgws8u4jytuvfq283hymqku796td5dp427np", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 107 (TESTNET) (877 on MAINNET)
-        ("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek", "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e"), // code id 5
+        ("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek", "af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e"), // code id 5 SSCRT
         ("secret1chsejpk9kfj4vt9ec6xvyguw539gsdtr775us2", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SNOBLEUSDC
         ("secret1e0y9vf4xr9wffyxsvlz35jzl5st2srkdl8frac", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SPICA
         ("secret13lndcagy53wfzh69rtv0dex3a7cks0dv5emwke", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SDYDX
@@ -589,6 +589,7 @@ lazy_static::lazy_static! {
         ("secret1wzqxaa6g6xa27vrwgygex8xurxdjzjtwzlgwy3", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SBLUNA
         ("secret1yafpcu9wpauy5ktymggzk9kmsvmce0hkl9p2h7", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SNLS
         ("secret1ve536yukullq5rm67gdpssm23wynfv9gcqh6xn", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 SBKJ
+        ("secret1s9h6mrp4k9gll4zfv5h78ll68hdq8ml7jrnn20", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 STIA
         ("secret14mzwd0ps5q277l20ly2q3aetqe3ev4m4260gf4", "ad91060456344fc8d8e93c0600a3957b8158605c044b3bef7048510b3157b807"),
         ("secret1k8cge73c3nh32d4u0dsd5dgtmk63shtlrfscj5", "ad91060456344fc8d8e93c0600a3957b8158605c044b3bef7048510b3157b807"),
         ("secret1smmc5k24lcn4j2j8f3w0yaeafga6wmzl0qct03", "ad91060456344fc8d8e93c0600a3957b8158605c044b3bef7048510b3157b807"),
@@ -608,14 +609,14 @@ lazy_static::lazy_static! {
         ("secret1h5d3555tz37crrgl5rppu2np2fhaugq3q8yvv9", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SDOT
         ("secret1n4dp5dk6fufqmaalu9y7pnmk2r0hs7kc66a55f", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SKSM
         ("secret15rxfz2w2tallu9gr9zjxj8wav2lnz4gl9pjccj", "5a085bd8ed89de92b35134ddd12505a602c7759ea25fb5c089ba03c8535b3042"), // code id 563 SMNTA
-        ("secret1vcau4rkn7mvfwl8hf0dqa9p0jr59983e3qqe3z", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
+        ("secret1vcau4rkn7mvfwl8hf0dqa9p0jr59983e3qqe3z", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 sAXL
         ("secret1vkq022x4q8t8kx9de3r84u669l65xnwf2lg3e6", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saUSDC
         ("secret139qfh3nmuzfgwsx2npnmnjl4hrvj3xq5rmq8a0", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saWETH
         ("secret1guyayjwg5f84daaxl7w84skd8naxvq8vz9upqx", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saWBTC
         ("secret19xsac2kstky8nhgvvz257uszt44g0cu6ycd5e4", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saWBNB
         ("secret1t642ayn9rhl5q9vuh4n2jkx0gpa9r6c3sl96te", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"),
         ("secret1c2prkwd8e6ratk42l4vrnwz34knfju6hmp7mg7", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saDAI
-        ("secret1wk5j2cntwg2fgklf0uta3tlkvt87alfj7kepuw", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 sAXL
+        ("secret1wk5j2cntwg2fgklf0uta3tlkvt87alfj7kepuw", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saUSDT
         ("secret1egqlkasa6xe6efmfp9562sfj07lq44z7jngu5k", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saUNI
         ("secret16e230j6qm5u5q30pcc6qv726ae30ak6lzq0zvf", "638a3e1d50175fbcb8373cf801565283e3eb23d88a9b7b7f99fcc5eb1e6b561e"), // code id 877 saFRAX
         ("secret1tqmms5awftpuhalcv5h5mg76fa0tkdz4jv9ex4", "f85b413b547b9460162958bafd51113ac266dac96a84c33b9150f68f045f2641"),
