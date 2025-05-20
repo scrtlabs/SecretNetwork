@@ -13,6 +13,7 @@ replace (
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.2.2-secret.0
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 
+	github.com/zondax/ledger-go => github.com/zondax/ledger-go v1.0.0
 	// avoid v1.66 that has a breaking change for protobuf. That change breaks the compute client.
 	// https://github.com/grpc/grpc-go/issues/7569
 	google.golang.org/grpc => google.golang.org/grpc v1.65.0
