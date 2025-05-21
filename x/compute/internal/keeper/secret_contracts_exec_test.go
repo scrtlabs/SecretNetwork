@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -19,7 +20,6 @@ import (
 	stypes "cosmossdk.io/store/types"
 
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
-	"golang.org/x/exp/slices"
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/stretchr/testify/require"

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -17,8 +18,6 @@ import (
 
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-
-	"golang.org/x/exp/slices"
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/stretchr/testify/require"
