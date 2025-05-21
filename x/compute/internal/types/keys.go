@@ -41,7 +41,7 @@ var (
 	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)
 )
 
-// GetCodeKey constructs the key for retreiving the ID for the WASM code
+// GetCodeKey constructs the key for retrieving the ID for the WASM code
 func GetCodeKey(codeID uint64) []byte {
 	contractIDBz := sdk.Uint64ToBigEndian(codeID)
 	return append(CodeKeyPrefix, contractIDBz...)
