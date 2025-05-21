@@ -2,7 +2,7 @@
 
 #![allow(unused)]
 
-/// These types are are copied over from the cosmwasm_std package, and must be kept in sync with it.
+/// These types are copied over from the cosmwasm_std package, and must be kept in sync with it.
 ///
 /// We copy these types instead of directly depending on them, because we require special versions of serde
 /// inside the enclave, which are different from the versions that cosmwasm_std uses.
