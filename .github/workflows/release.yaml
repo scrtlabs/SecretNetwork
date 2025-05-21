@@ -71,6 +71,7 @@ jobs:
       matrix:
         db_backend: [goleveldb]
     runs-on: ubuntu-20.04
+    if: false
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
@@ -127,6 +128,7 @@ jobs:
 
   build-deb-mainnet-2004:
     runs-on: ubuntu-20.04
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -307,6 +309,7 @@ jobs:
 
   Ubuntu-2004-CLI:
     runs-on: ubuntu-20.04
+    if: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -384,6 +387,7 @@ jobs:
           path: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
 
   check-hw-tool-2004:
+    if: false
     runs-on: ubuntu-20.04
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
@@ -472,13 +476,13 @@ jobs:
     needs: [
         native-build-cli,
         build-deb-testnet,
-        build-deb-testnet-2004,
+        #build-deb-testnet-2004,
         build-deb-mainnet,
-        build-deb-mainnet-2004,
+        #build-deb-mainnet-2004,
         MacOS-ARM64-CLI,
-        Ubuntu-2004-CLI,
+        #Ubuntu-2004-CLI,
         check-hw-tool,
-        check-hw-tool-2004,
+        #check-hw-tool-2004,
         # check-hw-tool-mainnet
       ]
     runs-on: ubuntu-22.04
@@ -499,27 +503,27 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: secretcli-MacOS-arm64
-      - uses: actions/download-artifact@v4
-        with:
-          name: secretcli-Ubuntu-20.04
-      - uses: actions/download-artifact@v4
-        with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-20.04.deb
+      # - uses: actions/download-artifact@v4
+      #   with:
+      #     name: secretcli-Ubuntu-20.04
+      # - uses: actions/download-artifact@v4
+      #   with:
+      #     name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-20.04.deb
       - uses: actions/download-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-22.04.deb
-      - uses: actions/download-artifact@v4
-        with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-20.04.deb
+      # - uses: actions/download-artifact@v4
+      #   with:
+      #     name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-20.04.deb
       - uses: actions/download-artifact@v4
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-22.04.deb
       - uses: actions/download-artifact@v4
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
-      - uses: actions/download-artifact@v4
-        with:
-          name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
+      # - uses: actions/download-artifact@v4
+      #   with:
+      #     name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
       # - uses: actions/download-artifact@v4
       #   with:
       #     name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
@@ -528,14 +532,10 @@ jobs:
         with:
           prerelease: true
           files: |
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-20.04.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-22.04.deb
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
             secretcli-MacOS-arm64
-            secretcli-Ubuntu-20.04
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-20.04.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-22.04.deb
             check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
-            check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
