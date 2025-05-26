@@ -125,6 +125,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     if let Err(_e) = key_manager.create_registration_key() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
+    key_manager.save();
 
     if let Err(status) = write_master_pub_keys(&key_manager) {
         return status;
@@ -266,6 +267,7 @@ pub unsafe extern "C" fn ecall_init_node(
     let mut key_manager = Keychain::new();
 
     key_manager.delete_consensus_seed();
+    key_manager.save();
 
     // Skip the first byte which is the length of the seed
     let mut single_seed_bytes = [0u8; SINGLE_ENCRYPTED_SEED_SIZE];
@@ -340,6 +342,7 @@ pub unsafe extern "C" fn ecall_init_node(
         return status;
     }
 
+    key_manager.save();
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -574,6 +577,7 @@ pub unsafe extern "C" fn ecall_key_gen(
         error!("Failed to create registration key");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     };
+    key_manager.save();
 
     let reg_key = key_manager.get_registration_key();
 

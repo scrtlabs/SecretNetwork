@@ -323,7 +323,9 @@ impl Keychain {
 
     pub fn create_registration_key(&mut self) -> Result<(), CryptoError> {
         match KeyPair::new() {
-            Ok(key) => self.set_registration_key(key),
+            Ok(key) => {
+                self.registration_key = Some(key);
+            }
             Err(err) => return Err(err),
         };
         Ok(())
@@ -397,11 +399,6 @@ impl Keychain {
         })
     }
 
-    pub fn set_registration_key(&mut self, kp: KeyPair) {
-        self.registration_key = Some(kp);
-        self.save();
-    }
-
     pub fn set_consensus_seed_exchange_keypair(&mut self, genesis: KeyPair, current: KeyPair) {
         self.consensus_seed_exchange_keypair = Some(SeedsHolder { genesis, current })
     }
@@ -420,12 +417,10 @@ impl Keychain {
 
     pub fn delete_consensus_seed(&mut self) {
         self.consensus_seed = None;
-        self.save();
     }
 
     pub fn set_consensus_seed(&mut self, genesis: Seed, current: Seed) {
         self.consensus_seed = Some(SeedsHolder { genesis, current });
-        self.save();
         trace!("Consensus seeds set");
     }
 
