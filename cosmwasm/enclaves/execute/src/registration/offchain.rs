@@ -996,18 +996,19 @@ fn get_rot_seed_encrypted_path() -> String {
     make_sgx_secret_path("rot_seed_encr.bin")
 }
 
-fn save_rot_seed(rot_seed: &[u8; 32]) {
+fn save_rot_seed(rot_seed: &enclave_crypto::Seed) {
     let (path, kdk) = get_rot_seed_file_params();
     let mut file = SgxFile::create_ex(path, &kdk).unwrap();
     file.write_all(rot_seed.as_slice()).unwrap();
 }
 
 fn generate_rot_seed() -> sgx_status_t {
-    let mut rot_seed: [u8; 32] = [0; 32];
-
-    if let Err(e) = rsgx_read_rand(&mut rot_seed) {
-        error!("Error generating random: {}", e);
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    let mut rot_seed = match enclave_crypto::Seed::new() {
+        Ok(seed) => seed,
+        Err(e) => {
+            error!("Error generating random: {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
     };
 
     save_rot_seed(&rot_seed);
@@ -1048,23 +1049,25 @@ fn get_dh_aes_key_from_rot_report() -> SgxResult<AESKey> {
     }
 }
 
+fn read_rot_seed() -> enclave_crypto::Seed {
+    let (path, kdk) = get_rot_seed_file_params();
+    let mut file = SgxFile::open_ex(path, &kdk).unwrap();
+
+    let mut seed = enclave_crypto::Seed::default();
+    file.read_exact(seed.as_mut()).unwrap();
+
+    seed
+}
+
 fn export_rot_seed() -> sgx_status_t {
-    let rot_seed = {
-        let (path, kdk) = get_rot_seed_file_params();
-        let mut file = SgxFile::open_ex(path, &kdk).unwrap();
-
-        let mut rot_seed: [u8; 32] = [0; 32];
-
-        file.read_exact(&mut rot_seed).unwrap();
-        rot_seed
-    };
+    let rot_seed = read_rot_seed();
 
     let aes_key = match get_dh_aes_key_from_rot_report() {
         Ok(k) => k,
         Err(e) => return e,
     };
 
-    let data_encrypted = aes_key.encrypt_siv(&rot_seed, None).unwrap();
+    let data_encrypted = aes_key.encrypt_siv(rot_seed.as_slice(), None).unwrap();
 
     //println!("ecnrypted seed candidate: {}", hex::encode(data_encrypted));
 
@@ -1099,11 +1102,13 @@ fn import_rot_seed() -> sgx_status_t {
         }
     };
 
-    if 32 != data_plain.len() {
+    if enclave_crypto::SEED_KEY_SIZE != data_plain.len() {
         error!("seed len mismatch");
     }
 
-    let rot_seed: [u8; 32] = data_plain.try_into().unwrap();
+    let mut rot_seed = enclave_crypto::Seed::default();
+    rot_seed.as_mut().copy_from_slice(&data_plain);
+
     save_rot_seed(&rot_seed);
 
     println!("Seed imported");
