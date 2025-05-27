@@ -1,22 +1,19 @@
 use crate::results::UnwrapOrSgxErrorUnexpected;
-
-use core::mem;
-use core::ptr::null;
-use enclave_crypto::consts::*;
+use core::{mem, ptr::null};
+use enclave_crypto::{consts::*, AESKey, Kdf, SIVEncryptable};
 use lazy_static::lazy_static;
 use log::*;
-use log::{error, info};
 use sgx_types::*;
-use std::env;
-use std::io::{Read, Write};
-use std::os::unix::ffi::OsStrExt;
-use std::path;
-use std::ptr;
-use std::sgxfs::SgxFile;
-use std::slice;
-use std::untrusted::fs;
-use std::untrusted::fs::File;
-use std::untrusted::path::PathEx;
+use std::{
+    env,
+    io::{Read, Write},
+    os::unix::ffi::OsStrExt,
+    path, ptr,
+    ptr::null_mut,
+    sgxfs::SgxFile,
+    slice,
+    untrusted::{fs, fs::File, path::PathEx},
+};
 
 pub fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
     let mut key_request = sgx_types::sgx_key_request_t {
@@ -530,3 +527,145 @@ pub fn test_migration() {
     test_migration_once(50000000); // huge
 }
 */
+
+/////////////////
+// Contract storage recoding
+fn get_next_chunk(p_buf: *mut u8, n_buf: usize, offset: *mut usize) -> SgxResult<(*mut u8, usize)> {
+    unsafe {
+        // Ensure we have at least 4 bytes left for the chunk size
+        if *offset + 4 > n_buf {
+            warn!("Buffer underflow: Not enough bytes for next chunk size");
+            return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
+        }
+
+        // Read chunk size (first 4 bytes as a native-endian u32)
+        let size_bytes = ptr::slice_from_raw_parts_mut(p_buf.add(*offset), 4);
+        let chunk_size = u32::from_ne_bytes(*(size_bytes as *const [u8; 4])) as usize;
+        *offset += 4;
+
+        // Ensure the chunk fits within the buffer
+        if *offset + chunk_size > n_buf {
+            warn!("Buffer underflow: Declared chunk size exceeds remaining buffer");
+            return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
+        }
+
+        // Return a raw pointer to the chunk memory
+        let chunk_ptr = p_buf.add(*offset);
+        *offset += chunk_size;
+
+        Ok((chunk_ptr, chunk_size))
+    }
+}
+
+fn get_next_chunk64(p_buf: *mut u8, n_buf: usize, offset: *mut usize) -> (*mut u8, usize) {
+    unsafe {
+        // Ensure we have at least 8 bytes left for the chunk size
+        if *offset + 8 > n_buf {
+            return (null_mut(), 0);
+        }
+
+        // Read chunk size (first 8 bytes as a native-endian u32)
+        let size_bytes = ptr::slice_from_raw_parts_mut(p_buf.add(*offset), 8);
+        let chunk_size = u64::from_ne_bytes(*(size_bytes as *const [u8; 8])) as usize;
+        *offset += 8;
+
+        // Ensure the chunk fits within the buffer
+        if *offset + chunk_size > n_buf {
+            return (null_mut(), 0);
+        }
+
+        // Return a raw pointer to the chunk memory
+        let chunk_ptr = p_buf.add(*offset);
+        *offset += chunk_size;
+
+        (chunk_ptr, chunk_size)
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug)]
+struct KeyVer2 {
+    magic_prefix: u8, // must be 3
+    contract_key: [u8; 20],
+    magic_1: u64,     // must be 6
+    magic_2: [u8; 6], // must be b"secret"
+    seed_version: u16,
+    encoding_version: u32,
+    data_size: u64,
+}
+
+pub unsafe fn rotate_store(
+    p_buf: *mut u8,
+    n_buf: usize,
+    ikm_current: &AESKey,
+    ikm_next: &AESKey,
+    num_total: &mut u32,
+    num_recoded: &mut u32,
+) -> SgxResult<()> {
+    //println!("******* rotate_store **********");
+
+    let mut offset: usize = 0;
+
+    let (og_key_p, og_key_n) = get_next_chunk(p_buf, n_buf, &mut offset)?;
+    let og_key = slice::from_raw_parts(og_key_p, og_key_n);
+    //println!("og_key = {}", hex::encode(og_key));
+
+    let symm_key_current = ikm_current.derive_key_from_this(og_key);
+    let symm_key_next = ikm_next.derive_key_from_this(og_key);
+
+    while offset < n_buf {
+        *num_total += 1;
+        let (key_p, key_n) = get_next_chunk(p_buf, n_buf, &mut offset)?;
+        let (val_p, val_n) = get_next_chunk(p_buf, n_buf, &mut offset)?;
+
+        // println!(" key = {}", hex::encode(slice::from_raw_parts(key_p, key_n)));
+        // println!(" val_2 = {}", hex::encode(slice::from_raw_parts(val_p, val_n)));
+
+        if key_n >= std::mem::size_of::<KeyVer2>() {
+            let key_parsed: *mut KeyVer2 = key_p as *mut KeyVer2;
+            if (key_n - std::mem::size_of::<KeyVer2>() == (*key_parsed).data_size as usize)
+                && ((*key_parsed).magic_prefix == 3)
+                && ((*key_parsed).magic_1 == 6)
+            {
+                //println!(" contract_key: {}", hex::encode((*key_parsed).contract_key));
+
+                let mut offs_val: usize = 0;
+                let (salt_p, salt_n) = get_next_chunk64(val_p, val_n, &mut offs_val);
+                let (data_p, data_n) = get_next_chunk64(val_p, val_n, &mut offs_val);
+
+                if (data_n > 0) && (salt_n > 0) {
+                    let encryption_salt = slice::from_raw_parts(salt_p, salt_n);
+                    let encrypted_val2 = slice::from_raw_parts_mut(data_p, data_n);
+
+                    // println!("   salt = {}", hex::encode(encryption_salt));
+                    // println!("   data_2 = {}", hex::encode(&encrypted_val2));
+
+                    let encrypted_key = slice::from_raw_parts(
+                        key_p.offset(std::mem::size_of::<KeyVer2>() as isize),
+                        key_n - std::mem::size_of::<KeyVer2>(),
+                    );
+                    // println!("   trying encrypted_key = {}", hex::encode(encrypted_key));
+
+                    let result = symm_key_current
+                        .decrypt_siv(&encrypted_val2, Some(&[encrypted_key, encryption_salt]));
+                    if let Ok(data_plain) = result {
+                        // println!("   data_plain = {}", hex::encode(&data_plain));
+
+                        // re-encode it with the new key. Leave the salt intact
+                        if let Ok(encrypted_val3) = symm_key_next
+                            .encrypt_siv(&data_plain, Some(&[encrypted_key, encryption_salt]))
+                        {
+                            // println!("   data_3 = {}", hex::encode(&encrypted_val3));
+                            if encrypted_val3.len() == encrypted_val2.len() {
+                                encrypted_val2.copy_from_slice(&encrypted_val3);
+                                *num_recoded += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
