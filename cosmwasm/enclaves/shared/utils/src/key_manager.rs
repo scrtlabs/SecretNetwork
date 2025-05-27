@@ -424,6 +424,10 @@ impl Keychain {
         trace!("Consensus seeds set");
     }
 
+    pub fn generate_consensus_ikm_key(seed: &Seed) -> AESKey {
+        seed.derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes())
+    }
+
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
         if !self.is_consensus_seed_set() {
             trace!("Seed not initialized, skipping derivation of enclave keys");
@@ -478,17 +482,11 @@ impl Keychain {
 
         // consensus_state_ikm
 
-        let consensus_state_ikm_genesis = self
-            .consensus_seed
-            .unwrap()
-            .genesis
-            .derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes());
+        let consensus_state_ikm_genesis =
+            Self::generate_consensus_ikm_key(&self.consensus_seed.unwrap().genesis);
 
-        let consensus_state_ikm_current = self
-            .consensus_seed
-            .unwrap()
-            .current
-            .derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes());
+        let consensus_state_ikm_current =
+            Self::generate_consensus_ikm_key(&self.consensus_seed.unwrap().current);
 
         self.set_consensus_state_ikm(consensus_state_ikm_genesis, consensus_state_ikm_current);
 
