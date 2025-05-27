@@ -1003,7 +1003,7 @@ fn save_rot_seed(rot_seed: &enclave_crypto::Seed) {
 }
 
 fn generate_rot_seed() -> sgx_status_t {
-    let mut rot_seed = match enclave_crypto::Seed::new() {
+    let rot_seed = match enclave_crypto::Seed::new() {
         Ok(seed) => seed,
         Err(e) => {
             error!("Error generating random: {}", e);
@@ -1049,18 +1049,31 @@ fn get_dh_aes_key_from_rot_report() -> SgxResult<AESKey> {
     }
 }
 
-fn read_rot_seed() -> enclave_crypto::Seed {
+fn read_rot_seed() -> SgxResult<enclave_crypto::Seed> {
     let (path, kdk) = get_rot_seed_file_params();
-    let mut file = SgxFile::open_ex(path, &kdk).unwrap();
+    let mut file = match SgxFile::open_ex(path, &kdk) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("can't open rot seed file: {}", e);
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+    };
 
     let mut seed = enclave_crypto::Seed::default();
-    file.read_exact(seed.as_mut()).unwrap();
-
-    seed
+    match file.read_exact(seed.as_mut()) {
+        Ok(()) => Ok(seed),
+        Err(e) => {
+            error!("can't read rot seed file: {}", e);
+            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+        }
+    }
 }
 
 fn export_rot_seed() -> sgx_status_t {
-    let rot_seed = read_rot_seed();
+    let rot_seed = match read_rot_seed() {
+        Ok(seed) => seed,
+        Err(e) => return e,
+    };
 
     let aes_key = match get_dh_aes_key_from_rot_report() {
         Ok(k) => k,
