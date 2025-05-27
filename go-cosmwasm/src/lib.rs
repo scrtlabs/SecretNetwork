@@ -15,7 +15,7 @@ use cosmwasm_sgx_vm::{
     create_attestation_report_u, features_from_csv, untrusted_approve_upgrade,
     untrusted_get_encrypted_genesis_seed, untrusted_get_encrypted_seed, untrusted_health_check,
     untrusted_init_bootstrap, untrusted_init_node, untrusted_key_gen, untrusted_migration_op,
-    untrusted_submit_validator_set_evidence, Checksum, CosmCache, Extern,
+    untrusted_rotate_store, untrusted_submit_validator_set_evidence, Checksum, CosmCache, Extern,
 };
 use ctor::ctor;
 pub use db::{db_t, DB};
@@ -858,6 +858,17 @@ pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
             Buffer::from_vec(r.to_vec())
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn rotate_store(p_buf: *mut u8, n_buf: u32) -> bool {
+    if let Err(e) = untrusted_rotate_store(p_buf, n_buf) {
+        error!("rotate_store error: {}", e);
+        return false;
+    }
+
+    clear_error();
+    true
 }
 
 #[no_mangle]

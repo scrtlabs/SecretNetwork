@@ -243,6 +243,8 @@ Buffer query(cache_t *cache,
  */
 void release_cache(cache_t *cache);
 
+bool rotate_store(uint8_t *p_buf, uint32_t n_buf);
+
 TwoBuffers submit_block_signatures(Buffer header,
                                    Buffer commit,
                                    Buffer txs,

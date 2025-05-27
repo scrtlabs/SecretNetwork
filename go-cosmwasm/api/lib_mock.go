@@ -57,6 +57,10 @@ func MigrationOp(op uint32) (bool, error) {
 	return false, nil
 }
 
+func RotateStore(kvs []byte) (bool, error) {
+	return false, nil
+}
+
 func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
 	return false, nil
 }

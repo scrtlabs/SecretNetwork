@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"runtime"
 	"syscall"
+	"unsafe"
 
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
@@ -98,6 +99,24 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 	_, err := C.init_node(pkSlice, seedSlice, apiKeySlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
+	}
+	return true, nil
+}
+
+func RotateStore(kvs []byte) (bool, error) {
+	// avoid buffer copy. We need modification in-place
+	kvSlice := C.Buffer{
+		ptr: (*C.uint8_t)(unsafe.Pointer(&kvs[0])),
+		len: C.ulong(len(kvs)),
+		cap: C.ulong(cap(kvs)),
+	}
+
+	ret, err := C.rotate_store(kvSlice.ptr, u32(kvSlice.len))
+	if err != nil {
+		return false, err
+	}
+	if !ret {
+		return false, errors.New("sealing migration failed")
 	}
 	return true, nil
 }

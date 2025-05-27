@@ -42,6 +42,13 @@ extern "C" {
         opcode: u32,
     ) -> sgx_status_t;
 
+    pub fn ecall_rotate_store(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        p_kv: *mut u8,
+        n_kv: u32,
+    ) -> sgx_status_t;
+
     pub fn ecall_onchain_approve_upgrade(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
@@ -160,6 +167,35 @@ pub fn untrusted_submit_validator_set_evidence(evidence: [u8; 32]) -> SgxResult<
     if ret != sgx_status_t::SGX_SUCCESS {
         return Err(ret);
     }
+
+    Ok(())
+}
+
+pub fn untrusted_rotate_store(p_buf: *mut u8, n_buf: u32) -> SgxResult<()> {
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
+    //info!("Initialized enclave successfully!");
+
+    let eid = enclave.geteid();
+    let mut ret = sgx_status_t::SGX_SUCCESS;
+    let status = unsafe { ecall_rotate_store(eid, &mut ret, p_buf, n_buf) };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if ret != sgx_status_t::SGX_SUCCESS {
+        return Err(ret);
+    }
+
+    // println!("untrusted_rotate_store res: {}", unsafe {
+    //     hex::encode(std::slice::from_raw_parts(p_buf, n_buf as usize))
+    // });
 
     Ok(())
 }

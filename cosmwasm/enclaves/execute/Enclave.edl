@@ -43,6 +43,11 @@ enclave {
             uint32_t opcode
         );
 
+        public sgx_status_t ecall_rotate_store(
+            [in, out, count=kv_len] uint8_t* kv_p,
+            uint32_t kv_len
+        );
+
         public sgx_status_t ecall_onchain_approve_upgrade(
             [in, count=msg_len] const uint8_t* msg,
             uint32_t msg_len

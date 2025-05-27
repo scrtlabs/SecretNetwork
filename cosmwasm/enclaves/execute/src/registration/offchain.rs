@@ -22,8 +22,9 @@ use enclave_crypto::{
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::key_manager::KeychainMutableData;
 use enclave_utils::pointers::validate_mut_slice;
-use enclave_utils::storage::{get_key_from_seed, migrate_all_from_2_17};
+use enclave_utils::storage::{get_key_from_seed, migrate_all_from_2_17, rotate_store};
 use enclave_utils::{validate_const_ptr, validate_mut_ptr, Keychain, KEY_MANAGER};
+
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
@@ -657,6 +658,50 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
     } else {
         warn!("Enclave call ecall_get_genesis_seed panic!");
         sgx_status_t::SGX_ERROR_UNEXPECTED
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ecall_rotate_store(p_buf: *mut u8, n_buf: u32) -> sgx_types::sgx_status_t {
+    validate_const_ptr!(
+        p_buf,
+        n_buf as usize,
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+    );
+
+    let consensus_ikm = match KEY_MANAGER.get_consensus_state_ikm() {
+        Ok(keys) => keys,
+        Err(e) => {
+            error!("no current ikm keys {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    let rot_seed = match read_rot_seed() {
+        Ok(seed) => seed,
+        Err(e) => {
+            return e;
+        }
+    };
+
+    let next_ikm = Keychain::generate_consensus_ikm_key(&rot_seed);
+
+    let mut _num_total: u32 = 0;
+    let mut _num_recoded: u32 = 0;
+
+    match rotate_store(
+        p_buf,
+        n_buf as usize,
+        &consensus_ikm.current,
+        &next_ikm,
+        &mut _num_total,
+        &mut _num_recoded,
+    ) {
+        Ok(()) => {
+            //trace!("------- Total={}, Recoded={}", num_total, num_recoded);
+            sgx_status_t::SGX_SUCCESS
+        }
+        Err(e) => e,
     }
 }
 
