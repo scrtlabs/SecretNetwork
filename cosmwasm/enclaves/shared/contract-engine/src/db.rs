@@ -213,8 +213,8 @@ pub fn read_from_encrypted_state(
     let gas_used_second_read: u64;
     (maybe_plaintext_value, gas_used_second_read) = match read_db(context, &scrambled_field_name) {
         Ok((encrypted_value, gas_used)) => match encrypted_value {
-            Some(plaintext_value) => {
-                match decrypt_value_old(&scrambled_field_name, &plaintext_value, contract_key) {
+            Some(encrypted_data) => {
+                match decrypt_value_old(&scrambled_field_name, &encrypted_data, contract_key) {
                     Ok(plaintext_value) => {
                         let _ = kv_cache.store_in_ro_cache(plaintext_key, &plaintext_value);
                         Ok((Some(plaintext_value), gas_used))
