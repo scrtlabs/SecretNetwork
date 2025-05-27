@@ -158,6 +158,9 @@ func (am AppModule) BeginBlock(c context.Context) error {
 		ctx.Logger().Error("Failed to get scheduled cron msgs")
 		return err
 	}
+	// hash := sha256.Sum256([]byte("random"))
+	// block_header.ImplicitHash = hash[:]
+	// block_header.AppHash = hash[:]
 
 	cron_msgs := tm_type.Data{Txs: bytesCronMsgs}
 	cron_data, err := cron_msgs.Marshal()
@@ -165,18 +168,12 @@ func (am AppModule) BeginBlock(c context.Context) error {
 		ctx.Logger().Error("Failed to marshal cron_msgs")
 		return err
 	}
-	// hash := sha256.Sum256(cron_data)
 
 	header, err := block_header.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal block header")
 		return err
 	}
-
-	// fmt.Printf("---------------bytesCronMsgs--------------\n%+v\n", bytesCronMsgs)
-	// fmt.Printf("---------------execCronMsgs--------------\n%+v\n", execCronMsgs)
-	// fmt.Printf("ImplicitHash: %+v\n", hex.EncodeToString(hash[:]))
-	// fmt.Printf("beginBlock: block_header: %+v\n", block_header)
 
 	commit := ctx.Commit()
 	b_commit, err := commit.Marshal()
@@ -222,8 +219,6 @@ func (am AppModule) BeginBlock(c context.Context) error {
 // EndBlock returns the end blocker for the compute module.
 func (am AppModule) EndBlock(c context.Context) error {
 	ctx := c.(sdk.Context)
-	block_header := ctx.BlockHeader()
-	fmt.Printf("endBlock: block_header: %+v\n", block_header)
 
 	_, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_END_BLOCKER)
 	if err != nil {
@@ -245,7 +240,6 @@ func (am AppModule) EndBlock(c context.Context) error {
 		ctx.Logger().Error("Failed to set implicit hash %+v", err)
 		return err
 	}
-	fmt.Printf("---------------EndBlock--------------\n")
 	return nil
 }
 

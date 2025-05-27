@@ -1,3 +1,4 @@
+use core::convert::TryInto;
 use std::slice;
 
 use sgx_types::sgx_status_t;
@@ -5,7 +6,10 @@ use sgx_types::sgx_status_t;
 use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr, KEY_MANAGER};
 use log::debug;
 use log::error;
+use std::convert::TryFrom;
+use tendermint::signature::Ed25519Signature;
 use tendermint::Hash;
+use tendermint::Signature;
 
 macro_rules! unwrap_or_return {
     ($result:expr) => {
@@ -135,13 +139,6 @@ pub unsafe fn submit_block_signatures_impl(
     let hash_result: [u8; 32] = hash_result.into();
 
     let implicit_hash = tendermint::Hash::Sha256(hash_result);
-
-    debug!("implicit_hash: {:?}", &implicit_hash);
-
-    debug!(
-        "header.header.implicit_hash: {:?}",
-        &header.header.implicit_hash
-    );
 
     if implicit_hash != header.header.implicit_hash {
         error!("Implicit hash does not match header implicit hash");

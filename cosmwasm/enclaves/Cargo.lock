@@ -2097,7 +2097,7 @@ dependencies = [
 [[package]]
 name = "tendermint"
 version = "0.38.0"
-source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.4#fca937579f9348ffb7386217cf0162fe76352bc4"
+source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.9-add-implicit-hash#cd93ead0165d175b3e51a30951cd6a5390cffcdc"
 dependencies = [
  "bytes 1.7.1",
  "digest 0.10.7",
@@ -2129,6 +2129,7 @@ source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.4#fca
 dependencies = [
  "derive_more",
  "flex-error",
+ "log",
  "serde 1.0.205",
  "tendermint",
  "time",
@@ -2137,7 +2138,7 @@ dependencies = [
 [[package]]
 name = "tendermint-proto"
 version = "0.38.0"
-source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.4#fca937579f9348ffb7386217cf0162fe76352bc4"
+source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.9-add-implicit-hash#cd93ead0165d175b3e51a30951cd6a5390cffcdc"
 dependencies = [
  "bytes 1.7.1",
  "flex-error",
