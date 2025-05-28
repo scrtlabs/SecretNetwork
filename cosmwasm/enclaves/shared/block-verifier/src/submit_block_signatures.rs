@@ -122,17 +122,6 @@ pub unsafe fn submit_block_signatures_impl(
         message_verifier.clear();
     }
 
-    for tx in txs.iter() {
-        // doing this a different way makes the code unreadable or requires creating a copy of
-
-        let parsed_tx = unwrap_or_return!(tx_from_bytes(tx.as_slice()).map_err(|_| {
-            error!("Unable to parse tx bytes from proto");
-            sgx_status_t::SGX_ERROR_INVALID_PARAMETER
-        }));
-
-        message_verifier.append_msg_from_tx(parsed_tx);
-    }
-
     let mut hasher = Sha256::new();
     hasher.update(cron_msgs_slice);
     let hash_result = hasher.finalize();
@@ -152,10 +141,19 @@ pub unsafe fn submit_block_signatures_impl(
                 sgx_status_t::SGX_ERROR_INVALID_PARAMETER
             }));
 
-            dbg!(&parsed_cron_msg);
-
             message_verifier.append_msg_from_tx(parsed_cron_msg);
         }
+    }
+
+    for tx in txs.iter() {
+        // doing this a different way makes the code unreadable or requires creating a copy of
+
+        let parsed_tx = unwrap_or_return!(tx_from_bytes(tx.as_slice()).map_err(|_| {
+            error!("Unable to parse tx bytes from proto");
+            sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+        }));
+
+        message_verifier.append_msg_from_tx(parsed_tx);
     }
 
     message_verifier.set_block_info(
