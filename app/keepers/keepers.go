@@ -552,12 +552,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	ak.ComputeKeeper = &computeKeeper
 	wasmHooks.ContractKeeper = ak.ComputeKeeper
 
-	// wasmMsgServer := compute.NewMsgServerImpl(*ak.ComputeKeeper)
-	// fmt.Printf("wasmMsgServer: %+v\n", wasmMsgServer)
-	// ak.CronKeeper.WasmMsgServer = compute.NewCronWasmMsgServerAdapter(wasmMsgServer)
-	// ak.ComputeKeeper.SetCronKeeper(*ak.CronKeeper)
-	// fmt.Printf("ak.CronKeeper.WasmMsgServer: %+v\n", ak.CronKeeper.WasmMsgServer)
-
 	// Compute receive: Switch -> Fee -> Packet Forward -> WASM Hooks
 	var computeStack porttypes.IBCModule
 	computeStack = compute.NewIBCHandler(ak.ComputeKeeper, ak.IbcKeeper.ChannelKeeper, ak.IbcFeeKeeper)

@@ -158,9 +158,6 @@ func (am AppModule) BeginBlock(c context.Context) error {
 		ctx.Logger().Error("Failed to get scheduled cron msgs")
 		return err
 	}
-	// hash := sha256.Sum256([]byte("random"))
-	// block_header.ImplicitHash = hash[:]
-	// block_header.AppHash = hash[:]
 
 	cron_msgs := tm_type.Data{Txs: bytesCronMsgs}
 	cron_data, err := cron_msgs.Marshal()
@@ -198,16 +195,12 @@ func (am AppModule) BeginBlock(c context.Context) error {
 		}
 
 		for idx, msg := range execCronMsgs {
-			fmt.Printf("idx, msg: %+v %+v\n", idx, msg)
 			ctx = ctx.WithTxBytes(bytesCronMsgs[idx])
 			_, err := am.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, wasmtypes.HandleTypeExecute)
 			if err != nil {
 				ctx.Logger().Error("Failed to execute cron message", "error", err)
-				// return err
 			}
 		}
-
-		fmt.Printf("setRandomSeed\n")
 
 		am.keeper.SetRandomSeed(ctx, random, validator_set_evidence)
 	} else {
