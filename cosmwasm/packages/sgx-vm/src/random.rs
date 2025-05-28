@@ -1,6 +1,6 @@
 use sgx_types::*;
 
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
@@ -18,6 +18,8 @@ extern "C" {
         in_encrypted_random_len: u32,
         decrypted_random: &mut [u8; 32],
         next_validator_set_evidence: &mut [u8; 32],
+        in_cron_msgs: *const u8,
+        in_cron_msgs_len: u32,
     ) -> sgx_status_t;
 }
 
@@ -26,7 +28,8 @@ pub fn untrusted_submit_block_signatures(
     commit: &[u8],
     txs: &[u8],
     encrypted_random: &[u8],
-) -> SgxResult<([u8; 32], [u8; 32])>{
+    cron_msgs: &[u8],
+) -> SgxResult<([u8; 32], [u8; 32])> {
     debug!("Hello from just before - untrusted_submit_block_signatures");
 
     const RETRY_LIMIT: i32 = 3;
@@ -36,7 +39,7 @@ pub fn untrusted_submit_block_signatures(
     // this is here so we can
     loop {
         let (retval, decrypted, next_validator_set_evidence, status) =
-            submit_block_signature_impl(header, commit, txs, encrypted_random)?;
+            submit_block_signature_impl(header, commit, txs, encrypted_random, cron_msgs)?;
         if status != sgx_status_t::SGX_SUCCESS {
             return Err(status);
         } else if retval != sgx_status_t::SGX_SUCCESS {
@@ -56,7 +59,7 @@ pub fn untrusted_submit_block_signatures(
                 return Err(retval);
             }
         } else {
-        return Ok((decrypted, next_validator_set_evidence));
+            return Ok((decrypted, next_validator_set_evidence));
         }
     }
 }
@@ -66,7 +69,8 @@ fn submit_block_signature_impl(
     commit: &[u8],
     txs: &[u8],
     encrypted_random: &[u8],
-) -> SgxResult<(sgx_status_t, [u8; 32], [u8; 32], sgx_status_t)>{
+    cron_msgs: &[u8],
+) -> SgxResult<(sgx_status_t, [u8; 32], [u8; 32], sgx_status_t)> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -97,9 +101,16 @@ fn submit_block_signature_impl(
             encrypted_random.as_ptr(),
             encrypted_random.len() as u32,
             &mut random_decrypted,
-            &mut next_validator_set_evidence
+            &mut next_validator_set_evidence,
+            cron_msgs.as_ptr(),
+            cron_msgs.len() as u32,
         )
     };
 
-    Ok((retval, random_decrypted, next_validator_set_evidence, status))
+    Ok((
+        retval,
+        random_decrypted,
+        next_validator_set_evidence,
+        status,
+    ))
 }
