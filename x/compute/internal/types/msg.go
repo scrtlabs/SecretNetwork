@@ -245,3 +245,63 @@ func (msg MsgUpgradeProposalPassed) GetSigners() []sdk.AccAddress {
 	}
 	return []sdk.AccAddress{senderAddr}
 }
+
+func (msg MsgMigrateContractProposal) Route() string {
+	return RouterKey
+}
+
+func (msg MsgMigrateContractProposal) Type() string {
+	return "migrate-contract-proposal"
+}
+
+func (msg MsgMigrateContractProposal) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
+		return errorsmod.Wrap(err, "authority")
+	}
+	if _, err := sdk.AccAddressFromBech32(msg.ContractAddress); err != nil {
+		return errorsmod.Wrap(err, "contract")
+	}
+	return nil
+}
+
+func (msg MsgMigrateContractProposal) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgMigrateContractProposal) GetSigners() []sdk.AccAddress {
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Authority)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{senderAddr}
+}
+
+func (msg MsgSetContractGovernance) Route() string {
+	return RouterKey
+}
+
+func (msg MsgSetContractGovernance) Type() string {
+	return "set-contract-governance"
+}
+
+func (msg MsgSetContractGovernance) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+		return errorsmod.Wrap(err, "sender")
+	}
+	if _, err := sdk.AccAddressFromBech32(msg.ContractAddress); err != nil {
+		return errorsmod.Wrap(err, "contract")
+	}
+	return nil
+}
+
+func (msg MsgSetContractGovernance) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgSetContractGovernance) GetSigners() []sdk.AccAddress {
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{senderAddr}
+}

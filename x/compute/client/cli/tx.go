@@ -52,6 +52,7 @@ func GetTxCmd() *cobra.Command {
 		UpdateContractAdminCmd(),
 		ClearContractAdminCmd(),
 		UpgradeProposalPassedCmd(),
+		SetContractGovernanceCmd(),
 	)
 	return txCmd
 }
@@ -603,5 +604,48 @@ func UpgradeProposalPassedCmd() *cobra.Command {
 	}
 	flags.AddTxFlagsToCmd(cmd)
 
+	return cmd
+}
+
+func SetContractGovernanceCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "set-contract-governance [contract-address] [require-governance]",
+		Short: "Set governance requirement for contract upgrades (admin only)",
+		Long: `Set whether a contract requires governance approval for upgrades. 
+Only the contract admin can execute this command.
+
+Note: This is a one-way operation. Once governance is required (true), 
+it cannot be changed back to false.
+
+Examples:
+  # Enable governance requirement
+  secretd tx compute set-contract-governance secret1abc123... true --from contract-admin
+
+  # This will fail if governance is already enabled:
+  secretd tx compute set-contract-governance secret1abc123... false --from contract-admin`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			contractAddr := args[0]
+			requireGovernance, err := strconv.ParseBool(args[1])
+			if err != nil {
+				return fmt.Errorf("invalid require-governance value '%s', must be true or false", args[1])
+			}
+
+			msg := &types.MsgSetContractGovernance{
+				Sender:            clientCtx.GetFromAddress().String(),
+				ContractAddress:   contractAddr,
+				RequireGovernance: requireGovernance,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
