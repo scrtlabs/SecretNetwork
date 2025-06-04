@@ -34,12 +34,18 @@ var (
 	ContractCodeHistoryElementPrefix               = []byte{0x09}
 	ContractByCodeIDAndCreatedSecondaryIndexPrefix = []byte{0x0A}
 	ParamsKey                                      = []byte{0x0B}
+	UpgradeAuthPrefix                              = []byte{0x0C}
 	RandomPrefix                                   = []byte{0xFF}
 	ValidatorSetEvidencePrefix                     = []byte{0xFE}
 
 	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
 	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)
 )
+
+// GetUpgradeAuthKey creates the key for upgrade authorization storage
+func GetUpgradeAuthKey(contractAddr string) []byte {
+	return append(UpgradeAuthPrefix, []byte(contractAddr)...)
+}
 
 // GetCodeKey constructs the key for retreiving the ID for the WASM code
 func GetCodeKey(codeID uint64) []byte {

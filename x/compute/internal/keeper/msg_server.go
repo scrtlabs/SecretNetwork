@@ -6,6 +6,7 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
@@ -222,4 +223,85 @@ func (m msgServer) UpgradeProposalPassed(goCtx context.Context, msg *types.MsgUp
 	}
 
 	return &types.MsgUpgradeProposalPassedResponse{}, nil
+}
+
+func (m msgServer) MigrateContractProposal(goCtx context.Context, msg *types.MsgMigrateContractProposal) (*types.MsgMigrateContractProposalResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	// Verify sender has authority (only governance module should call this)
+	if m.keeper.authority != msg.Authority {
+		return nil, errorsmod.Wrapf(govtypes.ErrInvalidSigner, "invalid authority; expected %s, got %s", m.keeper.authority, msg.Authority)
+	}
+
+	contractAddr, err := sdk.AccAddressFromBech32(msg.ContractAddress)
+	if err != nil {
+		return nil, errorsmod.Wrap(err, "contract")
+	}
+	// Store the authorized upgrade
+	m.keeper.SetAuthorizedUpgrade(ctx, msg.ContractAddress, msg.NewCodeId)
+	err = m.keeper.UpdateContractGovernanceRequirement(ctx, contractAddr, true)
+	if err != nil {
+		return nil, errorsmod.Wrap(err, "updating contract governance requirement")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeMigrateContractProposal,
+		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.ContractAddress),
+		sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", msg.NewCodeId)),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
+	))
+
+	return &types.MsgMigrateContractProposalResponse{}, nil
+}
+
+func (m msgServer) SetContractGovernance(goCtx context.Context, msg *types.MsgSetContractGovernance) (*types.MsgSetContractGovernanceResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	_, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, errorsmod.Wrap(err, "sender")
+	}
+
+	contractAddr, err := sdk.AccAddressFromBech32(msg.ContractAddress)
+	if err != nil {
+		return nil, errorsmod.Wrap(err, "contract")
+	}
+
+	// Get contract info to check permissions and current state
+	contractInfo := m.keeper.GetContractInfo(ctx, contractAddr)
+	if contractInfo == nil {
+		return nil, errorsmod.Wrap(types.ErrNotFound, "contract")
+	}
+
+	// Check if sender is contract admin
+	if contractInfo.Admin != msg.Sender {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("only contract admin can change governance requirement")
+	}
+
+	// One-way ratchet: can only change false → true, never true → false
+	if contractInfo.RequireGovernance && !msg.RequireGovernance {
+		return nil, sdkerrors.ErrUnauthorized.Wrap("cannot disable governance requirement once enabled")
+	}
+	// Update the governance requirement
+	if err := m.keeper.UpdateContractGovernanceRequirement(ctx, contractAddr, msg.RequireGovernance); err != nil {
+		return nil, err
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.ContractAddress),
+		sdk.NewAttribute("require_governance", fmt.Sprintf("%t", msg.RequireGovernance)),
+	))
+
+	return &types.MsgSetContractGovernanceResponse{}, nil
 }
