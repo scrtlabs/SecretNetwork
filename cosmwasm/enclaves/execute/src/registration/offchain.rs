@@ -746,6 +746,10 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
             println!("Import rotation seed");
             import_rot_seed()
         }
+        9 => {
+            println!("Apply rotation seed");
+            apply_rot_seed()
+        }
         _ => sgx_status_t::SGX_ERROR_UNEXPECTED,
     }
 }
@@ -1170,6 +1174,29 @@ fn import_rot_seed() -> sgx_status_t {
     save_rot_seed(&rot_seed);
 
     println!("Seed imported");
+    sgx_status_t::SGX_SUCCESS
+}
+
+fn apply_rot_seed() -> sgx_status_t {
+    let rot_seed = {
+        let (path, kdk) = get_rot_seed_file_params();
+        let mut file = SgxFile::open_ex(path, &kdk).unwrap();
+
+        let mut rot_seed: [u8; 32] = [0; 32];
+
+        file.read_exact(&mut rot_seed).unwrap();
+        rot_seed
+    };
+
+    let mut key_manager = Keychain::new();
+    let seeds = key_manager.get_consensus_seed().unwrap();
+
+    let mut rs2 = enclave_crypto::Seed::default();
+    rs2.as_mut().copy_from_slice(&rot_seed);
+
+    key_manager.set_consensus_seed(seeds.genesis, rs2);
+    key_manager.save();
+
     sgx_status_t::SGX_SUCCESS
 }
 
