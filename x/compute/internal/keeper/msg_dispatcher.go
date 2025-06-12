@@ -87,13 +87,17 @@ func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr
 	defer func() {
 		if r := recover(); r != nil {
 			// if it's not an OutOfGas error, raise it again
-			if _, ok := r.(storetypes.ErrorOutOfGas); !ok {
+			if _, ok := r.(storetypes.ErrorOutOfGas); ok {
+				ctx.GasMeter().ConsumeGas(gasLimit, "Sub-Message OutOfGas panic")
+				err = sdkerrors.ErrOutOfGas.Wrap("SubMsg hit gas limit")
+			} else {
+				// if it's not an ErrorOutOfGas, consume the gas used in the sub-context and raise it again
+				spent := subCtx.GasMeter().GasConsumed()
+				ctx.GasMeter().ConsumeGas(spent, "From limited Sub-Message")
 				// log it to get the original stack trace somewhere (as panic(r) keeps message but stacktrace to here
 				moduleLogger(ctx).Info("SubMsg rethrowing panic: %#v", r)
 				panic(r)
 			}
-			ctx.GasMeter().ConsumeGas(gasLimit, "Sub-Message OutOfGas panic")
-			err = sdkerrors.ErrOutOfGas.Wrap("SubMsg hit gas limit")
 		}
 	}()
 	events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg)
