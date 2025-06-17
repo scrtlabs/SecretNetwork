@@ -620,7 +620,7 @@ it cannot be changed back to false.
 Examples:
   # Enable governance requirement
   secretd tx compute set-contract-governance secret1abc123... --from contract-admin`,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
