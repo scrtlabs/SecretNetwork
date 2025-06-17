@@ -2018,14 +2018,14 @@ func (k Keeper) ConsumeAuthorizedMigration(ctx sdk.Context, contractAddr string)
 	}
 }
 
-// UpdateContractGovernanceRequirement updates the require_governance field
-func (k Keeper) UpdateContractGovernanceRequirement(ctx sdk.Context, contractAddr sdk.AccAddress, requireGovernance bool) error {
+// UpdateContractGovernanceRequirement set true to the require_governance field
+func (k Keeper) SetContractGovernanceRequirement(ctx sdk.Context, contractAddr sdk.AccAddress) error {
 	contractInfo := k.GetContractInfo(ctx, contractAddr)
 	if contractInfo == nil {
 		return errorsmod.Wrap(types.ErrNotFound, "contract")
 	}
 
-	contractInfo.RequireGovernance = requireGovernance
+	contractInfo.RequireGovernance = true
 	k.setContractInfo(ctx, contractAddr, contractInfo)
 
 	return nil

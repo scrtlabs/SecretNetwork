@@ -1217,7 +1217,7 @@ var (
 
 	pattern_Query_Params_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"compute", "v1beta1", "params"}, "", runtime.AssumeColonVerbOpt(false)))
 
-	pattern_Query_AuthorizedMigration_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"compute", "v1beta1", "authorized_upgrade", "contract_address"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Query_AuthorizedMigration_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"compute", "v1beta1", "authorized_migration", "contract_address"}, "", runtime.AssumeColonVerbOpt(false)))
 )
 
 var (
