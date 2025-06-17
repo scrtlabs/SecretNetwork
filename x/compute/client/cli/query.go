@@ -52,7 +52,7 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdCodeHashByCodeID(),
 		GetCmdDecryptText(),
 		GetCmdGetContractHistory(),
-		GetCmdQueryAuthorizedUpgrade(),
+		GetCmdQueryAuthorizedMigration(),
 	)
 	return queryCmd
 }
@@ -654,15 +654,15 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 	return cmd
 }
 
-func GetCmdQueryAuthorizedUpgrade() *cobra.Command {
+func GetCmdQueryAuthorizedMigration() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "authorized-upgrade [contract-address]",
-		Short: "Query authorized upgrade for a contract",
-		Long: `Query whether a contract has an authorized upgrade and what code ID and migrate message are authorized.
+		Use:   "authorized-migration [contract-address]",
+		Short: "Query authorized migration for a contract",
+		Long: `Query whether a contract has an authorized migration and what code ID and migrate message are authorized.
 
 Examples:
-  # Check if contract has authorized upgrade
-  secretcli query compute authorized-upgrade secret1sscrt123...`,
+  # Check if contract has authorized migration
+  secretcli query compute authorized-migration secret1sscrt123...`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx := client.GetClientContextFromCmd(cmd)
@@ -670,7 +670,7 @@ Examples:
 
 			contractAddr := args[0]
 
-			res, err := queryClient.AuthorizedUpgrade(context.Background(), &types.QueryAuthorizedUpgradeRequest{
+			res, err := queryClient.AuthorizedMigration(context.Background(), &types.QueryAuthorizedMigrationRequest{
 				ContractAddress: contractAddr,
 			})
 			if err != nil {
