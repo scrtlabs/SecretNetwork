@@ -237,23 +237,24 @@ func (m msgServer) MigrateContractProposal(goCtx context.Context, msg *types.Msg
 		return nil, errorsmod.Wrapf(govtypes.ErrInvalidSigner, "invalid authority; expected %s, got %s", m.keeper.authority, msg.Authority)
 	}
 
-	contractAddr, err := sdk.AccAddressFromBech32(msg.ContractAddress)
-	if err != nil {
-		return nil, errorsmod.Wrap(err, "contract")
+	for _, contract := range msg.Contracts {
+		contractAddr, err := sdk.AccAddressFromBech32(contract.Address)
+		if err != nil {
+			return nil, errorsmod.Wrap(err, "contract")
+		}
+		// Store the authorized migration
+		m.keeper.SetAuthorizedMigration(ctx, contract.Address, contract.NewCodeId)
+		err = m.keeper.UpdateContractGovernanceRequirement(ctx, contractAddr, true)
+		if err != nil {
+			return nil, errorsmod.Wrap(err, "updating contract governance requirement")
+		}
+		ctx.EventManager().EmitEvent(sdk.NewEvent(
+			types.EventTypeMigrateContractProposal,
+			sdk.NewAttribute(types.AttributeKeyContractAddr, contract.Address),
+			sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", contract.NewCodeId)),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
+		))
 	}
-	// Store the authorized upgrade
-	m.keeper.SetAuthorizedUpgrade(ctx, msg.ContractAddress, msg.NewCodeId)
-	err = m.keeper.UpdateContractGovernanceRequirement(ctx, contractAddr, true)
-	if err != nil {
-		return nil, errorsmod.Wrap(err, "updating contract governance requirement")
-	}
-
-	ctx.EventManager().EmitEvent(sdk.NewEvent(
-		types.EventTypeMigrateContractProposal,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.ContractAddress),
-		sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", msg.NewCodeId)),
-		sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
-	))
 
 	return &types.MsgMigrateContractProposalResponse{}, nil
 }

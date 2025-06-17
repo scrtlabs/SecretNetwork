@@ -218,8 +218,8 @@ func (q GrpcQuerier) Params(c context.Context, _ *types.ParamsRequest) (*types.P
 	}, nil
 }
 
-// AuthorizedUpgrade returns the authorized upgrade info for a contract
-func (q GrpcQuerier) AuthorizedUpgrade(c context.Context, req *types.QueryAuthorizedUpgradeRequest) (*types.QueryAuthorizedUpgradeResponse, error) {
+// AuthorizedMigration returns the authorized migration info for a contract
+func (q GrpcQuerier) AuthorizedMigration(c context.Context, req *types.QueryAuthorizedMigrationRequest) (*types.QueryAuthorizedMigrationResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
@@ -235,10 +235,10 @@ func (q GrpcQuerier) AuthorizedUpgrade(c context.Context, req *types.QueryAuthor
 		return nil, status.Error(codes.InvalidArgument, "invalid contract address")
 	}
 
-	// Check for authorized upgrade
-	codeID, hasAuth := q.keeper.GetAuthorizedUpgrade(ctx, req.ContractAddress)
+	// Check for authorized migration
+	codeID, hasAuth := q.keeper.GetAuthorizedMigration(ctx, req.ContractAddress)
 
-	response := &types.QueryAuthorizedUpgradeResponse{}
+	response := &types.QueryAuthorizedMigrationResponse{}
 	if hasAuth {
 		response.NewCodeID = codeID
 	}

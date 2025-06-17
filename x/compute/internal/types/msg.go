@@ -258,8 +258,10 @@ func (msg MsgMigrateContractProposal) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
 		return errorsmod.Wrap(err, "authority")
 	}
-	if _, err := sdk.AccAddressFromBech32(msg.ContractAddress); err != nil {
-		return errorsmod.Wrap(err, "contract")
+	for _, contract := range msg.Contracts {
+		if _, err := sdk.AccAddressFromBech32(contract.Address); err != nil {
+			return errorsmod.Wrap(err, "contract")
+		}
 	}
 	return nil
 }

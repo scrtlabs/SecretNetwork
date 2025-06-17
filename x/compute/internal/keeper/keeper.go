@@ -1648,7 +1648,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if contractInfo.Admin == "" && !contractInfo.RequireGovernance {
 		return nil, errorsmod.Wrap(types.ErrMigrationFailed, "contract is not upgradable")
 	}
-	codeID, found := k.GetAuthorizedUpgrade(ctx, contractAddress.String())
+	codeID, found := k.GetAuthorizedMigration(ctx, contractAddress.String())
 	if contractInfo.RequireGovernance {
 		if !found {
 			return nil, errorsmod.Wrap(types.ErrMigrationFailed, "requires governance approval for migration")
@@ -1719,7 +1719,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	k.setContractInfo(ctx, contractAddress, &contractInfo)
 
 	if contractInfo.RequireGovernance && found {
-		k.ConsumeAuthorizedUpgrade(ctx, contractAddress.String())
+		k.ConsumeAuthorizedMigration(ctx, contractAddress.String())
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -1827,23 +1827,23 @@ func (k Keeper) GetAuthority() string {
 }
 
 // Store upgrade authorization
-func (k Keeper) SetAuthorizedUpgrade(ctx sdk.Context, contractAddr string, newCodeID uint64) {
+func (k Keeper) SetAuthorizedMigration(ctx sdk.Context, contractAddr string, newCodeID uint64) {
 	store := k.storeService.OpenKVStore(ctx)
 	key := types.GetUpgradeAuthKey(contractAddr)
 	value := sdk.Uint64ToBigEndian(newCodeID)
 	err := store.Set(key, value)
 	if err != nil {
-		ctx.Logger().Error("SetAuthorizedUpgrade:", err.Error())
+		ctx.Logger().Error("SetAuthorizedMigration:", err.Error())
 	}
 }
 
 // Get upgrade authorization
-func (k Keeper) GetAuthorizedUpgrade(ctx sdk.Context, contractAddr string) (uint64, bool) {
+func (k Keeper) GetAuthorizedMigration(ctx sdk.Context, contractAddr string) (uint64, bool) {
 	store := k.storeService.OpenKVStore(ctx)
 	key := types.GetUpgradeAuthKey(contractAddr)
 	bz, err := store.Get(key)
 	if err != nil {
-		ctx.Logger().Error("GetAuthorizedUpgrade:", err.Error())
+		ctx.Logger().Error("GetAuthorizedMigration:", err.Error())
 		return 0, false
 	}
 	if bz == nil {
@@ -1853,12 +1853,12 @@ func (k Keeper) GetAuthorizedUpgrade(ctx sdk.Context, contractAddr string) (uint
 }
 
 // Consume (delete) authorization after use
-func (k Keeper) ConsumeAuthorizedUpgrade(ctx sdk.Context, contractAddr string) {
+func (k Keeper) ConsumeAuthorizedMigration(ctx sdk.Context, contractAddr string) {
 	store := k.storeService.OpenKVStore(ctx)
 	key := types.GetUpgradeAuthKey(contractAddr)
 	err := store.Delete(key)
 	if err != nil {
-		ctx.Logger().Error("ConsumeAuthorizedUpgrade:", err.Error())
+		ctx.Logger().Error("ConsumeAuthorizedMigration:", err.Error())
 	}
 }
 
