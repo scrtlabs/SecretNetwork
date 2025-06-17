@@ -244,7 +244,7 @@ func (m msgServer) MigrateContractProposal(goCtx context.Context, msg *types.Msg
 		}
 		// Store the authorized migration
 		m.keeper.SetAuthorizedMigration(ctx, contract.Address, contract.NewCodeId)
-		err = m.keeper.UpdateContractGovernanceRequirement(ctx, contractAddr, true)
+		err = m.keeper.SetContractGovernanceRequirement(ctx, contractAddr)
 		if err != nil {
 			return nil, errorsmod.Wrap(err, "updating contract governance requirement")
 		}
@@ -288,11 +288,8 @@ func (m msgServer) SetContractGovernance(goCtx context.Context, msg *types.MsgSe
 	}
 
 	// One-way ratchet: can only change false → true, never true → false
-	if contractInfo.RequireGovernance && !msg.RequireGovernance {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("cannot disable governance requirement once enabled")
-	}
 	// Update the governance requirement
-	if err := m.keeper.UpdateContractGovernanceRequirement(ctx, contractAddr, msg.RequireGovernance); err != nil {
+	if err := m.keeper.SetContractGovernanceRequirement(ctx, contractAddr); err != nil {
 		return nil, err
 	}
 
@@ -301,7 +298,7 @@ func (m msgServer) SetContractGovernance(goCtx context.Context, msg *types.MsgSe
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.ContractAddress),
-		sdk.NewAttribute("require_governance", fmt.Sprintf("%t", msg.RequireGovernance)),
+		sdk.NewAttribute("require_governance", fmt.Sprintf("%t", true)),
 	))
 
 	return &types.MsgSetContractGovernanceResponse{}, nil
