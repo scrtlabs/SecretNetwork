@@ -2,6 +2,7 @@ package types
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/scrtlabs/SecretNetwork/x/cron/types"
 
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
@@ -22,4 +23,8 @@ type ChannelKeeper interface {
 	GetAllChannels(ctx sdk.Context) (channels []channeltypes.IdentifiedChannel)
 	IterateChannels(ctx sdk.Context, cb func(channeltypes.IdentifiedChannel) bool)
 	SetChannel(ctx sdk.Context, portID, channelID string, channel channeltypes.Channel)
+}
+
+type CronKeeper interface {
+	GetScheduledMsgs(ctx sdk.Context) []types.MsgExecuteContract
 }

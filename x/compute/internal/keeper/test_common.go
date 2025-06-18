@@ -51,6 +51,7 @@ import (
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
 	// tmenclave "github.com/scrtlabs/tm-secret-enclave"
 
 	dbm "github.com/cosmos/cosmos-db"
@@ -115,6 +116,9 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"cosmossdk.io/x/upgrade"
+
+	cronkeeper "github.com/scrtlabs/SecretNetwork/x/cron/keeper"
+	crontypes "github.com/scrtlabs/SecretNetwork/x/cron/types"
 
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
@@ -497,6 +501,14 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	)
 	govKeeper.SetLegacyRouter(govRouter)
 
+	cronKeeper := cronkeeper.NewKeeper(
+		encodingConfig.Codec,
+		keys[crontypes.StoreKey],
+		memKeys[crontypes.StoreKey],
+		authKeeper,
+		authtypes.NewModuleAddress(crontypes.ModuleName).String(),
+	)
+
 	// bank := bankKeeper.
 	// bk := bank.Keeper(bankKeeper)
 
@@ -577,6 +589,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		runtime.NewKVStoreService(keys[wasmtypes.StoreKey]),
 		authKeeper,
 		bankKeeper,
+		*cronKeeper,
 		*govKeeper,
 		distKeeper,
 		mintKeeper,
@@ -1105,9 +1118,10 @@ func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 	random, proof, err := tmenclave.GetRandom(blockHeader.AppHash, uint64(blockHeader.Height))
 	require.NoError(t, err)
 
-	randomAndProofBz := append(random, proof...)
+	randomAndProofBz := append(random, proof...) //nolint:all
+	cronmsgs := []byte{}
 
-	_, _, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
+	_, _, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz, cronmsgs)
 	require.NoError(t, err)
 }*/
 

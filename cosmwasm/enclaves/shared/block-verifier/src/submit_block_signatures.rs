@@ -1,3 +1,4 @@
+use core::convert::TryInto;
 use std::slice;
 
 use sgx_types::sgx_status_t;
@@ -5,6 +6,10 @@ use sgx_types::sgx_status_t;
 use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr, KEY_MANAGER};
 use log::debug;
 use log::error;
+use std::convert::TryFrom;
+use tendermint::signature::Ed25519Signature;
+use tendermint::Hash;
+use tendermint::Signature;
 
 macro_rules! unwrap_or_return {
     ($result:expr) => {
@@ -17,6 +22,8 @@ macro_rules! unwrap_or_return {
 
 use crate::txs::tx_from_bytes;
 use crate::wasm_messages::VERIFIED_BLOCK_MESSAGES;
+
+use sha2::{Digest, Sha256};
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
 const MAX_BLOCK_DATA_LENGTH: u32 = 22_020_096; // 21 MiB = max block size
@@ -37,6 +44,8 @@ pub unsafe fn submit_block_signatures_impl(
     in_encrypted_random_len: u32,
     decrypted_random: &mut [u8; 32],
     next_validator_set_evidence: &mut [u8; 32],
+    in_cron_msgs: *const u8,
+    in_cron_msgs_len: u32,
 ) -> sgx_status_t {
     if let Err(e) = validate_inputs(
         in_header,
@@ -58,6 +67,12 @@ pub unsafe fn submit_block_signatures_impl(
     // todo: from_raw_parts caused a crash when txs was empty. Investigate and see if this still happens
     let txs_slice = if in_txs_len != 0 && !in_txs.is_null() {
         slice::from_raw_parts(in_txs, in_txs_len as usize)
+    } else {
+        &[]
+    };
+
+    let cron_msgs_slice = if in_cron_msgs_len != 0 && !in_cron_msgs.is_null() {
+        slice::from_raw_parts(in_cron_msgs, in_cron_msgs_len as usize)
     } else {
         &[]
     };
@@ -86,11 +101,48 @@ pub unsafe fn submit_block_signatures_impl(
 
     let txs = unwrap_or_return!(crate::verify::txs::validate_txs(txs_slice, &header));
 
+    let cron_msgs = if cron_msgs_slice.len() > 0 {
+        let msgs = crate::txs::txs_from_bytes(cron_msgs_slice).map_err(|e| {
+            error!("Error parsing cron msgs from proto: {:?}", e);
+            sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+        });
+        if msgs.is_err() {
+            error!("Error parsing cron msgs from proto: {:?}", msgs);
+            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+        }
+        Some(msgs.unwrap())
+    } else {
+        None
+    };
+
     let mut message_verifier = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
 
     if message_verifier.remaining() != 0 {
         // new block, clear messages
         message_verifier.clear();
+    }
+
+    let mut hasher = Sha256::new();
+    hasher.update(cron_msgs_slice);
+    let hash_result = hasher.finalize();
+    let hash_result: [u8; 32] = hash_result.into();
+
+    let implicit_hash = tendermint::Hash::Sha256(hash_result);
+
+    if implicit_hash != header.header.implicit_hash {
+        error!("Implicit hash does not match header implicit hash");
+        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+    }
+
+    if let Some(cron_msgs) = cron_msgs {
+        for msg in cron_msgs {
+            let parsed_cron_msg = unwrap_or_return!(tx_from_bytes(msg.as_slice()).map_err(|_| {
+                error!("Unable to parse tx bytes from proto");
+                sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+            }));
+
+            message_verifier.append_msg_from_tx(parsed_cron_msg);
+        }
     }
 
     for tx in txs.iter() {

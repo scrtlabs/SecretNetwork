@@ -39,6 +39,8 @@ import (
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
+	"github.com/scrtlabs/SecretNetwork/x/cron"
+	crontypes "github.com/scrtlabs/SecretNetwork/x/cron/types"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
@@ -55,6 +57,7 @@ var ModuleAccountPermissions = map[string][]string{
 	ibcfeetypes.ModuleName:         nil,
 	ibcswitch.ModuleName:           nil,
 	compute.ModuleName:             {authtypes.Burner},
+	crontypes.ModuleName:           nil,
 }
 
 func Modules(
@@ -88,5 +91,6 @@ func Modules(
 		packetforward.NewAppModule(app.AppKeepers.PacketForwardKeeper, app.AppKeepers.GetSubspace(packetforwardtypes.ModuleName)),
 		ibcfee.NewAppModule(app.AppKeepers.IbcFeeKeeper),
 		ibcswitch.NewAppModule(app.AppKeepers.IbcSwitchKeeper, app.AppKeepers.GetSubspace(ibcswitch.ModuleName)),
+		cron.NewAppModule(app.appCodec, *app.AppKeepers.CronKeeper),
 	}
 }
