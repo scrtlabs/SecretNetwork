@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -54,6 +55,8 @@ import (
 	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
+
+	"github.com/btcsuite/btcutil/bech32"
 )
 
 type ResponseHandler interface {
@@ -159,6 +162,146 @@ func NewKeeper(
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
+}
+
+func DecodeAddr(addr string) (error, []byte) {
+	// Decode Bech32
+	_, data, err := bech32.Decode(addr)
+	if err != nil {
+		return err, nil
+	}
+
+	// Convert from Bech32 (5-bit) to 8-bit binary
+	decodedBytes, err := bech32.ConvertBits(data, 5, 8, false)
+	return err, decodedBytes
+}
+
+type KVPair struct {
+	Key   []byte
+	Value []byte
+}
+
+func (k Keeper) ReadSingleChunk(buf *bytes.Buffer) ([]byte, error) {
+	var chunkSize uint32
+	err := binary.Read(buf, binary.LittleEndian, &chunkSize)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure there’s enough data for the chunk
+	if int(chunkSize) > buf.Len() {
+		return nil, errors.New("data underflow")
+	}
+
+	// Read the chunk data
+	chunk := make([]byte, chunkSize)
+	_, err = buf.Read(chunk)
+	if err != nil {
+		return nil, err
+	}
+
+	return chunk, nil
+}
+
+func (k Keeper) RotateStoreFlush(all_data *bytes.Buffer, kvs *[]KVPair) error {
+	_, err := api.RotateStore(all_data.Bytes())
+	if err != nil {
+		return err
+	}
+
+	_, err = k.ReadSingleChunk(all_data)
+	if err != nil {
+		return err
+	}
+
+	// parse the result
+	for all_data.Len() != 0 {
+
+		key, err := k.ReadSingleChunk(all_data)
+		if err != nil {
+			return err
+		}
+
+		val, err := k.ReadSingleChunk(all_data)
+		if err != nil {
+			return err
+		}
+
+		*kvs = append(*kvs, KVPair{Key: key, Value: val})
+	}
+
+	all_data.Reset()
+	return nil
+}
+
+func (k Keeper) RotateContractsStore(ctx sdk.Context) error {
+	store := k.storeService.OpenKVStore(ctx)
+	k.IterateContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo, _ types.ContractCustomInfo) bool {
+		fmt.Println("********* Contracts info *********")
+
+		fmt.Printf("Contract Address: %s\n", addr.String())
+		fmt.Printf("Contract Address B: %x\n", addr.Bytes())
+
+		_, addrB := DecodeAddr(addr.String())
+		if addrB != nil {
+			fmt.Printf("Hex Address: %s\n", hex.EncodeToString(addrB))
+		}
+
+		fmt.Printf("Contract Info: %+v\n", info)
+
+		prefixKey := append([]byte{0x03}, addrB...)
+
+		iterator, _ := store.Iterator(prefixKey, nil)
+		defer iterator.Close()
+
+		all_data := new(bytes.Buffer)
+		var kvs []KVPair
+
+		contractKey, _ := k.GetContractKey(ctx, addr)
+		og_key := contractKey.OgContractKey
+
+		for ; iterator.Valid(); iterator.Next() {
+			key := iterator.Key()
+			if !bytes.HasPrefix(key, prefixKey) {
+				break
+			}
+			value := iterator.Value()
+			// fmt.Printf("Key: %X, Value: %X\n", key, value)
+
+			if all_data.Len() > 1024*1024*20 {
+				k.RotateStoreFlush(all_data, &kvs)
+			}
+
+			if all_data.Len() == 0 {
+				binary.Write(all_data, binary.LittleEndian, uint32(len(og_key)))
+				all_data.Write(og_key)
+			}
+
+			binary.Write(all_data, binary.LittleEndian, uint32(len(key)))
+			all_data.Write(key)
+			binary.Write(all_data, binary.LittleEndian, uint32(len(value)))
+			all_data.Write(value)
+		}
+
+		// all_data.Bytes()
+
+		if all_data.Len() != 0 {
+			k.RotateStoreFlush(all_data, &kvs)
+		}
+
+		// fmt.Println("----------- result -----------")
+		// fmt.Printf("K%X\n", all_data)
+
+		for _, kv := range kvs {
+			store.Set(kv.Key, kv.Value)
+			//	fmt.Printf("Key: %X, Value: %X\n", kv.Key, kv.Value)
+		}
+		// fmt.Println("----------------------")
+
+		return false
+	})
+
+	return nil
 }
 
 func (k Keeper) SetValidatorSetEvidence(ctx sdk.Context) error {
