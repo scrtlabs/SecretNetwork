@@ -26,7 +26,7 @@ import (
 	"cosmossdk.io/store/snapshots"
 	snapshottypes "cosmossdk.io/store/snapshots/types"
 	storetypes "cosmossdk.io/store/types"
-	"github.com/scrtlabs/SecretNetwork/app"
+	app "github.com/scrtlabs/SecretNetwork/app"
 
 	confixcmd "cosmossdk.io/tools/confix/cmd"
 	"github.com/spf13/cast"
@@ -180,6 +180,14 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	return rootCmd, encodingConfig
 }
 
+func RotateStore(appCreator servertypes.AppCreator) *cobra.Command {
+	cmd := server.StartCmd(appCreator, app.DefaultNodeHome)
+	cmd.Use = "rotate_store"
+	cmd.Short = "Rotate store"
+	cmd.Long = "Re-encode store using the new network seed"
+	return cmd
+}
+
 func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basicManager module.BasicManager) {
 	rootCmd.AddCommand(
 		InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
@@ -202,6 +210,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basi
 		ParseCert(),
 		DumpBin(),
 		MigrationOp(),
+		RotateStore(newApp),
 		EmergencyApproveUpgrade(),
 		ConfigureSecret(),
 		HealthCheck(),
@@ -312,7 +321,7 @@ func txCommand() *cobra.Command {
 	return cmd
 }
 
-func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
+func newApp_internal(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) *app.SecretNetworkApp {
 	var cache storetypes.MultiStorePersistentCache
 
 	if cast.ToBool(appOpts.Get(server.FlagInterBlockCache)) {
@@ -362,6 +371,16 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 	res.Initialize()
 
 	return res
+}
+
+func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
+	return newApp_internal(logger, db, traceStore, appOpts)
+}
+
+func newApp_rot(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
+	app := newApp_internal(logger, db, traceStore, appOpts)
+	app.RotateStore()
+	return app
 }
 
 func exportAppStateAndTMValidators(

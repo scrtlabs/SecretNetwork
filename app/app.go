@@ -424,6 +424,12 @@ func NewSecretNetworkApp(
 	return app
 }
 
+func (app *SecretNetworkApp) RotateStore() {
+	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
+	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
+	app.AppKeepers.ComputeKeeper.RotateContractsStore(ctx)
+}
+
 func (app *SecretNetworkApp) Initialize() {
 	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
 
