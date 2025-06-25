@@ -210,7 +210,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basi
 		ParseCert(),
 		DumpBin(),
 		MigrationOp(),
-		RotateStore(newApp),
+		RotateStore(newApp_rot),
 		EmergencyApproveUpgrade(),
 		ConfigureSecret(),
 		HealthCheck(),

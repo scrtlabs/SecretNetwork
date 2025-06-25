@@ -235,6 +235,8 @@ func (k Keeper) RotateStoreFlush(all_data *bytes.Buffer, kvs *[]KVPair) error {
 }
 
 func (k Keeper) RotateContractsStore(ctx sdk.Context) error {
+	fmt.Println("Rotate contract store...")
+
 	store := k.storeService.OpenKVStore(ctx)
 	k.IterateContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo, _ types.ContractCustomInfo) bool {
 		fmt.Println("********* Contracts info *********")

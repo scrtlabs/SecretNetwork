@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	packetforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/types"
 	ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
@@ -428,6 +429,11 @@ func (app *SecretNetworkApp) RotateStore() {
 	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
 	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
 	app.AppKeepers.ComputeKeeper.RotateContractsStore(ctx)
+
+	p, err := os.FindProcess(os.Getpid())
+	if err == nil {
+		p.Signal(syscall.SIGINT) // Sends interrupt, causing Tendermint node to stop
+	}
 }
 
 func (app *SecretNetworkApp) Initialize() {
