@@ -203,7 +203,7 @@ func (k Keeper) ReadSingleChunk(buf *bytes.Buffer) ([]byte, error) {
 	return chunk, nil
 }
 
-func (k Keeper) RotateStoreFlush(all_data *bytes.Buffer, kvs *[]KVPair) error {
+func (k Keeper) RotateStoreFlush(all_data *bytes.Buffer, store store.KVStore) error {
 	_, err := api.RotateStore(all_data.Bytes())
 	if err != nil {
 		return err
@@ -227,7 +227,7 @@ func (k Keeper) RotateStoreFlush(all_data *bytes.Buffer, kvs *[]KVPair) error {
 			return err
 		}
 
-		*kvs = append(*kvs, KVPair{Key: key, Value: val})
+		store.Set(key, val)
 	}
 
 	all_data.Reset()
@@ -257,7 +257,6 @@ func (k Keeper) RotateContractsStore(ctx sdk.Context) error {
 		defer iterator.Close()
 
 		all_data := new(bytes.Buffer)
-		var kvs []KVPair
 
 		contractKey, _ := k.GetContractKey(ctx, addr)
 		og_key := contractKey.OgContractKey
@@ -271,7 +270,7 @@ func (k Keeper) RotateContractsStore(ctx sdk.Context) error {
 			// fmt.Printf("Key: %X, Value: %X\n", key, value)
 
 			if all_data.Len() > 1024*1024*20 {
-				k.RotateStoreFlush(all_data, &kvs)
+				k.RotateStoreFlush(all_data, store)
 			}
 
 			if all_data.Len() == 0 {
@@ -288,16 +287,12 @@ func (k Keeper) RotateContractsStore(ctx sdk.Context) error {
 		// all_data.Bytes()
 
 		if all_data.Len() != 0 {
-			k.RotateStoreFlush(all_data, &kvs)
+			k.RotateStoreFlush(all_data, store)
 		}
 
 		// fmt.Println("----------- result -----------")
 		// fmt.Printf("K%X\n", all_data)
 
-		for _, kv := range kvs {
-			store.Set(kv.Key, kv.Value)
-			//	fmt.Printf("Key: %X, Value: %X\n", kv.Key, kv.Value)
-		}
 		// fmt.Println("----------------------")
 
 		return false
