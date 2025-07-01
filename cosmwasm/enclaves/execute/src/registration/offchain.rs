@@ -1191,6 +1191,11 @@ fn apply_rot_seed() -> sgx_status_t {
     let mut key_manager = Keychain::new();
     let seeds = key_manager.get_consensus_seed().unwrap();
 
+    {
+        let mut extra = key_manager.extra_data.lock().unwrap();
+        extra.last_evidence_seed = Some(seeds.current);
+    }
+
     let mut rs2 = enclave_crypto::Seed::default();
     rs2.as_mut().copy_from_slice(&rot_seed);
 
@@ -1502,10 +1507,20 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
 
         #[cfg(feature = "light-client-validation")]
         {
-            let expected_evidence = KEY_MANAGER.encrypt_hash(validator_set_hash, height);
+            let mut expected_evidence = KEY_MANAGER.encrypt_hash(validator_set_hash, height);
             let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
 
-            if verified_msgs.next_validators_evidence != expected_evidence {
+            let mut is_match = verified_msgs.next_validators_evidence == expected_evidence;
+            if !is_match && extra.last_evidence_seed.is_some() {
+                expected_evidence = Keychain::encrypt_hash_ex(
+                    &extra.last_evidence_seed.unwrap(),
+                    validator_set_hash,
+                    height,
+                );
+                is_match = verified_msgs.next_validators_evidence == expected_evidence;
+            }
+
+            if !is_match {
                 if extra.height != 0 {
                     error!("validator set evidence mismatch");
                     return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -1542,6 +1557,7 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
         {
             extra.height = height;
             extra.validator_set_serialized = validator_set_slice.to_vec();
+            extra.last_evidence_seed = None;
         }
     }
     KEY_MANAGER.save();

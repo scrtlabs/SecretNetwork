@@ -41,6 +41,7 @@ pub struct KeychainMutableData {
     pub height: u64,
     pub validator_set_serialized: Vec<u8>,
     pub next_mr_enclave: Option<sgx_measurement_t>,
+    pub last_evidence_seed: Option<Seed>,
 }
 
 impl KeychainMutableData {
@@ -115,11 +116,24 @@ impl Keychain {
         writer.write_all(&val_size.to_le_bytes())?;
         writer.write_all(&extra.validator_set_serialized)?;
 
-        if let Some(val) = extra.next_mr_enclave {
-            writer.write_all(&[1_u8])?;
-            writer.write_all(&val.m)?;
+        let ex_flag: u8 = (if extra.next_mr_enclave.is_some() {
+            1_u8
         } else {
-            writer.write_all(&[0_u8])?;
+            0_u8
+        }) | (if extra.last_evidence_seed.is_some() {
+            2_u8
+        } else {
+            0_u8
+        });
+
+        writer.write_all(&[ex_flag])?;
+
+        if let Some(val) = extra.next_mr_enclave {
+            writer.write_all(&val.m)?;
+        }
+
+        if let Some(val) = extra.last_evidence_seed {
+            writer.write_all(val.as_slice())?;
         }
 
         Ok(())
@@ -178,12 +192,21 @@ impl Keychain {
         reader.read_exact(&mut extra.validator_set_serialized)?;
 
         reader.read_exact(&mut flag_bytes)?;
-        if flag_bytes[0] != 0 {
+
+        if (flag_bytes[0] & 1_u8) != 0 {
             let mut val = sgx_measurement_t::default();
             reader.read_exact(&mut val.m)?;
             extra.next_mr_enclave = Some(val);
         } else {
             extra.next_mr_enclave = None;
+        }
+
+        if (flag_bytes[0] & 2_u8) != 0 {
+            let mut buf = Ed25519PrivateKey::default();
+            reader.read_exact(buf.get_mut())?;
+            extra.last_evidence_seed = Some(Seed::from(buf));
+        } else {
+            extra.last_evidence_seed = None;
         }
 
         Ok(())
@@ -211,15 +234,19 @@ impl Keychain {
         }
     }
 
-    pub fn encrypt_hash(&self, hv: [u8; 32], height: u64) -> [u8; 32] {
+    pub fn encrypt_hash_ex(seed: &Seed, hv: [u8; 32], height: u64) -> [u8; 32] {
         let mut hasher = Sha256::new();
-        hasher.update(self.consensus_seed.unwrap().current.as_slice());
+        hasher.update(seed.as_slice());
         hasher.update(hv);
         hasher.update(height.to_le_bytes());
 
         let mut ret: [u8; 32] = [0_u8; 32];
         ret.copy_from_slice(&hasher.finalize());
         ret
+    }
+
+    pub fn encrypt_hash(&self, hv: [u8; 32], height: u64) -> [u8; 32] {
+        Self::encrypt_hash_ex(&self.consensus_seed.unwrap().current, hv, height)
     }
 
     pub fn get_migration_keys() -> KeyPair {
@@ -249,6 +276,7 @@ impl Keychain {
                 height: 0,
                 validator_set_serialized: Vec::new(),
                 next_mr_enclave: None,
+                last_evidence_seed: None,
             }),
         }
     }
