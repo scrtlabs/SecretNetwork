@@ -1183,7 +1183,10 @@ fn apply_rot_seed() -> sgx_status_t {
     key_manager.set_consensus_seed(seeds.genesis, rs2);
     key_manager.save();
 
-    sgx_status_t::SGX_SUCCESS
+    match write_master_pub_keys(&key_manager) {
+        Err(e) => e,
+        Ok(()) => sgx_status_t::SGX_SUCCESS,
+    }
 }
 
 fn export_local_migration_report() -> sgx_status_t {
