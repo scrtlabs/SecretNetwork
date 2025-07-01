@@ -1183,6 +1183,10 @@ fn apply_rot_seed() -> sgx_status_t {
     key_manager.set_consensus_seed(seeds.genesis, rs2);
     key_manager.save();
 
+    if let Err(_e) = key_manager.generate_consensus_master_keys() {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
     match write_master_pub_keys(&key_manager) {
         Err(e) => e,
         Ok(()) => sgx_status_t::SGX_SUCCESS,
