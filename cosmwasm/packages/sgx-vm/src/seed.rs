@@ -120,6 +120,7 @@ pub fn untrusted_init_node(
         NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE => seed_to_enclave
             [0..NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE]
             .copy_from_slice(encrypted_seed),
+        1 => {} // empty
         _ => {
             error!("Received seed with wrong length");
             return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);

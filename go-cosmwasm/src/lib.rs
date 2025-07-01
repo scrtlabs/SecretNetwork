@@ -163,24 +163,15 @@ pub extern "C" fn init_node(
     err: Option<&mut Buffer>,
 ) -> bool {
     let pk_slice = match unsafe { master_key.read() } {
-        None => {
-            set_error(Error::empty_arg("master_key"), err);
-            return false;
-        }
+        None => &[],
         Some(r) => r,
     };
     let encrypted_seed_slice = match unsafe { encrypted_seed.read() } {
-        None => {
-            set_error(Error::empty_arg("encrypted_seed"), err);
-            return false;
-        }
+        None => &[],
         Some(r) => r,
     };
     let api_key_slice = match unsafe { api_key.read() } {
-        None => {
-            set_error(Error::empty_arg("api_key"), err);
-            return false;
-        }
+        None => &[],
         Some(r) => r,
     };
 

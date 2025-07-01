@@ -140,19 +140,14 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	legacySeedPath := filepath.Join(nodeDir, types.SecretNodeSeedLegacyConfig)
 
 	if !fileExists(seedPath) {
-		if !fileExists(legacySeedPath) {
-			panic(errorsmod.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", legacySeedPath)))
+		if fileExists(legacySeedPath) {
+			encSeed, pk = getLegacySeedParams(legacySeedPath)
 		}
-		encSeed, pk = getLegacySeedParams(legacySeedPath)
 	} else {
 		encSeed, pk = getNewSeedParams(seedPath)
 	}
 
 	sizedEndSeed := getSizedEncSeed(encSeed)
-	err = validateEncryptedSeed(hex.EncodeToString(sizedEndSeed))
-	if err != nil {
-		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
 
 	// On upgrade LoadSeed will write the new seed to "SeedPath -- seed.txt" which then will be parsed by the upgrade handler to create new_seed.json
 	// On registration both seed.jsםn and new_seed.json will be created by 'secretd q register secret-network-params' on manual flow or by auto-registration flow"

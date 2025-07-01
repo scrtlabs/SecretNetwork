@@ -177,18 +177,6 @@ pub unsafe extern "C" fn ecall_init_node(
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
 ) -> sgx_status_t {
     validate_const_ptr!(
-        master_key,
-        master_key_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
-    );
-
-    validate_const_ptr!(
-        encrypted_seed,
-        encrypted_seed_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
-    );
-
-    validate_const_ptr!(
         api_key,
         api_key_len as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED,
@@ -196,45 +184,15 @@ pub unsafe extern "C" fn ecall_init_node(
 
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
-    let key_slice = slice::from_raw_parts(master_key, master_key_len as usize);
-
-    if encrypted_seed_len != INPUT_ENCRYPTED_SEED_SIZE {
-        error!("Encrypted seed bad length");
-        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-    }
-
-    // validate this node is patched and updated
-
-    // generate temporary key for attestation
-    // let temp_key_result = KeyPair::new();
-    //
-    // if temp_key_result.is_err() {
-    //     error!("Failed to generate temporary key for attestation");
-    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    // }
-
-    // // this validates the cert and handles the "what if it fails" inside as well
-    // let res =
-    //     create_attestation_certificate(&temp_key_result.unwrap(), SIGNATURE_TYPE, api_key_slice);
-    // if res.is_err() {
-    //     error!("Error starting node, might not be updated",);
-    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    // }
-
-    let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
-
-    // validate this node is patched and updated
-
-    // generate temporary key for attestation
-    let temp_key_result = KeyPair::new();
-
-    if temp_key_result.is_err() {
-        error!("Failed to generate temporary key for attestation");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
     #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
     {
+        let temp_key_result = KeyPair::new();
+
+        if temp_key_result.is_err() {
+            error!("Failed to generate temporary key for attestation");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+
         // this validates the cert and handles the "what if it fails" inside as well
         let res = crate::registration::attestation::validate_enclave_version(
             temp_key_result.as_ref().unwrap(),
@@ -248,9 +206,34 @@ pub unsafe extern "C" fn ecall_init_node(
         }
     }
 
+    let mut key_manager = Keychain::new();
+    if key_manager.is_consensus_seed_set() {
+        return sgx_status_t::SGX_SUCCESS; // skip the rest
+    }
+
+    validate_const_ptr!(
+        master_key,
+        master_key_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
+
+    validate_const_ptr!(
+        encrypted_seed,
+        encrypted_seed_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
+
+    if encrypted_seed_len != INPUT_ENCRYPTED_SEED_SIZE {
+        error!("Encrypted seed bad length");
+        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+    }
+
+    let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
+
     // public keys in certificates don't have 0x04, so we'll copy it here
     let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
 
+    let key_slice = slice::from_raw_parts(master_key, master_key_len as usize);
     let pk = key_slice.to_vec();
 
     // just make sure the of the public key isn't messed up
@@ -264,8 +247,6 @@ pub unsafe extern "C" fn ecall_init_node(
         "ecall_init_node target public key is: {:?}",
         target_public_key
     );
-
-    let mut key_manager = Keychain::new();
 
     key_manager.delete_consensus_seed();
     key_manager.save();
