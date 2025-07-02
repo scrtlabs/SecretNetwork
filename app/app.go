@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -434,6 +435,31 @@ func (app *SecretNetworkApp) RotateStore() {
 	if err == nil {
 		p.Signal(syscall.SIGINT) // Sends interrupt, causing Tendermint node to stop
 	}
+}
+
+func (app *SecretNetworkApp) UpdateOneKey(ctx sdk.Context, filePath string, keyID string) {
+	keyB64, err := os.ReadFile(filePath)
+	if err != nil {
+		panic(err)
+	}
+
+	keyBz, err := base64.StdEncoding.DecodeString(string(keyB64))
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%s updated to %s\n", keyID, keyB64)
+
+	key := reg.MasterKey{Bytes: keyBz}
+	app.AppKeepers.RegKeeper.SetMasterKey(sdk.UnwrapSDKContext(ctx), key, reg.MasterIoKeyId)
+}
+
+func (app *SecretNetworkApp) UpdateNetworkKeys() {
+	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
+	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
+
+	app.UpdateOneKey(ctx, reg.NodeExchMasterKeyPath, reg.MasterNodeKeyId)
+	app.UpdateOneKey(ctx, reg.IoExchMasterKeyPath, reg.MasterIoKeyId)
 }
 
 func (app *SecretNetworkApp) Initialize() {

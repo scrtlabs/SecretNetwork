@@ -58,10 +58,14 @@ import (
 
 const (
 	flagIsBootstrap = "bootstrap"
+	flagUpdateKeys  = "update_keys"
 	cfgFileName     = "config.toml"
 )
 
-var bootstrap bool
+var (
+	bootstrap           bool
+	update_network_keys bool
+)
 
 // NewRootCmd creates a new root command for simd. It is called once in the
 // main function.
@@ -226,6 +230,9 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basi
 	// This is needed for `newApp` and `exportAppStateAndTMValidators`
 	rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
 		false, "Start the node as the bootstrap node for the network (only used when starting a new network)")
+
+	rootCmd.PersistentFlags().BoolVar(&update_network_keys, flagUpdateKeys,
+		false, "Update network keys, needed after seed rotation")
 }
 
 // genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter
@@ -343,7 +350,7 @@ func newApp_internal(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts
 		panic(err)
 	}
 
-	bootstrap := cast.ToBool(appOpts.Get("bootstrap"))
+	bootstrap := cast.ToBool(appOpts.Get(flagIsBootstrap))
 
 	appGenesis, err := genutiltypes.AppGenesisFromFile(filepath.Join(cast.ToString(appOpts.Get(flags.FlagHome)), "config", "genesis.json"))
 	if err != nil {
@@ -367,6 +374,12 @@ func newApp_internal(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts
 		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(server.FlagDisableIAVLFastNode))),
 		baseapp.SetChainID(appGenesis.ChainID),
 	)
+
+	update_network_keys := cast.ToBool(appOpts.Get(flagUpdateKeys))
+
+	if update_network_keys {
+		res.UpdateNetworkKeys()
+	}
 
 	res.Initialize()
 
