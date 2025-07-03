@@ -8,13 +8,12 @@ use enclave_ffi_types::NodeAuthResult;
 
 use crate::registration::attestation::verify_quote_sgx;
 use crate::registration::cert::verify_ra_report;
-use crate::registration::seed_exchange::SeedType;
 
 use enclave_crypto::consts::OUTPUT_ENCRYPTED_SEED_SIZE;
 use enclave_crypto::PUBLIC_KEY_SIZE;
 use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
-    validate_const_ptr, validate_mut_ptr,
+    validate_const_ptr, validate_mut_ptr, KEY_MANAGER,
 };
 
 use sgx_types::sgx_ql_qv_result_t;
@@ -200,10 +199,12 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             &target_public_key.to_vec()
         );
 
-        let mut res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis, false)
+        let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
+
+        let mut res: Vec<u8> = encrypt_seed(target_public_key, &seeds.genesis, false)
             .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
-        let res_current: Vec<u8> = encrypt_seed(target_public_key, SeedType::Current, false)
+        let res_current: Vec<u8> = encrypt_seed(target_public_key, &seeds.current, false)
             .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
         res.extend(&res_current);

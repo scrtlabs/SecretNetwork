@@ -44,7 +44,7 @@ use std::slice;
 use tendermint::Hash::Sha256 as tm_Sha256;
 
 use super::persistency::{write_master_pub_keys, write_seed};
-use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
+use super::seed_exchange::{decrypt_seed, encrypt_seed};
 
 #[cfg(feature = "light-client-validation")]
 use block_verifier::VERIFIED_BLOCK_MESSAGES;
@@ -304,8 +304,10 @@ pub unsafe extern "C" fn ecall_init_node(
             debug!("New consensus seed already exists, no need to get it from service");
         }
 
-        let mut res: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Genesis, false).unwrap();
-        let res_current: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Current, false).unwrap();
+        let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
+
+        let mut res: Vec<u8> = encrypt_seed(my_pub_key, &seeds.genesis, false).unwrap();
+        let res_current: Vec<u8> = encrypt_seed(my_pub_key, &seeds.current, false).unwrap();
         res.extend(&res_current);
 
         trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
@@ -616,7 +618,8 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
             &target_public_key.to_vec()
         );
 
-        let res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis, true)
+        let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
+        let res: Vec<u8> = encrypt_seed(target_public_key, &seeds.genesis, true)
             .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
 
         Ok(res)
