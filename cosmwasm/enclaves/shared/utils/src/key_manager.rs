@@ -65,8 +65,8 @@ pub struct Keychain {
     consensus_seed: Option<SeedsHolder<Seed>>,
     consensus_state_ikm: Option<SeedsHolder<AESKey>>,
     consensus_seed_exchange_keypair: Option<SeedsHolder<KeyPair>>,
-    consensus_io_exchange_keypair: Option<SeedsHolder<KeyPair>>,
-    consensus_callback_secret: Option<SeedsHolder<AESKey>>,
+    consensus_io_exchange_keypair: Option<KeyPair>,
+    consensus_callback_secret: Option<AESKey>,
     pub random_encryption_key: Option<AESKey>,
     pub initial_randomness_seed: Option<AESKey>,
     registration_key: Option<KeyPair>,
@@ -392,14 +392,14 @@ impl Keychain {
         })
     }
 
-    pub fn get_consensus_io_exchange_keypair(&self) -> Result<SeedsHolder<KeyPair>, CryptoError> {
+    pub fn get_consensus_io_exchange_keypair(&self) -> Result<KeyPair, CryptoError> {
         self.consensus_io_exchange_keypair.ok_or_else(|| {
             error!("Error accessing consensus_io_exchange_keypair (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
-    pub fn get_consensus_callback_secret(&self) -> Result<SeedsHolder<AESKey>, CryptoError> {
+    pub fn get_consensus_callback_secret(&self) -> Result<AESKey, CryptoError> {
         self.consensus_callback_secret.ok_or_else(|| {
             error!("Error accessing consensus_callback_secret (does not exist, or was not initialized)");
             CryptoError::ParsingError
@@ -431,16 +431,16 @@ impl Keychain {
         self.consensus_seed_exchange_keypair = Some(SeedsHolder { genesis, current })
     }
 
-    pub fn set_consensus_io_exchange_keypair(&mut self, genesis: KeyPair, current: KeyPair) {
-        self.consensus_io_exchange_keypair = Some(SeedsHolder { genesis, current })
+    pub fn set_consensus_io_exchange_keypair(&mut self, current: KeyPair) {
+        self.consensus_io_exchange_keypair = Some(current)
     }
 
     pub fn set_consensus_state_ikm(&mut self, genesis: AESKey, current: AESKey) {
         self.consensus_state_ikm = Some(SeedsHolder { genesis, current });
     }
 
-    pub fn set_consensus_callback_secret(&mut self, genesis: AESKey, current: AESKey) {
-        self.consensus_callback_secret = Some(SeedsHolder { genesis, current });
+    pub fn set_consensus_callback_secret(&mut self, current: AESKey) {
+        self.consensus_callback_secret = Some(current);
     }
 
     pub fn delete_consensus_seed(&mut self) {
@@ -487,14 +487,6 @@ impl Keychain {
 
         // consensus_io_exchange_keypair
 
-        let consensus_io_exchange_keypair_genesis_bytes = self
-            .consensus_seed
-            .unwrap()
-            .genesis
-            .derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
-        let consensus_io_exchange_keypair_genesis =
-            KeyPair::from(consensus_io_exchange_keypair_genesis_bytes);
-
         let consensus_io_exchange_keypair_current_bytes = self
             .consensus_seed
             .unwrap()
@@ -503,10 +495,7 @@ impl Keychain {
         let consensus_io_exchange_keypair_current =
             KeyPair::from(consensus_io_exchange_keypair_current_bytes);
 
-        self.set_consensus_io_exchange_keypair(
-            consensus_io_exchange_keypair_genesis,
-            consensus_io_exchange_keypair_current,
-        );
+        self.set_consensus_io_exchange_keypair(consensus_io_exchange_keypair_current);
 
         // consensus_state_ikm
 
@@ -520,22 +509,13 @@ impl Keychain {
 
         // consensus_state_ikm
 
-        let consensus_callback_secret_genesis = self
-            .consensus_seed
-            .unwrap()
-            .genesis
-            .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
-
         let consensus_callback_secret_current = self
             .consensus_seed
             .unwrap()
             .current
             .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
 
-        self.set_consensus_callback_secret(
-            consensus_callback_secret_genesis,
-            consensus_callback_secret_current,
-        );
+        self.set_consensus_callback_secret(consensus_callback_secret_current);
 
         //#[cfg(feature = "random")]
         {
