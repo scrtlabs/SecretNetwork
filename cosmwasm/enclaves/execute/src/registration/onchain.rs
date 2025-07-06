@@ -200,14 +200,13 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         );
 
         let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
+        let mut res = Vec::new();
 
-        let mut res: Vec<u8> = encrypt_seed(target_public_key, &seeds.arr[0], false)
-            .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
-
-        let res_current: Vec<u8> = encrypt_seed(target_public_key, &seeds.arr[1], false)
-            .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
-
-        res.extend(&res_current);
+        for s in &seeds.arr {
+            let res_current: Vec<u8> = encrypt_seed(target_public_key, s, false)
+                .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+            res.extend(&res_current);
+        }
 
         Ok(res)
     });

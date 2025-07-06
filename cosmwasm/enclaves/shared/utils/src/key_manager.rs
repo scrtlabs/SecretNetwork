@@ -349,7 +349,8 @@ impl Keychain {
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
         match (Seed::new(), Seed::new()) {
             (Ok(genesis), Ok(current)) => {
-                self.set_consensus_seed(genesis, current);
+                self.push_consensus_seed(genesis);
+                self.push_consensus_seed(current);
             }
             (Err(err), _) => return Err(err),
             (_, Err(err)) => return Err(err),
@@ -445,11 +446,12 @@ impl Keychain {
         self.consensus_seed.arr.clear();
     }
 
-    pub fn set_consensus_seed(&mut self, genesis: Seed, current: Seed) {
-        self.consensus_seed.arr.clear();
-        self.consensus_seed.arr.push(genesis);
-        self.consensus_seed.arr.push(current);
-        trace!("Consensus seeds set");
+    pub fn push_consensus_seed(&mut self, seed: Seed) {
+        self.consensus_seed.arr.push(seed);
+        trace!(
+            "Consensus seed added, total={}",
+            self.consensus_seed.arr.len()
+        );
     }
 
     pub fn generate_consensus_ikm_key(seed: &Seed) -> AESKey {

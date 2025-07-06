@@ -99,12 +99,11 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
                 return sgx_status_t::SGX_ERROR_UNEXPECTED;
             }
         };
-        let genesis_seed = key_manager.get_consensus_seed().unwrap().genesis;
 
         let new_consensus_seed = match get_next_consensus_seed_from_service(
             &mut key_manager,
             0,
-            genesis_seed,
+            key_manager.get_consensus_seed().unwrap().arr[0],
             api_key_slice,
             temp_keypair,
             CONSENSUS_SEED_VERSION,
@@ -116,7 +115,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
             }
         };
 
-        key_manager.set_consensus_seed(genesis_seed, new_consensus_seed);
+        key_manager.push_consensus_seed(new_consensus_seed);
     }
 
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
@@ -245,40 +244,32 @@ pub unsafe extern "C" fn ecall_init_node(
     key_manager.delete_consensus_seed();
     key_manager.save();
 
-    // Skip the first byte which is the length of the seed
-    let mut single_seed_bytes = [0u8; SINGLE_ENCRYPTED_SEED_SIZE];
-    single_seed_bytes.copy_from_slice(&encrypted_seed_slice[1..(SINGLE_ENCRYPTED_SEED_SIZE + 1)]);
+    let encrypted_seed_len = encrypted_seed_slice[0] as u32 as usize;
+    let seeds_count = encrypted_seed_len / SINGLE_ENCRYPTED_SEED_SIZE;
 
-    trace!("Target public key is: {:?}", target_public_key);
-    let genesis_seed = match decrypt_seed(&key_manager, target_public_key, single_seed_bytes) {
-        Ok(result) => result,
-        Err(status) => return status,
-    };
+    for i_seed in 0..seeds_count {
+        let offs = i_seed * SINGLE_ENCRYPTED_SEED_SIZE + 1;
+        let sub_slice: &[u8; SINGLE_ENCRYPTED_SEED_SIZE] = encrypted_seed_slice
+            [offs..offs + SINGLE_ENCRYPTED_SEED_SIZE]
+            .try_into()
+            .unwrap();
 
-    let encrypted_seed_len = encrypted_seed_slice[0] as u32;
-    let new_consensus_seed;
-
-    if encrypted_seed_len as usize == 2 * SINGLE_ENCRYPTED_SEED_SIZE {
-        debug!("Got both keys from registration");
-
-        single_seed_bytes.copy_from_slice(
-            &encrypted_seed_slice
-                [(SINGLE_ENCRYPTED_SEED_SIZE + 1)..(SINGLE_ENCRYPTED_SEED_SIZE * 2 + 1)],
-        );
-        new_consensus_seed = match decrypt_seed(&key_manager, target_public_key, single_seed_bytes)
-        {
+        let seed = match decrypt_seed(&key_manager, target_public_key, *sub_slice) {
             Ok(result) => result,
             Err(status) => return status,
         };
 
-        key_manager.set_consensus_seed(genesis_seed, new_consensus_seed);
-    } else {
+        key_manager.push_consensus_seed(seed);
+    }
+
+    if seeds_count == 1 {
         let reg_key = key_manager.get_registration_key().unwrap();
         let my_pub_key = reg_key.get_pubkey();
 
         debug!("New consensus seed not found! Need to get it from service");
+        let genesis_seed = key_manager.get_consensus_seed().unwrap().arr[0];
         if key_manager.get_consensus_seed().is_err() {
-            new_consensus_seed = match get_next_consensus_seed_from_service(
+            let new_consensus_seed = match get_next_consensus_seed_from_service(
                 &mut key_manager,
                 1,
                 genesis_seed,
@@ -293,16 +284,19 @@ pub unsafe extern "C" fn ecall_init_node(
                 }
             };
 
-            key_manager.set_consensus_seed(genesis_seed, new_consensus_seed);
+            key_manager.push_consensus_seed(new_consensus_seed);
         } else {
             debug!("New consensus seed already exists, no need to get it from service");
         }
 
         let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
 
-        let mut res: Vec<u8> = encrypt_seed(my_pub_key, &seeds.arr[0], false).unwrap();
-        let res_current: Vec<u8> = encrypt_seed(my_pub_key, &seeds.arr[1], false).unwrap();
-        res.extend(&res_current);
+        let mut res = Vec::new();
+
+        for s in &seeds.arr {
+            let res_current: Vec<u8> = encrypt_seed(my_pub_key, &s, false).unwrap();
+            res.extend(&res_current);
+        }
 
         trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
 
@@ -670,7 +664,7 @@ pub unsafe extern "C" fn ecall_rotate_store(p_buf: *mut u8, n_buf: u32) -> sgx_t
     match rotate_store(
         p_buf,
         n_buf as usize,
-        &consensus_ikm.arr[1],
+        &consensus_ikm.last(),
         &next_ikm,
         &mut _num_total,
         &mut _num_recoded,
@@ -1167,17 +1161,17 @@ fn apply_rot_seed() -> sgx_status_t {
     };
 
     let mut key_manager = Keychain::new();
-    let seeds = key_manager.get_consensus_seed().unwrap();
 
     {
+        let seeds = key_manager.get_consensus_seed().unwrap();
         let mut extra = key_manager.extra_data.lock().unwrap();
-        extra.last_evidence_seed = Some(seeds.arr[1]);
+        extra.last_evidence_seed = Some(*seeds.last());
     }
 
     let mut rs2 = enclave_crypto::Seed::default();
     rs2.as_mut().copy_from_slice(&rot_seed);
 
-    key_manager.set_consensus_seed(seeds.arr[0], rs2);
+    key_manager.push_consensus_seed(rs2);
     key_manager.save();
 
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
