@@ -490,12 +490,7 @@ fn decrypt_value_new(
     encryption_salt: &[u8],
     seed_id: u16,
 ) -> Result<Vec<u8>, WasmEngineError> {
-    let decryption_key = match get_symmetrical_key_new(contract_key, Some(seed_id)) {
-        Ok(key) => key,
-        Err(e) => {
-            return Err(e);
-        }
-    };
+    let decryption_key = get_symmetrical_key_new(contract_key, Some(seed_id))?;
 
     decryption_key.decrypt_siv(encrypted_value, Some(&[encrypted_key, encryption_salt])).map_err(|err| {
         warn!(
@@ -512,7 +507,7 @@ fn encrypt_key_new(
     plaintext_state_key: &[u8],
     contract_key: &ContractKey,
 ) -> Result<Vec<u8>, WasmEngineError> {
-    let encryption_key = get_symmetrical_key_new(contract_key, None).unwrap();
+    let encryption_key = get_symmetrical_key_new(contract_key, Some(2))?;
 
     encryption_key
         .encrypt_siv(plaintext_state_key, Some(&[]))
