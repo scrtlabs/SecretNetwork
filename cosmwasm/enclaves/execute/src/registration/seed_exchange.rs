@@ -11,10 +11,12 @@ pub fn encrypt_seed(
     seed_to_share: &Seed,
     is_legacy: bool,
 ) -> SgxResult<Vec<u8>> {
+    let seed_xchg = KEY_MANAGER.seed_exchange_key().unwrap();
+
     let base_seed = if is_legacy {
-        KEY_MANAGER.seed_exchange_key().unwrap().genesis
+        &seed_xchg.arr[0]
     } else {
-        KEY_MANAGER.seed_exchange_key().unwrap().current
+        seed_xchg.last()
     };
 
     let shared_enc_key = base_seed.diffie_hellman(&new_node_pk);

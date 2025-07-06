@@ -421,15 +421,13 @@ fn get_symmetrical_key_old(field_name: &[u8], contract_key: &ContractKey) -> AES
     // Derive the key to the specific field name
     let mut derivation_data = field_name.to_vec();
     derivation_data.extend_from_slice(contract_key.to_vec().as_slice());
-    consensus_state_ikm
-        .genesis
-        .derive_key_from_this(&derivation_data)
+    consensus_state_ikm.arr[0].derive_key_from_this(&derivation_data)
 }
 
 fn get_symmetrical_key_new(contract_key: &ContractKey) -> AESKey {
-    let consensus_state_ikm: SeedsHolder<AESKey> = KEY_MANAGER.get_consensus_state_ikm().unwrap();
+    let consensus_state_ikm: &SeedsHolder<AESKey> = KEY_MANAGER.get_consensus_state_ikm().unwrap();
     consensus_state_ikm
-        .current
+        .last()
         .derive_key_from_this(contract_key)
 }
 

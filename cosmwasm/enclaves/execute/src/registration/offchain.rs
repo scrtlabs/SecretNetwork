@@ -132,13 +132,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         return status;
     }
 
-    public_key.copy_from_slice(
-        &key_manager
-            .seed_exchange_key()
-            .unwrap()
-            .current
-            .get_pubkey(),
-    );
+    public_key.copy_from_slice(&key_manager.seed_exchange_key().unwrap().last().get_pubkey());
 
     trace!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
@@ -306,8 +300,8 @@ pub unsafe extern "C" fn ecall_init_node(
 
         let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
 
-        let mut res: Vec<u8> = encrypt_seed(my_pub_key, &seeds.genesis, false).unwrap();
-        let res_current: Vec<u8> = encrypt_seed(my_pub_key, &seeds.current, false).unwrap();
+        let mut res: Vec<u8> = encrypt_seed(my_pub_key, &seeds.arr[0], false).unwrap();
+        let res_current: Vec<u8> = encrypt_seed(my_pub_key, &seeds.arr[1], false).unwrap();
         res.extend(&res_current);
 
         trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
@@ -619,7 +613,7 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
         );
 
         let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
-        let res: Vec<u8> = encrypt_seed(target_public_key, &seeds.genesis, true)
+        let res: Vec<u8> = encrypt_seed(target_public_key, &seeds.arr[0], true)
             .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
 
         Ok(res)
@@ -676,7 +670,7 @@ pub unsafe extern "C" fn ecall_rotate_store(p_buf: *mut u8, n_buf: u32) -> sgx_t
     match rotate_store(
         p_buf,
         n_buf as usize,
-        &consensus_ikm.current,
+        &consensus_ikm.arr[1],
         &next_ikm,
         &mut _num_total,
         &mut _num_recoded,
@@ -1177,13 +1171,13 @@ fn apply_rot_seed() -> sgx_status_t {
 
     {
         let mut extra = key_manager.extra_data.lock().unwrap();
-        extra.last_evidence_seed = Some(seeds.current);
+        extra.last_evidence_seed = Some(seeds.arr[1]);
     }
 
     let mut rs2 = enclave_crypto::Seed::default();
     rs2.as_mut().copy_from_slice(&rot_seed);
 
-    key_manager.set_consensus_seed(seeds.genesis, rs2);
+    key_manager.set_consensus_seed(seeds.arr[0], rs2);
     key_manager.save();
 
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
