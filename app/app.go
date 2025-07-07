@@ -440,15 +440,15 @@ func (app *SecretNetworkApp) RotateStore() {
 func (app *SecretNetworkApp) UpdateOneKey(ctx sdk.Context, filePath string, keyID string) {
 	keyB64, err := os.ReadFile(filePath)
 	if err != nil {
-		panic(err)
+		return
 	}
 
 	keyBz, err := base64.StdEncoding.DecodeString(string(keyB64))
 	if err != nil {
-		panic(err)
+		return
 	}
 
-	fmt.Printf("%s updated to %s\n", keyID, keyB64)
+	fmt.Printf("%s set to %s\n", keyID, keyB64)
 
 	key := reg.MasterKey{Bytes: keyBz}
 	app.AppKeepers.RegKeeper.SetMasterKey(sdk.UnwrapSDKContext(ctx), key, reg.MasterIoKeyId)
@@ -468,6 +468,7 @@ func (app *SecretNetworkApp) Initialize() {
 	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
 
 	_ = app.AppKeepers.ComputeKeeper.SetValidatorSetEvidence(ctx)
+	app.UpdateNetworkKeys()
 }
 
 // Name returns the name of the App
