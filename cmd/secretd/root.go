@@ -184,14 +184,6 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	return rootCmd, encodingConfig
 }
 
-func RotateStore(appCreator servertypes.AppCreator) *cobra.Command {
-	cmd := server.StartCmd(appCreator, app.DefaultNodeHome)
-	cmd.Use = "rotate_store"
-	cmd.Short = "Rotate store"
-	cmd.Long = "Re-encode store using the new network seed"
-	return cmd
-}
-
 func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basicManager module.BasicManager) {
 	rootCmd.AddCommand(
 		InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
@@ -214,7 +206,6 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basi
 		ParseCert(),
 		DumpBin(),
 		MigrationOp(),
-		RotateStore(newApp_rot),
 		EmergencyApproveUpgrade(),
 		ConfigureSecret(),
 		HealthCheck(),
@@ -388,12 +379,6 @@ func newApp_internal(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts
 
 func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
 	return newApp_internal(logger, db, traceStore, appOpts)
-}
-
-func newApp_rot(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
-	app := newApp_internal(logger, db, traceStore, appOpts)
-	app.RotateStore()
-	return app
 }
 
 func exportAppStateAndTMValidators(
