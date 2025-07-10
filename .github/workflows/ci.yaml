@@ -201,7 +201,11 @@ jobs:
           echo "not_a_key" > ias_keys/develop/api_key.txt
           LOG_LEVEL=ERROR go test -v -tags "test" ./x/compute/client/...
           LOG_LEVEL=ERROR SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
-
+      - name: Test x/cron
+        run: |
+          source "$HOME/.sgxsdk/sgxsdk/environment"
+          export SGX_MODE=SW
+          LOG_LEVEL=ERROR go test -v -tags "test" ./x/cron/...
   Clippy:
     runs-on: ubuntu-22.04
     steps:
