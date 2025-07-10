@@ -3,9 +3,7 @@ package compute
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
@@ -227,7 +225,6 @@ func (am AppModule) EndBlock(c context.Context) error {
 	}
 	hash := sha256.Sum256(cron_data)
 
-	fmt.Printf("Hash of the executed msgs in the next round: %+v\n", hex.EncodeToString(hash[:]))
 	err = tmenclave.SetImplicitHash(hash[:])
 	if err != nil {
 		ctx.Logger().Error("Failed to set implicit hash %+v", err)

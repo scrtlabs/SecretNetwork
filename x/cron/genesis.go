@@ -11,7 +11,7 @@ import (
 func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) {
 	// Set all the schedules
 	for _, elem := range genState.ScheduleList {
-		err := k.AddSchedule(ctx, elem.Name, elem.Period, elem.Msgs, elem.ExecutionStage)
+		err := k.AddSchedule(ctx, elem.Name, elem.Period, elem.Msgs)
 		if err != nil {
 			panic(err)
 		}

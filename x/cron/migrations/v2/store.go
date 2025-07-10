@@ -32,7 +32,7 @@ func migrateSchedules(ctx sdk.Context, cdc codec.BinaryCodec, storeKey storetype
 		var schedule types.Schedule
 		cdc.MustUnmarshal(iterator.Value(), &schedule)
 		// Set execution in EndBlocker
-		schedule.ExecutionStage = types.ExecutionStage_EXECUTION_STAGE_END_BLOCKER
+		// schedule.ExecutionStage = types.ExecutionStage_EXECUTION_STAGE_END_BLOCKER
 
 		schedulesToUpdate = append(schedulesToUpdate, migrationUpdate{
 			key: iterator.Key(),
