@@ -75,6 +75,7 @@ require (
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
 	github.com/cosmos/rosetta v0.50.4
 	github.com/gogo/protobuf v1.3.2
+	github.com/golang/mock v1.6.0
 	github.com/hashicorp/go-metrics v0.5.3
 	github.com/scrtlabs/tm-secret-enclave v1.12.3-implicit-hash
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028
@@ -140,7 +141,6 @@ require (
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/golang/glog v1.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/flatbuffers v2.0.8+incompatible // indirect

@@ -57,17 +57,13 @@ func (k *Keeper) GetTxConfig() client.TxConfig {
 func (k *Keeper) GetScheduledMsgs(ctx sdk.Context, execution_stage types.ExecutionStage) []types.MsgExecuteContract {
 	// func (k *Keeper) GetScheduledMsgs(ctx sdk.Context) [][]byte {
 	schedules := k.getSchedulesReadyForExecution(ctx, execution_stage)
-	fmt.Printf("schedules: %+v\n", schedules)
 	var msgExecuteContractList []types.MsgExecuteContract
 	for _, schedule := range schedules {
-		fmt.Printf("schedule:%+v\n", schedule)
 		msgs, err := k.getCronsMsgs(ctx, schedule, execution_stage)
 		if err != nil {
 			ctx.Logger().Error("Failed to get crons msgs", "error", err)
 			continue
 		}
-		fmt.Printf("------------msgs by schedule ----------------\n")
-		fmt.Printf("%+v\n", msgs)
 
 		msgExecuteContractList = append(msgExecuteContractList, msgs...)
 		if execution_stage == types.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER {
@@ -146,7 +142,6 @@ func (k *Keeper) AddSchedule(
 	name string,
 	period uint64,
 	msgs []types.MsgExecuteContract,
-	executionStage types.ExecutionStage,
 ) error {
 	if k.scheduleExists(ctx, name) {
 		return fmt.Errorf("schedule already exists with name=%v", name)
@@ -158,7 +153,6 @@ func (k *Keeper) AddSchedule(
 		Msgs:   msgs,
 		// let's execute newly added schedule on `now + period` block
 		LastExecuteHeight: uint64(ctx.BlockHeight()), //nolint:gosec
-		ExecutionStage:    executionStage,
 	}
 
 	k.storeSchedule(ctx, schedule)
@@ -225,7 +219,6 @@ func (k *Keeper) getSchedulesReadyForExecution(ctx sdk.Context, executionStage t
 	for ; iterator.Valid(); iterator.Next() {
 		var schedule types.Schedule
 		k.cdc.MustUnmarshal(iterator.Value(), &schedule)
-
 		if k.intervalPassed(ctx, schedule, executionStage) {
 			res = append(res, schedule)
 			count++
@@ -252,7 +245,7 @@ func getTxEncryptionKey(ctx sdk.Context, k *Keeper, txSenderPrivKey []byte, nonc
 
 	txEncryptionIkm, err := curve25519.X25519(txSenderPrivKey, consensusIoPubKey.Bytes)
 	if err != nil {
-		fmt.Println("Failed to get tx encryption key")
+		ctx.Logger().Error("Failed to derive tx encryption key", "error", err)
 		return nil, err
 	}
 
@@ -260,6 +253,7 @@ func getTxEncryptionKey(ctx sdk.Context, k *Keeper, txSenderPrivKey []byte, nonc
 
 	txEncryptionKey := make([]byte, 32)
 	if _, err := io.ReadFull(kdfFunc, txEncryptionKey); err != nil {
+		ctx.Logger().Error("Failed inside the getTxEncryptionKey", "error", err)
 		return nil, err
 	}
 
@@ -269,15 +263,9 @@ func getTxEncryptionKey(ctx sdk.Context, k *Keeper, txSenderPrivKey []byte, nonc
 // Encrypt encrypts deterministically by deriving the ephemeral keys and nonce from the plaintext.
 func Encrypt(ctx sdk.Context, k *Keeper, plaintext []byte) ([]byte, error) {
 	txSenderPrivKey := sha256.Sum256(plaintext)
-	// var txSenderPrivKey [32]byte
-	// rand.Read(txSenderPrivKey[:]) //nolint:errcheck
 
 	var txSenderPubKey [32]byte
 	curve25519.ScalarBaseMult(&txSenderPubKey, &txSenderPrivKey)
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return nil, err
-	// }
 
 	// Derive a deterministic nonce by hashing the plaintext with an appended constant.
 	nonceData := append(plaintext, []byte("nonce")...) // "nonce" is a constant string to differentiate from key derivation
@@ -286,7 +274,7 @@ func Encrypt(ctx sdk.Context, k *Keeper, plaintext []byte) ([]byte, error) {
 
 	txEncryptionKey, err := getTxEncryptionKey(ctx, k, txSenderPrivKey[:], nonce)
 	if err != nil {
-		// log.Println(err)
+		ctx.Logger().Error("Failed to get tx encryption key", "error", err)
 		return nil, err
 	}
 
@@ -344,7 +332,7 @@ func (k *Keeper) intervalPassed(ctx sdk.Context, schedule types.Schedule, execut
 	if executionStage == types.ExecutionStage_EXECUTION_STAGE_END_BLOCKER {
 		delta = 1
 	}
-	return uint64(ctx.BlockHeight())+uint64(delta) > (schedule.LastExecuteHeight + schedule.Period) //nolint:gosec
+	return uint64(ctx.BlockHeight())+uint64(delta) >= (schedule.LastExecuteHeight + schedule.Period) //nolint:gosec
 }
 
 func (k *Keeper) changeTotalCount(ctx sdk.Context, incrementAmount int32) {
