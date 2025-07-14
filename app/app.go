@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -448,10 +449,14 @@ func (app *SecretNetworkApp) UpdateOneKey(ctx sdk.Context, filePath string, keyI
 		return
 	}
 
-	fmt.Printf("%s set to %s\n", keyID, keyB64)
+	keyNew := reg.MasterKey{Bytes: keyBz}
+	ctx2 := sdk.UnwrapSDKContext(ctx)
 
-	key := reg.MasterKey{Bytes: keyBz}
-	app.AppKeepers.RegKeeper.SetMasterKey(sdk.UnwrapSDKContext(ctx), key, keyID)
+	keyOld := app.AppKeepers.RegKeeper.GetMasterKey(ctx2, keyID)
+	if (keyOld == nil) || !bytes.Equal(keyOld.Bytes, keyNew.Bytes) {
+		app.AppKeepers.RegKeeper.SetMasterKey(ctx2, keyNew, keyID)
+		fmt.Printf("%s set to %s\n", keyID, keyB64)
+	}
 }
 
 func (app *SecretNetworkApp) UpdateNetworkKeys() {
