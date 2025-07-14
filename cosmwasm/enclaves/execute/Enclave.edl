@@ -62,7 +62,9 @@ enclave {
         public NodeAuthResult ecall_authenticate_new_node(
             [in, count=cert_len] const uint8_t* cert,
             uintptr_t cert_len,
-            [out, count=96] uint8_t* seed
+            [out, count=n_seeds] uint8_t* p_seeds,
+            uintptr_t n_seeds,
+            [out] uintptr_t* p_seeds_size
         );
 
         public NodeAuthResult ecall_check_patch_level(

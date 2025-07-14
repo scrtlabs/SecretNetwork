@@ -3,7 +3,6 @@ use std::env;
 use std::path;
 use std::string::ToString;
 
-pub use enclave_ffi_types::{INPUT_ENCRYPTED_SEED_SIZE, OUTPUT_ENCRYPTED_SEED_SIZE};
 use lazy_static::lazy_static;
 use log::*;
 use sgx_types::{sgx_quote_sign_type_t, sgx_report_body_t, sgx_self_report};

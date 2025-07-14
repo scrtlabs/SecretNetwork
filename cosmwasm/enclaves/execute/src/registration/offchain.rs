@@ -11,8 +11,8 @@ use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
     make_sgx_secret_path, CONSENSUS_SEED_VERSION, FILE_ATTESTATION_CERTIFICATE, FILE_CERT_COMBINED,
     FILE_MIGRATION_CERT_LOCAL, FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS,
-    FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY, INPUT_ENCRYPTED_SEED_SIZE,
-    SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY, SEED_UPDATE_SAVE_PATH,
+    SIGNATURE_TYPE,
 };
 #[cfg(feature = "random")]
 use enclave_crypto::{
@@ -216,10 +216,12 @@ pub unsafe extern "C" fn ecall_init_node(
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
 
-    if encrypted_seed_len != INPUT_ENCRYPTED_SEED_SIZE {
-        error!("Encrypted seed bad length");
+    if encrypted_seed_len == 0 {
+        error!("Encrypted seed is empty");
         return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     }
+
+    info!("Importing encrypted seed...");
 
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
@@ -237,19 +239,43 @@ pub unsafe extern "C" fn ecall_init_node(
     target_public_key.copy_from_slice(&pk);
 
     trace!(
-        "ecall_init_node target public key is: {:?}",
-        target_public_key
+        "ecall_init_node target public key is: {}",
+        hex::encode(target_public_key)
     );
 
     key_manager.delete_consensus_seed();
     key_manager.save();
 
-    let encrypted_seed_len = encrypted_seed_slice[0] as u32 as usize;
-    let seeds_count = encrypted_seed_len / SINGLE_ENCRYPTED_SEED_SIZE;
+    // older format for encrypted seeds: 1st byte is the size, then followed by 1 or 2 seeds
+    // newer format: only the seeds, without the preceeding first byte
+
+    let (seeds_count, seeds_packed) = match encrypted_seed_slice.len() % SINGLE_ENCRYPTED_SEED_SIZE
+    {
+        0 => {
+            // newer format
+            (encrypted_seed_slice.len(), encrypted_seed_slice)
+        }
+        1 => {
+            // older format
+            let used_len = encrypted_seed_slice[0] as u32 as usize;
+            if used_len > encrypted_seed_slice.len() - 1 {
+                error!("Unrecognized seeds used len: {}", used_len);
+                return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+            }
+
+            let seeds_count = used_len / SINGLE_ENCRYPTED_SEED_SIZE;
+            let remaining = &encrypted_seed_slice[1..used_len + 1];
+            (seeds_count, remaining)
+        }
+        _ => {
+            error!("Unrecognized seeds len: {}", encrypted_seed_slice.len());
+            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+        }
+    };
 
     for i_seed in 0..seeds_count {
-        let offs = i_seed * SINGLE_ENCRYPTED_SEED_SIZE + 1;
-        let sub_slice: &[u8; SINGLE_ENCRYPTED_SEED_SIZE] = encrypted_seed_slice
+        let offs = i_seed * SINGLE_ENCRYPTED_SEED_SIZE;
+        let sub_slice: &[u8; SINGLE_ENCRYPTED_SEED_SIZE] = seeds_packed
             [offs..offs + SINGLE_ENCRYPTED_SEED_SIZE]
             .try_into()
             .unwrap();

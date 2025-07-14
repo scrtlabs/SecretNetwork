@@ -1,10 +1,7 @@
-use enclave_ffi_types::{
-    HealthCheckResult, INPUT_ENCRYPTED_SEED_SIZE, NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE,
-    NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE,
-};
+use enclave_ffi_types::HealthCheckResult;
 use sgx_types::*;
 
-use log::{error, info};
+use log::info;
 
 use crate::enclave::{ecall_submit_validator_set_evidence, ENCLAVE_DOORBELL};
 
@@ -106,35 +103,14 @@ pub fn untrusted_init_node(
     let eid = enclave.geteid();
     let mut ret = sgx_status_t::SGX_SUCCESS;
 
-    let mut seed_to_enclave = [0u8; INPUT_ENCRYPTED_SEED_SIZE as usize];
-
-    if (encrypted_seed.len()) > INPUT_ENCRYPTED_SEED_SIZE as usize {
-        error!("Tried to setup node with seed that is too long");
-        return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
-    }
-
-    match encrypted_seed.len() {
-        NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE => seed_to_enclave
-            [0..NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE]
-            .copy_from_slice(encrypted_seed),
-        NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE => seed_to_enclave
-            [0..NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE]
-            .copy_from_slice(encrypted_seed),
-        1 => {} // empty
-        _ => {
-            error!("Received seed with wrong length");
-            return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
-        }
-    };
-
     let status = unsafe {
         ecall_init_node(
             eid,
             &mut ret,
             master_key.as_ptr(),
             master_key.len() as u32,
-            seed_to_enclave.as_ptr(),
-            seed_to_enclave.len() as u32,
+            encrypted_seed.as_ptr(),
+            encrypted_seed.len() as u32,
             api_key.as_ptr(),
             api_key.len() as u32,
         )

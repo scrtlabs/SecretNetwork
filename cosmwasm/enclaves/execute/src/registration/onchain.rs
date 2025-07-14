@@ -9,7 +9,6 @@ use enclave_ffi_types::NodeAuthResult;
 use crate::registration::attestation::verify_quote_sgx;
 use crate::registration::cert::verify_ra_report;
 
-use enclave_crypto::consts::OUTPUT_ENCRYPTED_SEED_SIZE;
 use enclave_crypto::PUBLIC_KEY_SIZE;
 use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
@@ -150,15 +149,16 @@ fn verify_attestation_dcap(
 pub unsafe extern "C" fn ecall_authenticate_new_node(
     cert: *const u8,
     cert_len: u32,
-    // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
-    seed: &mut [u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize],
+    p_seeds: *mut u8,
+    n_seeds: u32,
+    p_seeds_size: *mut u32,
 ) -> NodeAuthResult {
     if let Err(_err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
         return NodeAuthResult::MemorySafetyAllocationError;
     }
 
-    validate_mut_ptr!(seed.as_mut_ptr(), seed.len(), NodeAuthResult::InvalidInput);
+    validate_mut_ptr!(p_seeds, n_seeds as usize, NodeAuthResult::InvalidInput);
     validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
 
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
@@ -221,8 +221,17 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             Ok(res) => {
                 trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
 
-                seed.copy_from_slice(&res);
-                trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
+                let actual_size = res.len() as u32;
+                *p_seeds_size = actual_size;
+
+                if n_seeds < actual_size {
+                    warn!("insufficient seeds buffer!");
+                    return NodeAuthResult::InvalidInput;
+                }
+
+                slice::from_raw_parts_mut(p_seeds, res.len()).copy_from_slice(&res);
+
+                trace!("returning with seed: {}, {}", res.len(), hex::encode(&res));
                 NodeAuthResult::Success
             }
             Err(e) => {

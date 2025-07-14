@@ -7,7 +7,7 @@ use log::*;
 use sgx_types::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
-use enclave_ffi_types::{NodeAuthResult, OUTPUT_ENCRYPTED_SEED_SIZE, SINGLE_ENCRYPTED_SEED_SIZE};
+use enclave_ffi_types::{NodeAuthResult, SINGLE_ENCRYPTED_SEED_SIZE};
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
@@ -24,7 +24,9 @@ extern "C" {
         retval: *mut NodeAuthResult,
         cert: *const u8,
         cert_len: u32,
-        seed: &mut [u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize],
+        p_seeds: *mut u8,
+        n_seeds: u32,
+        p_seeds_size: *mut u32,
     ) -> sgx_status_t;
     pub fn ecall_get_genesis_seed(
         eid: sgx_enclave_id_t,
@@ -175,7 +177,13 @@ pub fn create_attestation_report_u(api_key: &[u8], flags: u32) -> SgxResult<()> 
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let status = unsafe {
-        ecall_get_attestation_report(eid, &mut retval, api_key.as_ptr(), api_key.len() as u32, flags)
+        ecall_get_attestation_report(
+            eid,
+            &mut retval,
+            api_key.as_ptr(),
+            api_key.len() as u32,
+            flags,
+        )
     };
 
     if status != sgx_status_t::SGX_SUCCESS {
@@ -189,9 +197,7 @@ pub fn create_attestation_report_u(api_key: &[u8], flags: u32) -> SgxResult<()> 
     Ok(())
 }
 
-pub fn untrusted_get_encrypted_seed(
-    cert: &[u8],
-) -> SgxResult<Result<[u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize], NodeAuthResult>> {
+pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<Result<Vec<u8>, NodeAuthResult>> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -201,14 +207,20 @@ pub fn untrusted_get_encrypted_seed(
     let eid = enclave.geteid();
     let mut retval = NodeAuthResult::Success;
 
-    let mut seed = [0u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize];
+    let mut seed_buffer = Vec::new();
+    seed_buffer.resize(SINGLE_ENCRYPTED_SEED_SIZE * 100, 0); // should be enough. Resize in later version, when approaching the limit
+
+    let mut seeds_size: u32 = 0;
+
     let status = unsafe {
         ecall_authenticate_new_node(
             eid,
             &mut retval,
             cert.as_ptr(),
             cert.len() as u32,
-            &mut seed,
+            seed_buffer.as_mut_ptr(),
+            seed_buffer.len() as u32,
+            &mut seeds_size,
         )
     };
 
@@ -222,14 +234,16 @@ pub fn untrusted_get_encrypted_seed(
         return Ok(Err(retval));
     }
 
-    debug!("Done auth, got seed: {:?}", seed);
-
-    if seed.is_empty() {
+    if seeds_size == 0 {
         error!("Got empty seed from encryption");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    Ok(Ok(seed))
+    seed_buffer.resize(seeds_size as usize, 0);
+
+    debug!("Done auth, got seed: {}", hex::encode(&seed_buffer));
+
+    Ok(Ok(seed_buffer))
 }
 
 pub fn untrusted_get_encrypted_genesis_seed(

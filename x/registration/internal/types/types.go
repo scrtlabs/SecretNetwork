@@ -7,13 +7,12 @@ import (
 
 const (
 	EnclaveSealedData          = "data.sealed"
-	PublicKeyLength            = 64  // encoded length
-	EncryptedKeyLength         = 192 // hex encoded length
-	LegacyEncryptedKeyLength   = 96  // hex encoded length
+	PublicKeyLength            = 64 // encoded length
+	EncryptedKeyGranularity    = 96 // hex encoded length
 	MasterNodeKeyId            = "NodeExchMasterKey"
 	MasterIoKeyId              = "IoExchMasterKey"
 	SecretNodeSeedLegacyConfig = "seed.json"
-	SecretNodeSeedNewConfig    = "new_seed.json" 
+	SecretNodeSeedNewConfig    = "new_seed.json"
 	SecretNodeCfgFolder        = ".node"
 )
 

@@ -264,7 +264,7 @@ func FetchRawPubKeyFromLegacyCert(cert []byte) ([]byte, error) {
 func validateEncryptedSeed(encSeed string) error {
 	lenKey := len(encSeed) - 2
 
-	if (lenKey != types.EncryptedKeyLength && lenKey != types.LegacyEncryptedKeyLength) || !IsHexString(encSeed) {
+	if (lenKey%types.EncryptedKeyGranularity != 0) || !IsHexString(encSeed) {
 		return errorsmod.Wrap(types.ErrSeedValidationParams, "Invalid parameter: `seed` in seed parameters. Did you initialize the node?")
 	}
 	return nil

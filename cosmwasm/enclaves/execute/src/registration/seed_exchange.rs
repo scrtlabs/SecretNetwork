@@ -27,9 +27,9 @@ pub fn encrypt_seed(
     // genesis seed is passed in registration
 
     trace!(
-        "Public keys on encryption {:?} {:?}",
-        base_seed.get_pubkey(),
-        new_node_pk
+        "Public keys on encryption {} {}",
+        hex::encode(base_seed.get_pubkey()),
+        hex::encode(new_node_pk)
     );
     let res = match AESKey::new_from_slice(&shared_enc_key)
         .encrypt_siv(seed_to_share.as_slice(), Some(&authenticated_data))
@@ -74,9 +74,9 @@ pub fn decrypt_seed(
     let authenticated_data: Vec<&[u8]> = vec![&my_public_key];
 
     trace!(
-        "Public keys on decryption: {:?} {:?}",
-        my_public_key,
-        master_pk
+        "Public keys on decryption: {} {}",
+        hex::encode(my_public_key),
+        hex::encode(master_pk)
     );
 
     // decrypt
