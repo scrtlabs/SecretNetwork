@@ -451,7 +451,7 @@ func (app *SecretNetworkApp) UpdateOneKey(ctx sdk.Context, filePath string, keyI
 	fmt.Printf("%s set to %s\n", keyID, keyB64)
 
 	key := reg.MasterKey{Bytes: keyBz}
-	app.AppKeepers.RegKeeper.SetMasterKey(sdk.UnwrapSDKContext(ctx), key, reg.MasterIoKeyId)
+	app.AppKeepers.RegKeeper.SetMasterKey(sdk.UnwrapSDKContext(ctx), key, keyID)
 }
 
 func (app *SecretNetworkApp) UpdateNetworkKeys() {
