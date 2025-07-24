@@ -134,12 +134,36 @@ fn verify_contract_address_msg_recv_packet(
     data: &Vec<u8>,
     contract_address: &HumanAddr,
 ) -> bool {
+    info!(
+        "---destination_port: {:?}, contract_address: {:?}",
+        destination_port, contract_address
+    );
     if destination_port == "transfer" {
         // Packet was routed here through ibc-hooks
         verify_contract_address_ibc_wasm_hooks_incoming_transfer(data, contract_address)
-    } else {
-        // Packet is for an IBC enabled contract
+    } else if destination_port.starts_with("wasm.") {
+        // Check if this is IBC hooks through ics20 contract
+        if let Ok(packet_data) = serde_json::from_slice::<FungibleTokenPacketData>(data.as_slice())
+        {
+            if let Some(memo) = &packet_data.memo {
+                if let Ok(wasm_msg) =
+                    serde_json::from_slice::<IbcHooksIncomingTransferMsg>(memo.as_bytes())
+                {
+                    // This is IBC hooks through ics20 - verify against memo contract
+                    info!(
+                        "contract_addreess: {:?}, wasm_msg: {:?}",
+                        contract_address, wasm_msg.wasm.contract
+                    );
+                    if *contract_address == wasm_msg.wasm.contract {
+                        return true;
+                    }
+                }
+            }
+        }
+        // // Fall back to standard IBC contract verification
         verify_contract_address_ibc_contract(destination_port, contract_address)
+    } else {
+        false
     }
 }
 
