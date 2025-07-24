@@ -150,12 +150,96 @@ pub fn verify_ibc_packet_recv(sent_msg: &SecretMessage, packet: &Packet) -> bool
     }
     let parsed = parsed_sent_msg.unwrap();
 
-    parsed.packet.data.as_slice() == data.as_slice()
-        && parsed.packet.sequence == *sequence
+    // First, verify all the packet metadata - this should always match
+    let metadata_valid = parsed.packet.sequence == *sequence
         && parsed.packet.src.port_id == *source_port
         && parsed.packet.src.channel_id == *source_channel
         && parsed.packet.dest.port_id == *destination_port
-        && parsed.packet.dest.channel_id == *destination_channel
+        && parsed.packet.dest.channel_id == *destination_channel;
+
+    info!("IBC packet metadata valid: {}", metadata_valid);
+
+    if !metadata_valid {
+        warn!("IBC packet metadata verification failed");
+        return false;
+    }
+
+    // Now verify the data - with hooks awareness
+    let data_valid = verify_ibc_packet_data_with_hooks(&parsed.packet.data.as_slice(), data);
+
+    info!("IBC packet data valid: {}", data_valid);
+
+    metadata_valid && data_valid
+}
+
+const ZERO_SENDER: &str = "secret1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3x5k6p";
+
+fn verify_ibc_packet_data_with_hooks(actual_data: &[u8], expected_data: &[u8]) -> bool {
+    // Parse both packets using the proper struct
+    let actual_packet = match serde_json::from_slice::<FungibleTokenPacketData>(actual_data) {
+        Ok(packet) => packet,
+        Err(e) => {
+            warn!("Failed to parse actual packet: {}", e);
+            return false;
+        }
+    };
+
+    let expected_packet = match serde_json::from_slice::<FungibleTokenPacketData>(expected_data) {
+        Ok(packet) => packet,
+        Err(e) => {
+            warn!("Failed to parse expected packet: {}", e);
+            return false;
+        }
+    };
+
+    // Verify core fields are unchanged
+    let core_valid = expected_packet.denom == actual_packet.denom
+        && expected_packet.amount == actual_packet.amount
+        && expected_packet.sender == actual_packet.sender
+        && expected_packet.memo == actual_packet.memo;
+
+    if !core_valid {
+        warn!("Core IBC packet fields were modified");
+        return false;
+    }
+
+    // Handle receiver changes
+    if expected_packet.receiver == actual_packet.receiver {
+        info!("Standard IBC transfer - receiver unchanged");
+        return true;
+    }
+
+    // Allow receiver change to ZeroSender for IBC hooks
+    if actual_packet.receiver.as_str() == ZERO_SENDER {
+        info!("IBC hooks detected: receiver changed to ZeroSender");
+
+        // Verify there's a valid wasm memo
+        if let Some(memo_str) = &actual_packet.memo {
+            if let Ok(memo_json) = serde_json::from_str::<serde_json::Value>(memo_str) {
+                if let Some(contract_addr) = memo_json
+                    .get("wasm")
+                    .and_then(|w| w.get("contract"))
+                    .and_then(|c| c.as_str())
+                {
+                    // Verify original receiver matches contract in memo
+                    let valid = expected_packet.receiver.as_str() == contract_addr;
+                    info!(
+                        "IBC hooks validation: original='{}', contract='{}', valid={}",
+                        expected_packet.receiver, contract_addr, valid
+                    );
+                    return valid;
+                }
+            }
+        }
+        warn!("Invalid IBC hooks: ZeroSender change without valid wasm memo");
+        return false;
+    }
+
+    warn!(
+        "Unauthorized receiver change: {} -> {}",
+        expected_packet.receiver, actual_packet.receiver
+    );
+    false
 }
 
 pub fn verify_ibc_wasm_hooks_incoming_transfer(sent_msg: &SecretMessage, packet: &Packet) -> bool {
