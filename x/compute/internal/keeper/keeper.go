@@ -1658,9 +1658,27 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return nil, err
 	}
 
-	if contractInfo.Admin != caller.String() {
+	if contractInfo.Admin != caller.String() && contractInfo.Admin != "" {
 		return nil, errorsmod.Wrap(types.ErrMigrationFailed, "requires migrate from admin")
 	}
+	if contractInfo.Admin == "" && !contractInfo.RequireGovernance {
+		return nil, errorsmod.Wrap(types.ErrMigrationFailed, "contract is not upgradable")
+	}
+	codeID, found := k.GetAuthorizedMigration(ctx, contractAddress.String())
+	if contractInfo.RequireGovernance {
+		if !found {
+			return nil, errorsmod.Wrap(types.ErrMigrationFailed, "requires governance approval for migration")
+		}
+		if codeID != newCodeID {
+			return nil, errorsmod.Wrap(types.ErrMigrationFailed, "mismatch code id for migration")
+		}
+	}
+
+	// We set the admin only if it's currently unset and the contract is intended to be upgradable via governance.
+	// The admin field might be empty, so we assign an arbitrary value to avoid breaking the upgrade logic.
+	// if contractInfo.Admin == "" && contractInfo.RequireGovernance {
+	// 	contractInfo.Admin = caller.String()
+	// }
 
 	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
@@ -1671,7 +1689,8 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	adminAddr, err := sdk.AccAddressFromBech32(admin)
 	if err != nil {
-		return nil, errorsmod.Wrap(types.ErrMigrationFailed, err.Error())
+		// return nil, errorsmod.Wrap(types.ErrMigrationFailed, err.Error())
+		adminAddr = sdk.AccAddress{}
 	}
 
 	// prepare querier
@@ -1714,6 +1733,10 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	contractInfo.CodeID = newCodeID
 	k.setContractInfo(ctx, contractAddress, &contractInfo)
+
+	if contractInfo.RequireGovernance && found {
+		k.ConsumeAuthorizedMigration(ctx, contractAddress.String())
+	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeMigrate,
@@ -1817,4 +1840,53 @@ func (k Keeper) addToContractCodeSecondaryIndex(ctx sdk.Context, contractAddress
 // GetAuthority returns the x/emergencybutton module's authority.
 func (k Keeper) GetAuthority() string {
 	return k.authority
+}
+
+// Store upgrade authorization
+func (k Keeper) SetAuthorizedMigration(ctx sdk.Context, contractAddr string, newCodeID uint64) {
+	store := k.storeService.OpenKVStore(ctx)
+	key := types.GetUpgradeAuthKey(contractAddr)
+	value := sdk.Uint64ToBigEndian(newCodeID)
+	err := store.Set(key, value)
+	if err != nil {
+		ctx.Logger().Error("SetAuthorizedMigration:", err.Error())
+	}
+}
+
+// Get upgrade authorization
+func (k Keeper) GetAuthorizedMigration(ctx sdk.Context, contractAddr string) (uint64, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	key := types.GetUpgradeAuthKey(contractAddr)
+	bz, err := store.Get(key)
+	if err != nil {
+		ctx.Logger().Error("GetAuthorizedMigration:", err.Error())
+		return 0, false
+	}
+	if bz == nil {
+		return 0, false
+	}
+	return sdk.BigEndianToUint64(bz), true
+}
+
+// Consume (delete) authorization after use
+func (k Keeper) ConsumeAuthorizedMigration(ctx sdk.Context, contractAddr string) {
+	store := k.storeService.OpenKVStore(ctx)
+	key := types.GetUpgradeAuthKey(contractAddr)
+	err := store.Delete(key)
+	if err != nil {
+		ctx.Logger().Error("ConsumeAuthorizedMigration:", err.Error())
+	}
+}
+
+// UpdateContractGovernanceRequirement set true to the require_governance field
+func (k Keeper) SetContractGovernanceRequirement(ctx sdk.Context, contractAddr sdk.AccAddress) error {
+	contractInfo := k.GetContractInfo(ctx, contractAddr)
+	if contractInfo == nil {
+		return errorsmod.Wrap(types.ErrNotFound, "contract")
+	}
+
+	contractInfo.RequireGovernance = true
+	k.setContractInfo(ctx, contractAddr, contractInfo)
+
+	return nil
 }

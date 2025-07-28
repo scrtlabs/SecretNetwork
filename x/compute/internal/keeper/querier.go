@@ -6,6 +6,8 @@ import (
 	"sort"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	errorsmod "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
@@ -214,6 +216,34 @@ func (q GrpcQuerier) Params(c context.Context, _ *types.ParamsRequest) (*types.P
 	return &types.ParamsResponse{
 		Params: params,
 	}, nil
+}
+
+// AuthorizedMigration returns the authorized migration info for a contract
+func (q GrpcQuerier) AuthorizedMigration(c context.Context, req *types.QueryAuthorizedMigrationRequest) (*types.QueryAuthorizedMigrationResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.ContractAddress == "" {
+		return nil, status.Error(codes.InvalidArgument, "contract address cannot be empty")
+	}
+
+	ctx := sdk.UnwrapSDKContext(c)
+
+	// Validate contract address
+	if _, err := sdk.AccAddressFromBech32(req.ContractAddress); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid contract address")
+	}
+
+	// Check for authorized migration
+	codeID, hasAuth := q.keeper.GetAuthorizedMigration(ctx, req.ContractAddress)
+
+	response := &types.QueryAuthorizedMigrationResponse{}
+	if hasAuth {
+		response.NewCodeID = codeID
+	}
+
+	return response, nil
 }
 
 func queryContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, keeper Keeper) (*types.ContractInfoWithAddress, error) {
