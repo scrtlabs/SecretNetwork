@@ -60,6 +60,8 @@ import (
 	v1_16 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.16"
 	v1_17 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.17"
 	v1_18 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.18"
+	v1_19 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.19"
+	v1_20 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.20"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
@@ -133,6 +135,8 @@ var (
 		v1_16.Upgrade,
 		v1_17.Upgrade,
 		v1_18.Upgrade,
+		v1_19.Upgrade,
+		v1_20.Upgrade,
 	}
 )
 

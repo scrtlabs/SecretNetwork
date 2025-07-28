@@ -5,6 +5,34 @@ use std::collections::HashMap;
 lazy_static::lazy_static! {
     /// Current hardcoded contract admins
     static ref HARDCODED_CONTRACT_ADMINS: HashMap<&'static str, &'static str> = HashMap::from([
+        ("secret1hg83qtpn0444k7shhmuawhykklycd7qt24z34g", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
+        ("secret1jr05klxup5285wv2w24x3rs6rr37c8fyz39evd", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
+        ("secret1my2ycry070nsgugw67k4ej93ttsgut5yd8xnhj", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
+        ("secret1rekrj69d9kl7p5gpcq7d0qrwdrw0hmszrv5hy3", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
+        ("secret13w6n5u3kpvqdunkavgfy40d7ma85xuhxrcxd0a", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret15e5k97pfrwpkqwfxxeel0p6yn5dxztcfk9twvs", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret10j7966px7pgws8a248pdjpa9q5qc9yzal3yefj", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret17d24y82ccnar8hlxmlkfur35pykl520hmn4uy0", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1s5stvts55vup80tvzqm7yq3yztnraadwgdtu77", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret137sjm7hgqdp4d0dldqnrxe2ktw02meaygnjd0e", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret12y2a9qaaz9n3p73j9ew4jt44ux3zf8jtfjs73n", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret10vqfvzvnyugg2vs7ls8ywdqmmfhahzsyavdw7z", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1fs89u8ccf6pldedadztukdxvdvyufgzq0fwnw9", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret10d87t6dzdm9aqhnsak2hkm2yd3wj7gutusv55e", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1ul7a2xx99ym3g82k2l3d06x4v0zk2ddp6ak7sa", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1hqfl9fmwvljsyd5keydr7sg3ak3v0yfux7nsga", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret10nm4j3hk0dng4wy4vy56hlpuaz9stq9whuqtcr", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1rk99x8qcfk5944r0tqsw968nxh3fh75r2zsxr3", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1sryenwm7k855c27gl7669pqe7rueafupqn7wew", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1rzfcjeswt3xkqer9q0kpptz95ctj8ns92wweap", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1nt08wdpjdyd55t0hsq4k2t8vtpz2zpry3t0rn9", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret16x0mpw6ekw4rwpsqwzfu34kj03vpt8tqkvp9rh", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1q4j7x62fat7lksc68hjn0dvevxvr3y4u0xv2mh", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1taxc3vm49jkkngyrtz6ddre8r7rrpvyqsun5rn", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret18g6dzaeexa4afjpc8klqjjv8xatup9ajd9w7v5", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1lc30a65r5e082f9kzpujlfxpgj73jjz3q8gm4j", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1txlu7sk6ah45a8teasrv3nn79lwlq8emmd0kxd", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
+        ("secret1yk6aw5rsgm7wshg68zxspjv3mak57j6ata4v5c", "secret13r6tamqn88p0lxuuys4yxrxtdtjkclw4rmz8d2"), // shade testnet contracts
         ("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek", "secret1lrnpnp6ltfxwuhjeaz97htnajh096q7y72rp5d"),
         ("secret14mzwd0ps5q277l20ly2q3aetqe3ev4m4260gf4", "secret1lrnpnp6ltfxwuhjeaz97htnajh096q7y72rp5d"),
         ("secret1k8cge73c3nh32d4u0dsd5dgtmk63shtlrfscj5", "secret1lrnpnp6ltfxwuhjeaz97htnajh096q7y72rp5d"),

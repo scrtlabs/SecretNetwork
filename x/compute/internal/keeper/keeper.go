@@ -710,10 +710,26 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			return nil, sdkerrors.ErrInvalidAddress.Wrap("blocked address can not be used")
 		}
 
-		sdkerr := k.bankKeeper.SendCoins(ctx, caller, contractAddress, coins)
-		if sdkerr != nil {
-			return nil, sdkerr
+		// Filter out cw20: prefixed tokens and handle them separately
+		var nativeCoins sdk.Coins
+		var cw20Coins sdk.Coins
+
+		for _, coin := range coins {
+			if strings.HasPrefix(coin.Denom, "cw20:") {
+				cw20Coins = cw20Coins.Add(coin)
+			} else {
+				nativeCoins = nativeCoins.Add(coin)
+			}
 		}
+
+		// Send only native tokens via bank module
+		if !nativeCoins.IsZero() {
+			sdkerr := k.bankKeeper.SendCoins(ctx, caller, contractAddress, nativeCoins)
+			if sdkerr != nil {
+				return nil, sdkerr
+			}
+		}
+		coins = nativeCoins
 	}
 
 	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
