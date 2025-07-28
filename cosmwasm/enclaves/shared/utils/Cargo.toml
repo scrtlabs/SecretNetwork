@@ -32,6 +32,6 @@ serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"
 ] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
-tendermint-proto = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.9-add-implicit-hash", default-features = false }
-tendermint = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.9-add-implicit-hash", default-features = false, features = ["rust-crypto"] }
+tendermint-proto = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.5", default-features = false }
+tendermint = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.5", default-features = false, features = ["rust-crypto"] }
 enclave_crypto = { path = "../crypto" }
