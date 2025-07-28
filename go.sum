@@ -1593,8 +1593,8 @@ github.com/sagikazarmark/slog-shim v0.1.0/go.mod h1:SrcSrq8aKtyuqEI1uvTDTK1arOWR
 github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da/go.mod h1:gi+0XIa01GRL2eRQVjQkKGqKF3SF9vZR/HnPullcV2E=
 github.com/sasha-s/go-deadlock v0.3.5 h1:tNCOEEDG6tBqrNDOX35j/7hL5FcFViG6awUGROb2NsU=
 github.com/sasha-s/go-deadlock v0.3.5/go.mod h1:bugP6EGbdGYObIlx7pUZtWqlvo8k9H6vCBBsiChJQ5U=
-github.com/scrtlabs/cosmos-sdk v0.50.14-secret.0 h1:9JYPv5gsgRbykqMpMxNPOIbCME7xq8BdPIPtb3gskOc=
-github.com/scrtlabs/cosmos-sdk v0.50.14-secret.0/go.mod h1:2g96/v9yIKkK5L46ytJH+fJ7WFIq+B/N3OyLSudJwt0=
+github.com/scrtlabs/cosmos-sdk v0.50.14-secret.1 h1:PXMBr+XYyS+0rcV7qEZFMCHptE2yGy3Fm40aOf4uugg=
+github.com/scrtlabs/cosmos-sdk v0.50.14-secret.1/go.mod h1:o5lKbf9No55kH8kaMABPi7U0oPOnU8tU8iEvOgKyZXk=
 github.com/scrtlabs/cosmos-sdk-api v0.7.6-secret.0 h1:9IGLySVhC2qSrxT3fZvvqwjKsnXWSSKnywQDzT8y1Gs=
 github.com/scrtlabs/cosmos-sdk-api v0.7.6-secret.0/go.mod h1:IcxpYS5fMemZGqyYtErK7OqvdM0C8kdW3dq8Q/XIG38=
 github.com/scrtlabs/cosmos-sdk-store v1.1.1-secret.1 h1:TELtwBkSg0xBrs2ObFE0pVVWF6E31fPCDX2tk8OiJPo=
@@ -1603,10 +1603,10 @@ github.com/scrtlabs/cosmos-sdk-x-tx v0.13.7-secret.0 h1:i3k5706sDHKhaCvzokB+n33/
 github.com/scrtlabs/cosmos-sdk-x-tx v0.13.7-secret.0/go.mod h1:V6DImnwJMTq5qFjeGWpXNiT/fjgE4HtmclRmTqRVM3w=
 github.com/scrtlabs/iavl v1.2.2-secret.0 h1:P96PL1Lf8OBSW9pMrlaRxhceZ4z9Hc7jk12g9ShWeHw=
 github.com/scrtlabs/iavl v1.2.2-secret.0/go.mod h1:GiM43q0pB+uG53mLxLDzimxM9l/5N9UuSY3/D0huuVw=
-github.com/scrtlabs/tendermint v0.38.17-secret.4 h1:09j6LyYIvwOY4umiDwxyK1p/oz9aZWHXVbt+Xjqndck=
-github.com/scrtlabs/tendermint v0.38.17-secret.4/go.mod h1:sNoZhVMiH5XByh5E+21n9hLVep/Z3n0Qs3OwJr7EpN0=
-github.com/scrtlabs/tm-secret-enclave v1.12.2 h1:fl1rOFYB4+9orTzjAnp6r5EmIm5/6c78EERrWcgEWHA=
-github.com/scrtlabs/tm-secret-enclave v1.12.2/go.mod h1:nxZQtzzAqBNBLOEXSv4cKlUnVA4vRmHOn6ujr3kxVME=
+github.com/scrtlabs/tendermint v0.38.17-secret-5 h1:3A+C67lqUrL2ZryP6yhTz+9TyQxPMzYygtiOUdw5beM=
+github.com/scrtlabs/tendermint v0.38.17-secret-5/go.mod h1:v3Ig0sYd0ZzXf4V5A/M4PoBohQZYI9Wlg6gBALw1Qs8=
+github.com/scrtlabs/tm-secret-enclave v1.13.0 h1:a2xH0G96chEM8Ntwlq/Fh36r4dg0ijKWTaOy0oqFsqg=
+github.com/scrtlabs/tm-secret-enclave v1.13.0/go.mod h1:nxZQtzzAqBNBLOEXSv4cKlUnVA4vRmHOn6ujr3kxVME=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
@@ -2452,8 +2452,8 @@ google.golang.org/genproto/googleapis/api v0.0.0-20230711160842-782d3b101e98/go.
 google.golang.org/genproto/googleapis/api v0.0.0-20230726155614-23370e0ffb3e/go.mod h1:rsr7RhLuwsDKL7RmgDDCUc6yaGr1iqceVb5Wv6f6YvQ=
 google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d/go.mod h1:KjSP20unUpOx5kyQUFa7k4OJg0qeJ7DEZflGDu2p6Bk=
 google.golang.org/genproto/googleapis/api v0.0.0-20240528184218-531527333157/go.mod h1:99sLkeliLXfdj2J75X3Ho+rrVCaJze0uwN7zDDkjPVU=
-google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142 h1:wKguEg1hsxI2/L3hUYrpo1RVi48K+uTyzKqprwLXsb8=
-google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142/go.mod h1:d6be+8HhtEtucleCbxpPW9PA9XwISACu8nvpPqF0BVo=
+google.golang.org/genproto/googleapis/api v0.0.0-20241202173237-19429a94021a h1:OAiGFfOiA0v9MRYsSidp3ubZaBnteRUyn3xB2ZQ5G/E=
+google.golang.org/genproto/googleapis/api v0.0.0-20241202173237-19429a94021a/go.mod h1:jehYqy3+AhJU9ve55aNOaSml7wUXjF9x6z2LcCfpAhY=
 google.golang.org/genproto/googleapis/bytestream v0.0.0-20230530153820-e85fd2cbaebc/go.mod h1:ylj+BE99M198VPbBh6A8d9n3w8fChvyLK3wwBOjXBFA=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20230525234015-3fc162c6f38a/go.mod h1:xURIpW9ES5+/GZhnV6beoEtxQrnkRGIfP5VQG2tCBLc=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20230525234030-28d5490b6b19/go.mod h1:66JfowdXAEgad5O9NnYcsNPLCPZJD++2L9X0PCMODrA=

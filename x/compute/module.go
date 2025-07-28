@@ -2,6 +2,7 @@ package compute
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -15,9 +16,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/client/cli"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
+	crontypes "github.com/scrtlabs/SecretNetwork/x/cron/types"
+	tmenclave "github.com/scrtlabs/tm-secret-enclave"
 )
 
 var (
@@ -151,6 +155,20 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	// Note: as of tendermint v0.38.0 block begin request info is no longer available
 	ctx := c.(sdk.Context)
 	block_header := ctx.BlockHeader()
+
+	execCronMsgs, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
+	if err != nil {
+		ctx.Logger().Error("Failed to get scheduled cron msgs")
+		return err
+	}
+
+	cron_msgs := tm_type.Data{Txs: bytesCronMsgs}
+	cron_data, err := cron_msgs.Marshal()
+	if err != nil {
+		ctx.Logger().Error("Failed to marshal cron_msgs")
+		return err
+	}
+
 	header, err := block_header.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal block header")
@@ -173,15 +191,49 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	}
 	if block_header.EncryptedRandom != nil {
 		randomAndProof := append(block_header.EncryptedRandom.Random, block_header.EncryptedRandom.Proof...)
-		random, validator_set_evidence, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof)
+		random, validator_set_evidence, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof, cron_data)
 		if err != nil {
 			ctx.Logger().Error("Failed to submit block signatures")
 			return err
 		}
 
+		for idx, msg := range execCronMsgs {
+			ctx = ctx.WithTxBytes(bytesCronMsgs[idx])
+			_, err := am.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, wasmtypes.HandleTypeExecute)
+			if err != nil {
+				ctx.Logger().Error("Failed to execute cron message", "error", err)
+			}
+		}
+
 		am.keeper.SetRandomSeed(ctx, random, validator_set_evidence)
 	} else {
 		ctx.Logger().Debug("Non-encrypted block", "Block_hash", block_header.LastBlockId.Hash, "Height", ctx.BlockHeight(), "Txs", len(x2_data))
+	}
+	return nil
+}
+
+// EndBlock returns the end blocker for the compute module.
+func (am AppModule) EndBlock(c context.Context) error {
+	ctx := c.(sdk.Context)
+
+	_, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_END_BLOCKER)
+	if err != nil {
+		ctx.Logger().Error("Failed to get scheduled cron msgs")
+		return err
+	}
+
+	cron_msgs := tm_type.Data{Txs: bytesCronMsgs}
+	cron_data, err := cron_msgs.Marshal()
+	if err != nil {
+		ctx.Logger().Error("Failed to marshal cron_msgs")
+		return err
+	}
+	hash := sha256.Sum256(cron_data)
+
+	err = tmenclave.SetImplicitHash(hash[:])
+	if err != nil {
+		ctx.Logger().Error("Failed to set implicit hash %+v", err)
+		return err
 	}
 	return nil
 }

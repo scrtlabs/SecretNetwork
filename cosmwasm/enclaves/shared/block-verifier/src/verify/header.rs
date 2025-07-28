@@ -1,13 +1,14 @@
+use crate::verify::block::verify_block;
+use core::time::Duration;
 use log::error;
 use sgx_types::sgx_status_t;
+use sha2::{Digest, Sha256};
 use tendermint::block::signed_header::SignedHeader;
 use tendermint::block::{Commit, Header};
 use tendermint::validator::Set;
 use tendermint_light_client_verifier::types::UntrustedBlockState;
 use tendermint_proto::v0_38::types::Header as RawHeader;
 use tendermint_proto::Protobuf;
-
-use crate::verify::block::verify_block;
 
 pub fn validate_block_header(
     block_header_slice: &[u8],
@@ -32,10 +33,20 @@ pub fn validate_block_header(
         return Err(sgx_status_t::SGX_ERROR_FILE_RECOVERY_NEEDED);
     }
 
+    if signed_header.header.hash() != signed_header.commit.block_id.hash {
+        error!(
+            "Error verifying block hash in header! got {:?}, expected: {:?}",
+            signed_header.header.hash(),
+            signed_header.commit.block_id.hash
+        );
+        return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
+    }
+
     let untrusted_block = UntrustedBlockState {
         signed_header: &signed_header,
         validators: validator_set,
         next_validators: None,
+        implicit_hash: signed_header.header.implicit_hash,
     };
 
     let result = verify_block(&untrusted_block);
