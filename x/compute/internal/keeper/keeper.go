@@ -234,7 +234,7 @@ func (k Keeper) RotateStoreFlush(all_data *bytes.Buffer, store store.KVStore) er
 			return err
 		}
 
-		store.Set(key, val)
+		_ = store.Set(key, val)
 	}
 
 	all_data.Reset()
@@ -285,9 +285,9 @@ func (k Keeper) RotateContractsStore(ctx sdk.Context) error {
 				all_data.Write(og_key)
 			}
 
-			binary.Write(all_data, binary.LittleEndian, uint32(len(key)))
+			_ = binary.Write(all_data, binary.LittleEndian, uint32(len(key)))
 			all_data.Write(key)
-			binary.Write(all_data, binary.LittleEndian, uint32(len(value)))
+			_ = binary.Write(all_data, binary.LittleEndian, uint32(len(value)))
 			all_data.Write(value)
 		}
 

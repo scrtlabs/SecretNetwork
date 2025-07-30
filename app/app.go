@@ -436,11 +436,11 @@ func NewSecretNetworkApp(
 func (app *SecretNetworkApp) RotateStore() {
 	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
 	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
-	app.AppKeepers.ComputeKeeper.RotateContractsStore(ctx)
+	_ = app.AppKeepers.ComputeKeeper.RotateContractsStore(ctx)
 
 	p, err := os.FindProcess(os.Getpid())
 	if err == nil {
-		p.Signal(syscall.SIGINT) // Sends interrupt, causing Tendermint node to stop
+		_ = p.Signal(syscall.SIGINT) // Sends interrupt, causing Tendermint node to stop
 	}
 }
 
