@@ -281,7 +281,7 @@ func (k Keeper) RotateContractsStore(ctx sdk.Context) error {
 			}
 
 			if all_data.Len() == 0 {
-				binary.Write(all_data, binary.LittleEndian, uint32(len(og_key)))
+				_ = binary.Write(all_data, binary.LittleEndian, uint32(len(og_key)))
 				all_data.Write(og_key)
 			}
 
