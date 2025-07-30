@@ -320,7 +320,7 @@ pub unsafe extern "C" fn ecall_init_node(
         let mut res = Vec::new();
 
         for s in &seeds.arr {
-            let res_current: Vec<u8> = encrypt_seed(my_pub_key, &s, false).unwrap();
+            let res_current: Vec<u8> = encrypt_seed(my_pub_key, s, false).unwrap();
             res.extend(&res_current);
         }
 
@@ -690,7 +690,7 @@ pub unsafe extern "C" fn ecall_rotate_store(p_buf: *mut u8, n_buf: u32) -> sgx_t
     match rotate_store(
         p_buf,
         n_buf as usize,
-        &consensus_ikm.last(),
+        consensus_ikm.last(),
         &next_ikm,
         &mut _num_total,
         &mut _num_recoded,

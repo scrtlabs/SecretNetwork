@@ -1,8 +1,6 @@
 use crate::verify::block::verify_block;
-use core::time::Duration;
 use log::error;
 use sgx_types::sgx_status_t;
-use sha2::{Digest, Sha256};
 use tendermint::block::signed_header::SignedHeader;
 use tendermint::block::{Commit, Header};
 use tendermint::validator::Set;

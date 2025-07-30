@@ -219,37 +219,35 @@ fn main() {
         let status = unsafe { ecall_migration_op(eid, &mut retval, op) };
 
         println!("Migration op reval: {}, {}", status, retval);
+    } else if matches.is_present("server_seed") {
+        serve_rot_seed(eid);
     } else {
-        if matches.is_present("server_seed") {
-            serve_rot_seed(eid);
+        let mut retval = NodeAuthResult::Success;
+        let status = unsafe {
+            ecall_check_patch_level(
+                eid,
+                &mut retval,
+                api_key_bytes.as_ptr(),
+                api_key_bytes.len() as u32,
+            )
+        };
+
+        if status != sgx_status_t::SGX_SUCCESS {
+            println!(
+                "Failed to run hardware verification test (is the correct enclave in the correct path?)"
+            );
+            return;
+        }
+
+        if retval != NodeAuthResult::Success {
+            println!("Failed to verify platform. Please see errors above for more info on what needs to be fixed before you can run a mainnet node. \n\
+            If you require assistance or more information, please contact us on Discord or Telegram. In addition, you may use the documentation available at \
+            https://docs.scrt.network
+            ");
         } else {
-            let mut retval = NodeAuthResult::Success;
-            let status = unsafe {
-                ecall_check_patch_level(
-                    eid,
-                    &mut retval,
-                    api_key_bytes.as_ptr(),
-                    api_key_bytes.len() as u32,
-                )
-            };
-
-            if status != sgx_status_t::SGX_SUCCESS {
-                println!(
-                    "Failed to run hardware verification test (is the correct enclave in the correct path?)"
-                );
-                return;
-            }
-
-            if retval != NodeAuthResult::Success {
-                println!("Failed to verify platform. Please see errors above for more info on what needs to be fixed before you can run a mainnet node. \n\
-                If you require assistance or more information, please contact us on Discord or Telegram. In addition, you may use the documentation available at \
-                https://docs.scrt.network
-                ");
-            } else {
-                println!(
-                    "Platform verification successful! You are able to run a mainnet Secret node"
-                )
-            }
+            println!(
+                "Platform verification successful! You are able to run a mainnet Secret node"
+            )
         }
     }
 }

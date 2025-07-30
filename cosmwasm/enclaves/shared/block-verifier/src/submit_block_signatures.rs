@@ -1,15 +1,8 @@
-use core::convert::TryInto;
-use std::slice;
-
-use sgx_types::sgx_status_t;
-
 use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr, KEY_MANAGER};
 use log::debug;
 use log::error;
-use std::convert::TryFrom;
-use tendermint::signature::Ed25519Signature;
-use tendermint::Hash;
-use tendermint::Signature;
+use sgx_types::sgx_status_t;
+use std::slice;
 
 macro_rules! unwrap_or_return {
     ($result:expr) => {
@@ -101,7 +94,7 @@ pub unsafe fn submit_block_signatures_impl(
 
     let txs = unwrap_or_return!(crate::verify::txs::validate_txs(txs_slice, &header));
 
-    let cron_msgs = if cron_msgs_slice.len() > 0 {
+    let cron_msgs = if !cron_msgs_slice.is_empty() {
         let msgs = crate::txs::txs_from_bytes(cron_msgs_slice).map_err(|e| {
             error!("Error parsing cron msgs from proto: {:?}", e);
             sgx_status_t::SGX_ERROR_INVALID_PARAMETER

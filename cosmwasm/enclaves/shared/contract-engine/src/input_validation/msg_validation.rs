@@ -165,7 +165,7 @@ pub fn verify_ibc_packet_recv(sent_msg: &SecretMessage, packet: &Packet) -> bool
     }
 
     // Now verify the data - with hooks awareness
-    let data_valid = verify_ibc_packet_data_with_hooks(&parsed.packet.data.as_slice(), data);
+    let data_valid = verify_ibc_packet_data_with_hooks(parsed.packet.data.as_slice(), data);
 
     info!("IBC packet data valid: {}", data_valid);
 

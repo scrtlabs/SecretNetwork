@@ -254,7 +254,7 @@ impl Keychain {
     }
 
     pub fn encrypt_hash(&self, hv: [u8; 32], height: u64) -> [u8; 32] {
-        Self::encrypt_hash_ex(&self.consensus_seed.last(), hv, height)
+        Self::encrypt_hash_ex(self.consensus_seed.last(), hv, height)
     }
 
     pub fn get_migration_keys() -> KeyPair {
@@ -475,7 +475,7 @@ impl Keychain {
             // consensus_state_ikm
             self.consensus_state_ikm
                 .arr
-                .push(Self::generate_consensus_ikm_key(&s));
+                .push(Self::generate_consensus_ikm_key(s));
         }
 
         let s_last = self.consensus_seed.last();

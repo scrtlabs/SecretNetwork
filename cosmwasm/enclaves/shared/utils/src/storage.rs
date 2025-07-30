@@ -594,6 +594,16 @@ struct KeyVer2 {
     data_size: u64,
 }
 
+/// Rotates the store buffer, replacing the current IKM with a new one.
+///
+/// # Safety
+///
+/// - `p_buf` must be valid for reads and writes for `n_buf` bytes.
+/// - The caller must ensure that `p_buf` is properly aligned.
+/// - The function assumes that `ikm_current` and `ikm_new` point to valid keys.
+/// - `num_recoded` must be a valid, mutable pointer.
+///
+/// Calling this with invalid pointers or buffer lengths may lead to undefined behavior.
 pub unsafe fn rotate_store(
     p_buf: *mut u8,
     n_buf: usize,
@@ -641,13 +651,13 @@ pub unsafe fn rotate_store(
                     // println!("   data_2 = {}", hex::encode(&encrypted_val2));
 
                     let encrypted_key = slice::from_raw_parts(
-                        key_p.offset(std::mem::size_of::<KeyVer2>() as isize),
+                        key_p.add(std::mem::size_of::<KeyVer2>()),
                         key_n - std::mem::size_of::<KeyVer2>(),
                     );
                     // println!("   trying encrypted_key = {}", hex::encode(encrypted_key));
 
                     let result = symm_key_current
-                        .decrypt_siv(&encrypted_val2, Some(&[encrypted_key, encryption_salt]));
+                        .decrypt_siv(encrypted_val2, Some(&[encrypted_key, encryption_salt]));
                     if let Ok(data_plain) = result {
                         // println!("   data_plain = {}", hex::encode(&data_plain));
 
