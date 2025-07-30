@@ -2097,7 +2097,7 @@ dependencies = [
 [[package]]
 name = "tendermint"
 version = "0.38.0"
-source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.5#10fe0bb1c3e774e0b7e1c7ce53b524de6b1a0837"
+source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.9-add-implicit-hash#cd93ead0165d175b3e51a30951cd6a5390cffcdc"
 dependencies = [
  "bytes 1.7.1",
  "digest 0.10.7",
