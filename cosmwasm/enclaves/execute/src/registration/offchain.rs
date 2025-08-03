@@ -1190,6 +1190,12 @@ fn apply_rot_seed() -> sgx_status_t {
 
     {
         let seeds = key_manager.get_consensus_seed().unwrap();
+
+        if seeds.arr.len() != 2 {
+            error!("seeds count mismatch");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+
         let mut extra = key_manager.extra_data.lock().unwrap();
         extra.last_evidence_seed = Some(*seeds.last());
     }
