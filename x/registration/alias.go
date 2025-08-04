@@ -20,8 +20,7 @@ const (
 	SecretNodeSeedLegacyConfig = types.SecretNodeSeedLegacyConfig
 	SecretNodeSeedNewConfig    = types.SecretNodeSeedNewConfig
 	SecretNodeCfgFolder        = types.SecretNodeCfgFolder
-	EncryptedKeyLength         = types.EncryptedKeyLength
-	LegacyEncryptedKeyLength   = types.LegacyEncryptedKeyLength
+	EncryptedKeyGranularity    = types.EncryptedKeyGranularity
 	AttestationCertPath        = types.AttestationCertPath
 	AttestationCombinedPath    = types.AttestationCombinedPath
 	IoExchMasterKeyPath        = types.IoExchMasterKeyPath
@@ -64,5 +63,5 @@ type (
 	EnclaveApi           = enclave.Api
 	MasterKey            = types.MasterKey
 	Key                  = types.Key
-	RegistrationNodeInfo = types.RegistrationNodeInfo 
+	RegistrationNodeInfo = types.RegistrationNodeInfo
 )

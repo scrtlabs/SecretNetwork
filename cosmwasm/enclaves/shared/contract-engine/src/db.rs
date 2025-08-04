@@ -3,12 +3,12 @@ use enclave_crypto::consts::{
 };
 use log::*;
 
-use sgx_types::sgx_status_t;
-
 use enclave_crypto::{sha_256, AESKey, Kdf, SIVEncryptable};
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
 use enclave_utils::key_manager::SeedsHolder;
 use enclave_utils::KEY_MANAGER;
+use sgx_types::sgx_status_t;
+use std::io::Cursor;
 
 use crate::external::{ecalls, ocalls};
 
@@ -139,7 +139,13 @@ pub fn create_encrypted_key_value(
             encryption_salt,
         )?,
     };
-    let encrypted_value_bytes = bincode2::serialize(&encrypted_value).unwrap();
+    let mut encrypted_value_bytes = bincode2::serialize(&encrypted_value).unwrap();
+
+    if KEY_MANAGER.get_consensus_seed().unwrap().arr.len() > 2 {
+        let seed_id = KEY_MANAGER.get_consensus_seed().unwrap().arr.len() as u16;
+        let encr_ex = bincode2::serialize(&seed_id).unwrap();
+        encrypted_value_bytes.extend_from_slice(&encr_ex);
+    }
 
     debug!(
         "Removed old field name: {:?} and created new field name: {:?}",
@@ -171,7 +177,8 @@ pub fn read_from_encrypted_state(
     (maybe_plaintext_value, gas_used_first_read) = match read_db(context, &encrypted_key_bytes) {
         Ok((maybe_encrypted_value_bytes, gas_used)) => match maybe_encrypted_value_bytes {
             Some(encrypted_value_bytes) => {
-                let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
+                let mut cursor = Cursor::new(&encrypted_value_bytes);
+                let encrypted_value: EncryptedValue = bincode2::deserialize_from(&mut cursor).map_err(|err| {
                     warn!(
                         "read_db() got an error while trying to read_from_encrypted_state the value {:?} for key {:?}, stopping wasm: {:?}",
                         encrypted_value_bytes,
@@ -181,11 +188,22 @@ pub fn read_from_encrypted_state(
                     WasmEngineError::DecryptionError
                 })?;
 
+                let seed_id = if cursor.position() as usize != encrypted_value_bytes.len() {
+                    let id: u16 = bincode2::deserialize_from(&mut cursor).map_err(|err| {
+                        warn!("read_db() got an error while trying to seed_id: {}", err);
+                        WasmEngineError::DecryptionError
+                    })?;
+                    id
+                } else {
+                    2_u16
+                };
+
                 match decrypt_value_new(
                     &encrypted_key.data,
                     &encrypted_value.data,
                     contract_key,
                     &encrypted_value.salt,
+                    seed_id,
                 ) {
                     Ok(plaintext_value) => Ok((Some(plaintext_value), gas_used)),
                     // This error case is why we have all the matches here.
@@ -213,8 +231,8 @@ pub fn read_from_encrypted_state(
     let gas_used_second_read: u64;
     (maybe_plaintext_value, gas_used_second_read) = match read_db(context, &scrambled_field_name) {
         Ok((encrypted_value, gas_used)) => match encrypted_value {
-            Some(plaintext_value) => {
-                match decrypt_value_old(&scrambled_field_name, &plaintext_value, contract_key) {
+            Some(encrypted_data) => {
+                match decrypt_value_old(&scrambled_field_name, &encrypted_data, contract_key) {
                     Ok(plaintext_value) => {
                         let _ = kv_cache.store_in_ro_cache(plaintext_key, &plaintext_value);
                         Ok((Some(plaintext_value), gas_used))
@@ -421,16 +439,27 @@ fn get_symmetrical_key_old(field_name: &[u8], contract_key: &ContractKey) -> AES
     // Derive the key to the specific field name
     let mut derivation_data = field_name.to_vec();
     derivation_data.extend_from_slice(contract_key.to_vec().as_slice());
-    consensus_state_ikm
-        .genesis
-        .derive_key_from_this(&derivation_data)
+    consensus_state_ikm.arr[0].derive_key_from_this(&derivation_data)
 }
 
-fn get_symmetrical_key_new(contract_key: &ContractKey) -> AESKey {
-    let consensus_state_ikm: SeedsHolder<AESKey> = KEY_MANAGER.get_consensus_state_ikm().unwrap();
-    consensus_state_ikm
-        .current
-        .derive_key_from_this(contract_key)
+fn get_symmetrical_key_new(
+    contract_key: &ContractKey,
+    seed_id: Option<u16>,
+) -> Result<AESKey, WasmEngineError> {
+    let consensus_state_ikm: &SeedsHolder<AESKey> = KEY_MANAGER.get_consensus_state_ikm().unwrap();
+
+    let ikm = match seed_id {
+        Some(id) => {
+            if (id == 0) || (id as usize > consensus_state_ikm.arr.len()) {
+                warn!("db key seed_id {}", id);
+                return Err(WasmEngineError::EncryptionError);
+            }
+            &consensus_state_ikm.arr[id as usize - 1]
+        }
+        None => consensus_state_ikm.last(),
+    };
+
+    Ok(ikm.derive_key_from_this(contract_key))
 }
 
 fn encrypt_value_new(
@@ -439,7 +468,7 @@ fn encrypt_value_new(
     contract_key: &ContractKey,
     encryption_salt: &[u8],
 ) -> Result<Vec<u8>, WasmEngineError> {
-    let encryption_key = get_symmetrical_key_new(contract_key);
+    let encryption_key = get_symmetrical_key_new(contract_key, None).unwrap();
 
     encryption_key
         .encrypt_siv(plaintext_state_value, Some(&[encrypted_state_key, encryption_salt]))
@@ -459,8 +488,9 @@ fn decrypt_value_new(
     encrypted_value: &[u8],
     contract_key: &ContractKey,
     encryption_salt: &[u8],
+    seed_id: u16,
 ) -> Result<Vec<u8>, WasmEngineError> {
-    let decryption_key = get_symmetrical_key_new(contract_key);
+    let decryption_key = get_symmetrical_key_new(contract_key, Some(seed_id))?;
 
     decryption_key.decrypt_siv(encrypted_value, Some(&[encrypted_key, encryption_salt])).map_err(|err| {
         warn!(
@@ -477,7 +507,7 @@ fn encrypt_key_new(
     plaintext_state_key: &[u8],
     contract_key: &ContractKey,
 ) -> Result<Vec<u8>, WasmEngineError> {
-    let encryption_key = get_symmetrical_key_new(contract_key);
+    let encryption_key = get_symmetrical_key_new(contract_key, Some(2))?;
 
     encryption_key
         .encrypt_siv(plaintext_state_key, Some(&[]))

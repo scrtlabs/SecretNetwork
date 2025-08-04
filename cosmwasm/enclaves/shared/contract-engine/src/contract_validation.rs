@@ -203,7 +203,7 @@ pub fn generate_contract_key(
         // which is doable but requires one more ecall & just unnecessary
         // actually using consensus_state_ikm might be entirely unnecessary here but it's too
         // painful at this point to change the validation protocol to remove it
-        &consensus_state_ikm.genesis,
+        &consensus_state_ikm.arr[0],
         &sender_id,
         contract_hash,
         &(contract_address.0).0,
@@ -265,7 +265,7 @@ pub fn validate_current_contract_key(
             false
         })
         .unwrap()
-        .genesis;
+        .arr[0];
 
     // calculate the authentication_id
     let calculated_authentication_id = generate_contract_id(

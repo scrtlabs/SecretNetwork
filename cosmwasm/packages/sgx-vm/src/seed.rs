@@ -1,10 +1,7 @@
-use enclave_ffi_types::{
-    HealthCheckResult, INPUT_ENCRYPTED_SEED_SIZE, NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE,
-    NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE,
-};
+use enclave_ffi_types::HealthCheckResult;
 use sgx_types::*;
 
-use log::{error, info};
+use log::info;
 
 use crate::enclave::{ecall_submit_validator_set_evidence, ENCLAVE_DOORBELL};
 
@@ -40,6 +37,13 @@ extern "C" {
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         opcode: u32,
+    ) -> sgx_status_t;
+
+    pub fn ecall_rotate_store(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        p_kv: *mut u8,
+        n_kv: u32,
     ) -> sgx_status_t;
 
     pub fn ecall_onchain_approve_upgrade(
@@ -99,34 +103,14 @@ pub fn untrusted_init_node(
     let eid = enclave.geteid();
     let mut ret = sgx_status_t::SGX_SUCCESS;
 
-    let mut seed_to_enclave = [0u8; INPUT_ENCRYPTED_SEED_SIZE as usize];
-
-    if (encrypted_seed.len()) > INPUT_ENCRYPTED_SEED_SIZE as usize {
-        error!("Tried to setup node with seed that is too long");
-        return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
-    }
-
-    match encrypted_seed.len() {
-        NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE => seed_to_enclave
-            [0..NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE]
-            .copy_from_slice(encrypted_seed),
-        NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE => seed_to_enclave
-            [0..NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE]
-            .copy_from_slice(encrypted_seed),
-        _ => {
-            error!("Received seed with wrong length");
-            return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
-        }
-    };
-
     let status = unsafe {
         ecall_init_node(
             eid,
             &mut ret,
             master_key.as_ptr(),
             master_key.len() as u32,
-            seed_to_enclave.as_ptr(),
-            seed_to_enclave.len() as u32,
+            encrypted_seed.as_ptr(),
+            encrypted_seed.len() as u32,
             api_key.as_ptr(),
             api_key.len() as u32,
         )
@@ -160,6 +144,35 @@ pub fn untrusted_submit_validator_set_evidence(evidence: [u8; 32]) -> SgxResult<
     if ret != sgx_status_t::SGX_SUCCESS {
         return Err(ret);
     }
+
+    Ok(())
+}
+
+pub fn untrusted_rotate_store(p_buf: *mut u8, n_buf: u32) -> SgxResult<()> {
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
+    //info!("Initialized enclave successfully!");
+
+    let eid = enclave.geteid();
+    let mut ret = sgx_status_t::SGX_SUCCESS;
+    let status = unsafe { ecall_rotate_store(eid, &mut ret, p_buf, n_buf) };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if ret != sgx_status_t::SGX_SUCCESS {
+        return Err(ret);
+    }
+
+    // println!("untrusted_rotate_store res: {}", unsafe {
+    //     hex::encode(std::slice::from_raw_parts(p_buf, n_buf as usize))
+    // });
 
     Ok(())
 }

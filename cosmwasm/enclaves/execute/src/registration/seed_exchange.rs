@@ -6,25 +6,17 @@ use enclave_crypto::{AESKey, SIVEncryptable, Seed, PUBLIC_KEY_SIZE, SEED_KEY_SIZ
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::{Keychain, KEY_MANAGER};
 
-pub enum SeedType {
-    Genesis,
-    Current,
-}
-
 pub fn encrypt_seed(
     new_node_pk: [u8; PUBLIC_KEY_SIZE],
-    seed_type: SeedType,
+    seed_to_share: &Seed,
     is_legacy: bool,
 ) -> SgxResult<Vec<u8>> {
-    let base_seed = if is_legacy {
-        KEY_MANAGER.seed_exchange_key().unwrap().genesis
-    } else {
-        KEY_MANAGER.seed_exchange_key().unwrap().current
-    };
+    let seed_xchg = KEY_MANAGER.seed_exchange_key().unwrap();
 
-    let seed_to_share = match seed_type {
-        SeedType::Genesis => KEY_MANAGER.get_consensus_seed().unwrap().genesis,
-        SeedType::Current => KEY_MANAGER.get_consensus_seed().unwrap().current,
+    let base_seed = if is_legacy {
+        &seed_xchg.arr[0]
+    } else {
+        seed_xchg.last()
     };
 
     let shared_enc_key = base_seed.diffie_hellman(&new_node_pk);
@@ -35,9 +27,9 @@ pub fn encrypt_seed(
     // genesis seed is passed in registration
 
     trace!(
-        "Public keys on encryption {:?} {:?}",
-        base_seed.get_pubkey(),
-        new_node_pk
+        "Public keys on encryption {} {}",
+        hex::encode(base_seed.get_pubkey()),
+        hex::encode(new_node_pk)
     );
     let res = match AESKey::new_from_slice(&shared_enc_key)
         .encrypt_siv(seed_to_share.as_slice(), Some(&authenticated_data))
@@ -82,9 +74,9 @@ pub fn decrypt_seed(
     let authenticated_data: Vec<&[u8]> = vec![&my_public_key];
 
     trace!(
-        "Public keys on decryption: {:?} {:?}",
-        my_public_key,
-        master_pk
+        "Public keys on decryption: {} {}",
+        hex::encode(my_public_key),
+        hex::encode(master_pk)
     );
 
     // decrypt

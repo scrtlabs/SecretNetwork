@@ -14,10 +14,10 @@ pub fn write_seed(seed: &[u8], save_path: &str) -> SgxResult<()> {
 
 pub fn write_master_pub_keys(key_manager: &Keychain) -> SgxResult<()> {
     let kp = key_manager.seed_exchange_key().unwrap();
-    write_public_key(&kp.current, SEED_EXCH_KEY_SAVE_PATH)?;
+    write_public_key(kp.last(), SEED_EXCH_KEY_SAVE_PATH)?;
 
     let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
-    write_public_key(&kp.current, IO_KEY_SAVE_PATH)?;
+    write_public_key(&kp, IO_KEY_SAVE_PATH)?;
 
     Ok(())
 }

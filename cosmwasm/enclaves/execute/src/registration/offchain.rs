@@ -9,10 +9,9 @@ use core::convert::TryInto;
 use core::ptr::null;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
-    make_sgx_secret_path, ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, COLLATERAL_DCAP_PATH,
-    CONSENSUS_SEED_VERSION, FILE_CERT_COMBINED, FILE_MIGRATION_CERT_LOCAL,
-    FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO,
-    INPUT_ENCRYPTED_SEED_SIZE, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH,
+    make_sgx_secret_path, CONSENSUS_SEED_VERSION, FILE_ATTESTATION_CERTIFICATE, FILE_CERT_COMBINED,
+    FILE_MIGRATION_CERT_LOCAL, FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS,
+    FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY, SEED_UPDATE_SAVE_PATH,
     SIGNATURE_TYPE,
 };
 #[cfg(feature = "random")]
@@ -23,8 +22,9 @@ use enclave_crypto::{
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::key_manager::KeychainMutableData;
 use enclave_utils::pointers::validate_mut_slice;
-use enclave_utils::storage::migrate_all_from_2_17;
+use enclave_utils::storage::{get_key_from_seed, migrate_all_from_2_17, rotate_store};
 use enclave_utils::{validate_const_ptr, validate_mut_ptr, Keychain, KEY_MANAGER};
+
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
@@ -39,11 +39,12 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::panic;
+use std::sgxfs::SgxFile;
 use std::slice;
 use tendermint::Hash::Sha256 as tm_Sha256;
 
 use super::persistency::{write_master_pub_keys, write_seed};
-use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
+use super::seed_exchange::{decrypt_seed, encrypt_seed};
 
 #[cfg(feature = "light-client-validation")]
 use block_verifier::VERIFIED_BLOCK_MESSAGES;
@@ -98,12 +99,11 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
                 return sgx_status_t::SGX_ERROR_UNEXPECTED;
             }
         };
-        let genesis_seed = key_manager.get_consensus_seed().unwrap().genesis;
 
         let new_consensus_seed = match get_next_consensus_seed_from_service(
             &mut key_manager,
             0,
-            genesis_seed,
+            key_manager.get_consensus_seed().unwrap().arr[0],
             api_key_slice,
             temp_keypair,
             CONSENSUS_SEED_VERSION,
@@ -115,7 +115,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
             }
         };
 
-        key_manager.set_consensus_seed(genesis_seed, new_consensus_seed);
+        key_manager.push_consensus_seed(new_consensus_seed);
     }
 
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
@@ -125,18 +125,13 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     if let Err(_e) = key_manager.create_registration_key() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
+    key_manager.save();
 
     if let Err(status) = write_master_pub_keys(&key_manager) {
         return status;
     }
 
-    public_key.copy_from_slice(
-        &key_manager
-            .seed_exchange_key()
-            .unwrap()
-            .current
-            .get_pubkey(),
-    );
+    public_key.copy_from_slice(&key_manager.seed_exchange_key().unwrap().last().get_pubkey());
 
     trace!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
@@ -175,18 +170,6 @@ pub unsafe extern "C" fn ecall_init_node(
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
 ) -> sgx_status_t {
     validate_const_ptr!(
-        master_key,
-        master_key_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
-    );
-
-    validate_const_ptr!(
-        encrypted_seed,
-        encrypted_seed_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
-    );
-
-    validate_const_ptr!(
         api_key,
         api_key_len as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED,
@@ -194,45 +177,15 @@ pub unsafe extern "C" fn ecall_init_node(
 
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
-    let key_slice = slice::from_raw_parts(master_key, master_key_len as usize);
-
-    if encrypted_seed_len != INPUT_ENCRYPTED_SEED_SIZE {
-        error!("Encrypted seed bad length");
-        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-    }
-
-    // validate this node is patched and updated
-
-    // generate temporary key for attestation
-    // let temp_key_result = KeyPair::new();
-    //
-    // if temp_key_result.is_err() {
-    //     error!("Failed to generate temporary key for attestation");
-    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    // }
-
-    // // this validates the cert and handles the "what if it fails" inside as well
-    // let res =
-    //     create_attestation_certificate(&temp_key_result.unwrap(), SIGNATURE_TYPE, api_key_slice);
-    // if res.is_err() {
-    //     error!("Error starting node, might not be updated",);
-    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    // }
-
-    let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
-
-    // validate this node is patched and updated
-
-    // generate temporary key for attestation
-    let temp_key_result = KeyPair::new();
-
-    if temp_key_result.is_err() {
-        error!("Failed to generate temporary key for attestation");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
     #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
     {
+        let temp_key_result = KeyPair::new();
+
+        if temp_key_result.is_err() {
+            error!("Failed to generate temporary key for attestation");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+
         // this validates the cert and handles the "what if it fails" inside as well
         let res = crate::registration::attestation::validate_enclave_version(
             temp_key_result.as_ref().unwrap(),
@@ -246,9 +199,36 @@ pub unsafe extern "C" fn ecall_init_node(
         }
     }
 
+    let mut key_manager = Keychain::new();
+    if key_manager.is_consensus_seed_set() {
+        return sgx_status_t::SGX_SUCCESS; // skip the rest
+    }
+
+    validate_const_ptr!(
+        master_key,
+        master_key_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
+
+    validate_const_ptr!(
+        encrypted_seed,
+        encrypted_seed_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
+
+    if encrypted_seed_len == 0 {
+        error!("Encrypted seed is empty");
+        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+    }
+
+    info!("Importing encrypted seed...");
+
+    let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
+
     // public keys in certificates don't have 0x04, so we'll copy it here
     let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
 
+    let key_slice = slice::from_raw_parts(master_key, master_key_len as usize);
     let pk = key_slice.to_vec();
 
     // just make sure the of the public key isn't messed up
@@ -259,48 +239,63 @@ pub unsafe extern "C" fn ecall_init_node(
     target_public_key.copy_from_slice(&pk);
 
     trace!(
-        "ecall_init_node target public key is: {:?}",
-        target_public_key
+        "ecall_init_node target public key is: {}",
+        hex::encode(target_public_key)
     );
 
-    let mut key_manager = Keychain::new();
-
     key_manager.delete_consensus_seed();
+    key_manager.save();
 
-    // Skip the first byte which is the length of the seed
-    let mut single_seed_bytes = [0u8; SINGLE_ENCRYPTED_SEED_SIZE];
-    single_seed_bytes.copy_from_slice(&encrypted_seed_slice[1..(SINGLE_ENCRYPTED_SEED_SIZE + 1)]);
+    // older format for encrypted seeds: 1st byte is the size, then followed by 1 or 2 seeds
+    // newer format: only the seeds, without the preceeding first byte
 
-    trace!("Target public key is: {:?}", target_public_key);
-    let genesis_seed = match decrypt_seed(&key_manager, target_public_key, single_seed_bytes) {
-        Ok(result) => result,
-        Err(status) => return status,
+    let (seeds_count, seeds_packed) = match encrypted_seed_slice.len() % SINGLE_ENCRYPTED_SEED_SIZE
+    {
+        0 => {
+            // newer format
+            (encrypted_seed_slice.len(), encrypted_seed_slice)
+        }
+        1 => {
+            // older format
+            let used_len = encrypted_seed_slice[0] as u32 as usize;
+            if used_len > encrypted_seed_slice.len() - 1 {
+                error!("Unrecognized seeds used len: {}", used_len);
+                return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+            }
+
+            let seeds_count = used_len / SINGLE_ENCRYPTED_SEED_SIZE;
+            let remaining = &encrypted_seed_slice[1..used_len + 1];
+            (seeds_count, remaining)
+        }
+        _ => {
+            error!("Unrecognized seeds len: {}", encrypted_seed_slice.len());
+            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+        }
     };
 
-    let encrypted_seed_len = encrypted_seed_slice[0] as u32;
-    let new_consensus_seed;
+    for i_seed in 0..seeds_count {
+        let offs = i_seed * SINGLE_ENCRYPTED_SEED_SIZE;
+        let sub_slice: &[u8; SINGLE_ENCRYPTED_SEED_SIZE] = seeds_packed
+            [offs..offs + SINGLE_ENCRYPTED_SEED_SIZE]
+            .try_into()
+            .unwrap();
 
-    if encrypted_seed_len as usize == 2 * SINGLE_ENCRYPTED_SEED_SIZE {
-        debug!("Got both keys from registration");
-
-        single_seed_bytes.copy_from_slice(
-            &encrypted_seed_slice
-                [(SINGLE_ENCRYPTED_SEED_SIZE + 1)..(SINGLE_ENCRYPTED_SEED_SIZE * 2 + 1)],
-        );
-        new_consensus_seed = match decrypt_seed(&key_manager, target_public_key, single_seed_bytes)
-        {
+        let seed = match decrypt_seed(&key_manager, target_public_key, *sub_slice) {
             Ok(result) => result,
             Err(status) => return status,
         };
 
-        key_manager.set_consensus_seed(genesis_seed, new_consensus_seed);
-    } else {
+        key_manager.push_consensus_seed(seed);
+    }
+
+    if seeds_count == 1 {
         let reg_key = key_manager.get_registration_key().unwrap();
         let my_pub_key = reg_key.get_pubkey();
 
         debug!("New consensus seed not found! Need to get it from service");
+        let genesis_seed = key_manager.get_consensus_seed().unwrap().arr[0];
         if key_manager.get_consensus_seed().is_err() {
-            new_consensus_seed = match get_next_consensus_seed_from_service(
+            let new_consensus_seed = match get_next_consensus_seed_from_service(
                 &mut key_manager,
                 1,
                 genesis_seed,
@@ -315,14 +310,19 @@ pub unsafe extern "C" fn ecall_init_node(
                 }
             };
 
-            key_manager.set_consensus_seed(genesis_seed, new_consensus_seed);
+            key_manager.push_consensus_seed(new_consensus_seed);
         } else {
             debug!("New consensus seed already exists, no need to get it from service");
         }
 
-        let mut res: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Genesis, false).unwrap();
-        let res_current: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Current, false).unwrap();
-        res.extend(&res_current);
+        let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
+
+        let mut res = Vec::new();
+
+        for s in &seeds.arr {
+            let res_current: Vec<u8> = encrypt_seed(my_pub_key, s, false).unwrap();
+            res.extend(&res_current);
+        }
 
         trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
 
@@ -340,6 +340,7 @@ pub unsafe extern "C" fn ecall_init_node(
         return status;
     }
 
+    key_manager.save();
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -402,18 +403,17 @@ pub fn save_attestation_combined(
         size_epid = vec_cert.len() as u32;
 
         if !is_migration_report {
-            write_to_untrusted(vec_cert.as_slice(), ATTESTATION_CERT_PATH.as_str()).unwrap();
+            write_to_untrusted(
+                vec_cert.as_slice(),
+                make_sgx_secret_path(FILE_ATTESTATION_CERTIFICATE).as_str(),
+            )
+            .unwrap();
         }
     }
 
     if let Ok((ref vec_quote, ref vec_coll)) = res_dcap {
         size_dcap_q = vec_quote.len() as u32;
         size_dcap_c = vec_coll.len() as u32;
-
-        if !is_migration_report {
-            write_to_untrusted(vec_quote, ATTESTATION_DCAP_PATH.as_str()).unwrap();
-            write_to_untrusted(vec_coll, COLLATERAL_DCAP_PATH.as_str()).unwrap();
-        }
     }
 
     let out_path = make_sgx_secret_path(if is_migration_report {
@@ -528,7 +528,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
                 hex::encode(kp.get_pubkey())
             );
 
-            let mut f_out = match File::create(PUBKEY_PATH.as_str()) {
+            let mut f_out = match File::create(make_sgx_secret_path(FILE_PUBKEY).as_str()) {
                 Ok(f) => f,
                 Err(e) => {
                     error!("failed to create file {}", e);
@@ -575,6 +575,7 @@ pub unsafe extern "C" fn ecall_key_gen(
         error!("Failed to create registration key");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     };
+    key_manager.save();
 
     let reg_key = key_manager.get_registration_key();
 
@@ -631,7 +632,8 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
             &target_public_key.to_vec()
         );
 
-        let res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis, true)
+        let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
+        let res: Vec<u8> = encrypt_seed(target_public_key, &seeds.arr[0], true)
             .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
 
         Ok(res)
@@ -654,6 +656,50 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
     } else {
         warn!("Enclave call ecall_get_genesis_seed panic!");
         sgx_status_t::SGX_ERROR_UNEXPECTED
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ecall_rotate_store(p_buf: *mut u8, n_buf: u32) -> sgx_types::sgx_status_t {
+    validate_const_ptr!(
+        p_buf,
+        n_buf as usize,
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+    );
+
+    let consensus_ikm = match KEY_MANAGER.get_consensus_state_ikm() {
+        Ok(keys) => keys,
+        Err(e) => {
+            error!("no current ikm keys {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    let rot_seed = match read_rot_seed() {
+        Ok(seed) => seed,
+        Err(e) => {
+            return e;
+        }
+    };
+
+    let next_ikm = Keychain::generate_consensus_ikm_key(&rot_seed);
+
+    let mut _num_total: u32 = 0;
+    let mut _num_recoded: u32 = 0;
+
+    match rotate_store(
+        p_buf,
+        n_buf as usize,
+        consensus_ikm.last(),
+        &next_ikm,
+        &mut _num_total,
+        &mut _num_recoded,
+    ) {
+        Ok(()) => {
+            //trace!("------- Total={}, Recoded={}", num_total, num_recoded);
+            sgx_status_t::SGX_SUCCESS
+        }
+        Err(e) => e,
     }
 }
 
@@ -685,6 +731,22 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
         5 => {
             println!("Export self target info");
             export_self_target_info()
+        }
+        6 => {
+            println!("Generate true random seed for rotation");
+            generate_rot_seed()
+        }
+        7 => {
+            println!("Export rotation seed");
+            export_rot_seed()
+        }
+        8 => {
+            println!("Import rotation seed");
+            import_rot_seed()
+        }
+        9 => {
+            println!("Apply rotation seed");
+            apply_rot_seed()
         }
         _ => sgx_status_t::SGX_ERROR_UNEXPECTED,
     }
@@ -937,7 +999,7 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
         }
     }
 
-    if let Ok(f_in) = File::open(MIGRATION_CONSENSUS_PATH.as_str()) {
+    if let Ok(f_in) = File::open(make_sgx_secret_path(FILE_MIGRATION_CONSENSUS).as_str()) {
         if is_export_approved_offchain(f_in, report) {
             println!("Migration is authorized by off-chain (emergency) consensus");
             return true;
@@ -970,6 +1032,188 @@ fn export_self_target_info() -> sgx_status_t {
 
     println!("Local migration self target saved");
     sgx_status_t::SGX_SUCCESS
+}
+
+fn get_rot_seed_file_params() -> (String, [u8; 16]) {
+    let kdk = get_key_from_seed("seal.rot_seed".as_bytes());
+    (make_sgx_secret_path("rot_seed.sealed"), kdk)
+}
+
+fn get_rot_seed_encrypted_path() -> String {
+    make_sgx_secret_path("rot_seed_encr.bin")
+}
+
+fn save_rot_seed(rot_seed: &enclave_crypto::Seed) {
+    let (path, kdk) = get_rot_seed_file_params();
+    let mut file = SgxFile::create_ex(path, &kdk).unwrap();
+    file.write_all(rot_seed.as_slice()).unwrap();
+}
+
+fn generate_rot_seed() -> sgx_status_t {
+    let rot_seed = match enclave_crypto::Seed::new() {
+        Ok(seed) => seed,
+        Err(e) => {
+            error!("Error generating random: {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    save_rot_seed(&rot_seed);
+    println!("New seed generated");
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+fn get_dh_aes_key_from_report(other_report: &sgx_report_body_t, kp: &KeyPair) -> AESKey {
+    let other_pub_k = &other_report.report_data.d[0..32].try_into().unwrap();
+    AESKey::new_from_slice(&kp.diffie_hellman(other_pub_k))
+}
+
+fn get_seed_rot_report() -> SgxResult<sgx_report_body_t> {
+    let next_report = match get_verified_migration_report_body() {
+        Ok(report) => report,
+        Err(e) => {
+            error!("No migration report: {}", e);
+            return Err(e);
+        }
+    };
+
+    if next_report.mr_enclave.m != SELF_REPORT_BODY.mr_enclave.m {
+        println!("Not eligible");
+        return Err(sgx_status_t::SGX_ERROR_NO_PRIVILEGE);
+    }
+
+    Ok(next_report)
+}
+
+fn get_dh_aes_key_from_rot_report() -> SgxResult<AESKey> {
+    match get_seed_rot_report() {
+        Ok(r) => {
+            let kp = Keychain::get_migration_keys();
+            Ok(get_dh_aes_key_from_report(&r, &kp))
+        }
+        Err(e) => Err(e),
+    }
+}
+
+fn read_rot_seed() -> SgxResult<enclave_crypto::Seed> {
+    let (path, kdk) = get_rot_seed_file_params();
+    let mut file = match SgxFile::open_ex(path, &kdk) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("can't open rot seed file: {}", e);
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+    };
+
+    let mut seed = enclave_crypto::Seed::default();
+    match file.read_exact(seed.as_mut()) {
+        Ok(()) => Ok(seed),
+        Err(e) => {
+            error!("can't read rot seed file: {}", e);
+            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+        }
+    }
+}
+
+fn export_rot_seed() -> sgx_status_t {
+    let rot_seed = match read_rot_seed() {
+        Ok(seed) => seed,
+        Err(e) => return e,
+    };
+
+    let aes_key = match get_dh_aes_key_from_rot_report() {
+        Ok(k) => k,
+        Err(e) => return e,
+    };
+
+    let data_encrypted = aes_key.encrypt_siv(rot_seed.as_slice(), None).unwrap();
+
+    //println!("ecnrypted seed candidate: {}", hex::encode(data_encrypted));
+
+    let mut f_out = File::create(make_sgx_secret_path(&get_rot_seed_encrypted_path())).unwrap();
+    f_out.write_all(&data_encrypted).unwrap();
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+fn import_rot_seed() -> sgx_status_t {
+    let mut f_in = match File::open(get_rot_seed_encrypted_path()) {
+        Err(e) => {
+            error!("can't find encrypted seed: {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+        Ok(f) => f,
+    };
+
+    let mut data_encrypted = Vec::new();
+    f_in.read_to_end(&mut data_encrypted).unwrap();
+
+    let aes_key = match get_dh_aes_key_from_rot_report() {
+        Ok(k) => k,
+        Err(e) => return e,
+    };
+
+    let data_plain = match aes_key.decrypt_siv(&data_encrypted, None) {
+        Ok(res) => res,
+        Err(err) => {
+            error!("Can't decrypt: {}", err);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    if enclave_crypto::SEED_KEY_SIZE != data_plain.len() {
+        error!("seed len mismatch");
+    }
+
+    let mut rot_seed = enclave_crypto::Seed::default();
+    rot_seed.as_mut().copy_from_slice(&data_plain);
+
+    save_rot_seed(&rot_seed);
+
+    println!("Seed imported");
+    sgx_status_t::SGX_SUCCESS
+}
+
+fn apply_rot_seed() -> sgx_status_t {
+    let rot_seed = {
+        let (path, kdk) = get_rot_seed_file_params();
+        let mut file = SgxFile::open_ex(path, &kdk).unwrap();
+
+        let mut rot_seed: [u8; 32] = [0; 32];
+
+        file.read_exact(&mut rot_seed).unwrap();
+        rot_seed
+    };
+
+    let mut key_manager = Keychain::new();
+
+    {
+        let seeds = key_manager.get_consensus_seed().unwrap();
+
+        if seeds.arr.len() != 2 {
+            error!("seeds count mismatch");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+
+        let mut extra = key_manager.extra_data.lock().unwrap();
+        extra.last_evidence_seed = Some(*seeds.last());
+    }
+
+    let mut rs2 = enclave_crypto::Seed::default();
+    rs2.as_mut().copy_from_slice(&rot_seed);
+
+    key_manager.push_consensus_seed(rs2);
+    key_manager.save();
+
+    if let Err(_e) = key_manager.generate_consensus_master_keys() {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    match write_master_pub_keys(&key_manager) {
+        Err(e) => e,
+        Ok(()) => sgx_status_t::SGX_SUCCESS,
+    }
 }
 
 fn export_local_migration_report() -> sgx_status_t {
@@ -1028,8 +1272,7 @@ fn export_sealed_data() -> sgx_status_t {
     }
 
     let kp = KeyPair::new().unwrap();
-    let other_pub_k = &next_report.report_data.d[0..32].try_into().unwrap();
-    let aes_key = AESKey::new_from_slice(&kp.diffie_hellman(other_pub_k));
+    let aes_key = get_dh_aes_key_from_report(&next_report, &kp);
 
     let mut data_plain = Vec::new();
     KEY_MANAGER.serialize(&mut data_plain).unwrap();
@@ -1275,10 +1518,20 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
 
         #[cfg(feature = "light-client-validation")]
         {
-            let expected_evidence = KEY_MANAGER.encrypt_hash(validator_set_hash, height);
+            let mut expected_evidence = KEY_MANAGER.encrypt_hash(validator_set_hash, height);
             let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
 
-            if verified_msgs.next_validators_evidence != expected_evidence {
+            let mut is_match = verified_msgs.next_validators_evidence == expected_evidence;
+            if !is_match && extra.last_evidence_seed.is_some() {
+                expected_evidence = Keychain::encrypt_hash_ex(
+                    &extra.last_evidence_seed.unwrap(),
+                    validator_set_hash,
+                    height,
+                );
+                is_match = verified_msgs.next_validators_evidence == expected_evidence;
+            }
+
+            if !is_match {
                 if extra.height != 0 {
                     error!("validator set evidence mismatch");
                     return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -1315,6 +1568,7 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
         {
             extra.height = height;
             extra.validator_set_serialized = validator_set_slice.to_vec();
+            extra.last_evidence_seed = None;
         }
     }
     KEY_MANAGER.save();

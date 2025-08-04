@@ -24,3 +24,7 @@ clap = "2.33"
 parking_lot = "0.11"
 lazy_static = "1.4"
 log = "0.4.17"
+hyper = { version = "0.14.15", features = ["full"] }
+tokio = { version = "1.32", features = ["full"] }
+mio = "0.8.11"
+base64 = "0.21"

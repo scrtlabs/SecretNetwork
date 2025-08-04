@@ -26,7 +26,7 @@ import (
 	"cosmossdk.io/store/snapshots"
 	snapshottypes "cosmossdk.io/store/snapshots/types"
 	storetypes "cosmossdk.io/store/types"
-	"github.com/scrtlabs/SecretNetwork/app"
+	app "github.com/scrtlabs/SecretNetwork/app"
 
 	confixcmd "cosmossdk.io/tools/confix/cmd"
 	"github.com/spf13/cast"
@@ -312,7 +312,7 @@ func txCommand() *cobra.Command {
 	return cmd
 }
 
-func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
+func newApp_internal(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) *app.SecretNetworkApp {
 	var cache storetypes.MultiStorePersistentCache
 
 	if cast.ToBool(appOpts.Get(server.FlagInterBlockCache)) {
@@ -334,7 +334,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 		panic(err)
 	}
 
-	bootstrap := cast.ToBool(appOpts.Get("bootstrap"))
+	bootstrap := cast.ToBool(appOpts.Get(flagIsBootstrap))
 
 	appGenesis, err := genutiltypes.AppGenesisFromFile(filepath.Join(cast.ToString(appOpts.Get(flags.FlagHome)), "config", "genesis.json"))
 	if err != nil {
@@ -362,6 +362,10 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 	res.Initialize()
 
 	return res
+}
+
+func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
+	return newApp_internal(logger, db, traceStore, appOpts)
 }
 
 func exportAppStateAndTMValidators(

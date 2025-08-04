@@ -41,6 +41,7 @@ pub struct KeychainMutableData {
     pub height: u64,
     pub validator_set_serialized: Vec<u8>,
     pub next_mr_enclave: Option<sgx_measurement_t>,
+    pub last_evidence_seed: Option<Seed>,
 }
 
 impl KeychainMutableData {
@@ -61,11 +62,11 @@ impl KeychainMutableData {
 
 pub struct Keychain {
     consensus_seed_id: u16,
-    consensus_seed: Option<SeedsHolder<Seed>>,
-    consensus_state_ikm: Option<SeedsHolder<AESKey>>,
-    consensus_seed_exchange_keypair: Option<SeedsHolder<KeyPair>>,
-    consensus_io_exchange_keypair: Option<SeedsHolder<KeyPair>>,
-    consensus_callback_secret: Option<SeedsHolder<AESKey>>,
+    consensus_seed: SeedsHolder<Seed>,
+    consensus_state_ikm: SeedsHolder<AESKey>,
+    consensus_seed_exchange_keypair: SeedsHolder<KeyPair>,
+    consensus_io_exchange_keypair: Option<KeyPair>,
+    consensus_callback_secret: Option<AESKey>,
     pub random_encryption_key: Option<AESKey>,
     pub initial_randomness_seed: Option<AESKey>,
     registration_key: Option<KeyPair>,
@@ -74,12 +75,16 @@ pub struct Keychain {
     pub extra_data: SgxMutex<KeychainMutableData>,
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Default)]
 pub struct SeedsHolder<T> {
-    pub genesis: T,
-    pub current: T,
+    pub arr: Vec<T>,
 }
 
+impl<T> SeedsHolder<T> {
+    pub fn last(&self) -> &T {
+        self.arr.last().unwrap()
+    }
+}
 lazy_static! {
     static ref SEALING_KDK: sgx_key_128bit_t = get_key_from_seed("seal.kdk".as_bytes());
     pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path(&SEALED_FILE_UNITED);
@@ -93,12 +98,13 @@ impl Keychain {
     pub fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
         writer.write_all(&KEYCHAIN_DATA_VER.to_le_bytes())?;
 
-        if let Some(seeds) = self.consensus_seed {
-            writer.write_all(&[1_u8])?;
-            writer.write_all(seeds.genesis.as_slice())?;
-            writer.write_all(seeds.current.as_slice())?;
-        } else {
-            writer.write_all(&[0_u8])?;
+        {
+            let n = self.consensus_seed.arr.len() as u8;
+            writer.write_all(&[n])?;
+
+            for s in &self.consensus_seed.arr {
+                writer.write_all(s.as_slice())?;
+            }
         }
 
         if let Some(kp) = self.registration_key {
@@ -115,11 +121,24 @@ impl Keychain {
         writer.write_all(&val_size.to_le_bytes())?;
         writer.write_all(&extra.validator_set_serialized)?;
 
-        if let Some(val) = extra.next_mr_enclave {
-            writer.write_all(&[1_u8])?;
-            writer.write_all(&val.m)?;
+        let ex_flag: u8 = (if extra.next_mr_enclave.is_some() {
+            1_u8
         } else {
-            writer.write_all(&[0_u8])?;
+            0_u8
+        }) | (if extra.last_evidence_seed.is_some() {
+            2_u8
+        } else {
+            0_u8
+        });
+
+        writer.write_all(&[ex_flag])?;
+
+        if let Some(val) = extra.next_mr_enclave {
+            writer.write_all(&val.m)?;
+        }
+
+        if let Some(val) = extra.last_evidence_seed {
+            writer.write_all(val.as_slice())?;
         }
 
         Ok(())
@@ -150,14 +169,17 @@ impl Keychain {
 
         reader.read_exact(&mut flag_bytes)?;
         if flag_bytes[0] != 0 {
-            let mut buf = Ed25519PrivateKey::default();
-            reader.read_exact(buf.get_mut())?;
-            let genesis = Seed::from(buf);
+            if flag_bytes[0] == 1 {
+                flag_bytes[0] = 2; // legacy
+            }
 
-            reader.read_exact(buf.get_mut())?;
-            let current = Seed::from(buf);
+            for _ in 0..flag_bytes[0] {
+                let mut buf = Ed25519PrivateKey::default();
+                reader.read_exact(buf.get_mut())?;
+                let seed = Seed::from(buf);
 
-            self.consensus_seed = Some(SeedsHolder { genesis, current });
+                self.consensus_seed.arr.push(seed);
+            }
         }
 
         reader.read_exact(&mut flag_bytes)?;
@@ -178,12 +200,21 @@ impl Keychain {
         reader.read_exact(&mut extra.validator_set_serialized)?;
 
         reader.read_exact(&mut flag_bytes)?;
-        if flag_bytes[0] != 0 {
+
+        if (flag_bytes[0] & 1_u8) != 0 {
             let mut val = sgx_measurement_t::default();
             reader.read_exact(&mut val.m)?;
             extra.next_mr_enclave = Some(val);
         } else {
             extra.next_mr_enclave = None;
+        }
+
+        if (flag_bytes[0] & 2_u8) != 0 {
+            let mut buf = Ed25519PrivateKey::default();
+            reader.read_exact(buf.get_mut())?;
+            extra.last_evidence_seed = Some(Seed::from(buf));
+        } else {
+            extra.last_evidence_seed = None;
         }
 
         Ok(())
@@ -211,15 +242,19 @@ impl Keychain {
         }
     }
 
-    pub fn encrypt_hash(&self, hv: [u8; 32], height: u64) -> [u8; 32] {
+    pub fn encrypt_hash_ex(seed: &Seed, hv: [u8; 32], height: u64) -> [u8; 32] {
         let mut hasher = Sha256::new();
-        hasher.update(self.consensus_seed.unwrap().current.as_slice());
+        hasher.update(seed.as_slice());
         hasher.update(hv);
         hasher.update(height.to_le_bytes());
 
         let mut ret: [u8; 32] = [0_u8; 32];
         ret.copy_from_slice(&hasher.finalize());
         ret
+    }
+
+    pub fn encrypt_hash(&self, hv: [u8; 32], height: u64) -> [u8; 32] {
+        Self::encrypt_hash_ex(self.consensus_seed.last(), hv, height)
     }
 
     pub fn get_migration_keys() -> KeyPair {
@@ -233,10 +268,10 @@ impl Keychain {
     pub fn new_empty() -> Self {
         Keychain {
             consensus_seed_id: CONSENSUS_SEED_VERSION,
-            consensus_seed: None,
+            consensus_seed: SeedsHolder { arr: Vec::new() },
             registration_key: None,
-            consensus_state_ikm: None,
-            consensus_seed_exchange_keypair: None,
+            consensus_state_ikm: SeedsHolder { arr: Vec::new() },
+            consensus_seed_exchange_keypair: SeedsHolder { arr: Vec::new() },
             consensus_io_exchange_keypair: None,
             consensus_callback_secret: None,
             //#[cfg(feature = "random")]
@@ -249,6 +284,7 @@ impl Keychain {
                 height: 0,
                 validator_set_serialized: Vec::new(),
                 next_mr_enclave: None,
+                last_evidence_seed: None,
             }),
         }
     }
@@ -260,7 +296,7 @@ impl Keychain {
                 _ => None,
             };
 
-        self.consensus_seed = match (
+        match (
             Seed::unseal(&make_sgx_secret_path(
                 SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS,
             )),
@@ -270,15 +306,15 @@ impl Keychain {
         ) {
             (Ok(genesis), Ok(current)) => {
                 trace!("Network seeds imported from legacy");
-                Some(SeedsHolder { genesis, current })
+
+                self.consensus_seed.arr.push(genesis);
+                self.consensus_seed.arr.push(current);
             }
             (Err(e), _) => {
                 trace!("Failed to unseal seeds {}", e);
-                None
             }
             (_, Err(e)) => {
                 trace!("Failed to unseal seeds {}", e);
-                None
             }
         };
 
@@ -302,7 +338,7 @@ impl Keychain {
         let mut x = Self::new_empty();
         x.load_legacy_keys();
 
-        if x.registration_key.is_some() || x.consensus_seed.is_some() {
+        if x.registration_key.is_some() || !x.consensus_seed.arr.is_empty() {
             let _ = x.generate_consensus_master_keys();
             Some(x)
         } else {
@@ -313,7 +349,8 @@ impl Keychain {
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
         match (Seed::new(), Seed::new()) {
             (Ok(genesis), Ok(current)) => {
-                self.set_consensus_seed(genesis, current);
+                self.push_consensus_seed(genesis);
+                self.push_consensus_seed(current);
             }
             (Err(err), _) => return Err(err),
             (_, Err(err)) => return Err(err),
@@ -323,21 +360,25 @@ impl Keychain {
 
     pub fn create_registration_key(&mut self) -> Result<(), CryptoError> {
         match KeyPair::new() {
-            Ok(key) => self.set_registration_key(key),
+            Ok(key) => {
+                self.registration_key = Some(key);
+            }
             Err(err) => return Err(err),
         };
         Ok(())
     }
 
     pub fn is_consensus_seed_set(&self) -> bool {
-        self.consensus_seed.is_some()
+        !self.consensus_seed.arr.is_empty()
     }
 
-    pub fn get_consensus_state_ikm(&self) -> Result<SeedsHolder<AESKey>, CryptoError> {
-        self.consensus_state_ikm.ok_or_else(|| {
+    pub fn get_consensus_state_ikm(&self) -> Result<&SeedsHolder<AESKey>, CryptoError> {
+        if self.consensus_state_ikm.arr.is_empty() {
             error!("Error accessing base_state_key (does not exist, or was not initialized)");
-            CryptoError::ParsingError
-        })
+            Err(CryptoError::ParsingError)
+        } else {
+            Ok(&self.consensus_state_ikm)
+        }
     }
 
     pub fn get_consensus_seed_id(&self) -> u16 {
@@ -348,28 +389,32 @@ impl Keychain {
         self.consensus_seed_id += 1;
     }
 
-    pub fn get_consensus_seed(&self) -> Result<SeedsHolder<Seed>, CryptoError> {
-        self.consensus_seed.ok_or_else(|| {
+    pub fn get_consensus_seed(&self) -> Result<&SeedsHolder<Seed>, CryptoError> {
+        if self.consensus_seed.arr.is_empty() {
             error!("Error accessing consensus_seed (does not exist, or was not initialized)");
-            CryptoError::ParsingError
-        })
+            Err(CryptoError::ParsingError)
+        } else {
+            Ok(&self.consensus_seed)
+        }
     }
 
-    pub fn seed_exchange_key(&self) -> Result<SeedsHolder<KeyPair>, CryptoError> {
-        self.consensus_seed_exchange_keypair.ok_or_else(|| {
+    pub fn seed_exchange_key(&self) -> Result<&SeedsHolder<KeyPair>, CryptoError> {
+        if self.consensus_seed_exchange_keypair.arr.is_empty() {
             error!("Error accessing consensus_seed_exchange_keypair (does not exist, or was not initialized)");
-            CryptoError::ParsingError
-        })
+            Err(CryptoError::ParsingError)
+        } else {
+            Ok(&self.consensus_seed_exchange_keypair)
+        }
     }
 
-    pub fn get_consensus_io_exchange_keypair(&self) -> Result<SeedsHolder<KeyPair>, CryptoError> {
+    pub fn get_consensus_io_exchange_keypair(&self) -> Result<KeyPair, CryptoError> {
         self.consensus_io_exchange_keypair.ok_or_else(|| {
             error!("Error accessing consensus_io_exchange_keypair (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
-    pub fn get_consensus_callback_secret(&self) -> Result<SeedsHolder<AESKey>, CryptoError> {
+    pub fn get_consensus_callback_secret(&self) -> Result<AESKey, CryptoError> {
         self.consensus_callback_secret.ok_or_else(|| {
             error!("Error accessing consensus_callback_secret (does not exist, or was not initialized)");
             CryptoError::ParsingError
@@ -397,36 +442,20 @@ impl Keychain {
         })
     }
 
-    pub fn set_registration_key(&mut self, kp: KeyPair) {
-        self.registration_key = Some(kp);
-        self.save();
-    }
-
-    pub fn set_consensus_seed_exchange_keypair(&mut self, genesis: KeyPair, current: KeyPair) {
-        self.consensus_seed_exchange_keypair = Some(SeedsHolder { genesis, current })
-    }
-
-    pub fn set_consensus_io_exchange_keypair(&mut self, genesis: KeyPair, current: KeyPair) {
-        self.consensus_io_exchange_keypair = Some(SeedsHolder { genesis, current })
-    }
-
-    pub fn set_consensus_state_ikm(&mut self, genesis: AESKey, current: AESKey) {
-        self.consensus_state_ikm = Some(SeedsHolder { genesis, current });
-    }
-
-    pub fn set_consensus_callback_secret(&mut self, genesis: AESKey, current: AESKey) {
-        self.consensus_callback_secret = Some(SeedsHolder { genesis, current });
-    }
-
     pub fn delete_consensus_seed(&mut self) {
-        self.consensus_seed = None;
-        self.save();
+        self.consensus_seed.arr.clear();
     }
 
-    pub fn set_consensus_seed(&mut self, genesis: Seed, current: Seed) {
-        self.consensus_seed = Some(SeedsHolder { genesis, current });
-        self.save();
-        trace!("Consensus seeds set");
+    pub fn push_consensus_seed(&mut self, seed: Seed) {
+        self.consensus_seed.arr.push(seed);
+        trace!(
+            "Consensus seed added, total={}",
+            self.consensus_seed.arr.len()
+        );
+    }
+
+    pub fn generate_consensus_ikm_key(seed: &Seed) -> AESKey {
+        seed.derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes())
     }
 
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
@@ -435,118 +464,55 @@ impl Keychain {
             return Ok(());
         }
 
-        // consensus_seed_exchange_keypair
+        for s in &self.consensus_seed.arr {
+            // consensus_seed_exchange_keypair
+            self.consensus_seed_exchange_keypair
+                .arr
+                .push(KeyPair::from(s.derive_key_from_this(
+                    &CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes(),
+                )));
 
-        let consensus_seed_exchange_keypair_genesis_bytes = self
-            .consensus_seed
-            .unwrap()
-            .genesis
-            .derive_key_from_this(&CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
-        let consensus_seed_exchange_keypair_genesis =
-            KeyPair::from(consensus_seed_exchange_keypair_genesis_bytes);
-
-        let consensus_seed_exchange_keypair_current_bytes = self
-            .consensus_seed
-            .unwrap()
-            .current
-            .derive_key_from_this(&CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
-        let consensus_seed_exchange_keypair_current =
-            KeyPair::from(consensus_seed_exchange_keypair_current_bytes);
-
-        self.set_consensus_seed_exchange_keypair(
-            consensus_seed_exchange_keypair_genesis,
-            consensus_seed_exchange_keypair_current,
-        );
-
-        // consensus_io_exchange_keypair
-
-        let consensus_io_exchange_keypair_genesis_bytes = self
-            .consensus_seed
-            .unwrap()
-            .genesis
-            .derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
-        let consensus_io_exchange_keypair_genesis =
-            KeyPair::from(consensus_io_exchange_keypair_genesis_bytes);
-
-        let consensus_io_exchange_keypair_current_bytes = self
-            .consensus_seed
-            .unwrap()
-            .current
-            .derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
-        let consensus_io_exchange_keypair_current =
-            KeyPair::from(consensus_io_exchange_keypair_current_bytes);
-
-        self.set_consensus_io_exchange_keypair(
-            consensus_io_exchange_keypair_genesis,
-            consensus_io_exchange_keypair_current,
-        );
-
-        // consensus_state_ikm
-
-        let consensus_state_ikm_genesis = self
-            .consensus_seed
-            .unwrap()
-            .genesis
-            .derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes());
-
-        let consensus_state_ikm_current = self
-            .consensus_seed
-            .unwrap()
-            .current
-            .derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes());
-
-        self.set_consensus_state_ikm(consensus_state_ikm_genesis, consensus_state_ikm_current);
-
-        // consensus_state_ikm
-
-        let consensus_callback_secret_genesis = self
-            .consensus_seed
-            .unwrap()
-            .genesis
-            .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
-
-        let consensus_callback_secret_current = self
-            .consensus_seed
-            .unwrap()
-            .current
-            .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
-
-        self.set_consensus_callback_secret(
-            consensus_callback_secret_genesis,
-            consensus_callback_secret_current,
-        );
-
-        //#[cfg(feature = "random")]
-        {
-            let rek =
-                self.consensus_seed.unwrap().current.derive_key_from_this(
-                    &RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes(),
-                );
-
-            let irs =
-                self.consensus_seed.unwrap().current.derive_key_from_this(
-                    &INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes(),
-                );
-
-            self.initial_randomness_seed = Some(irs);
-            self.random_encryption_key = Some(rek);
+            // consensus_state_ikm
+            self.consensus_state_ikm
+                .arr
+                .push(Self::generate_consensus_ikm_key(s));
         }
 
-        let admin_proof_secret = self
-            .consensus_seed
-            .unwrap()
-            .current
-            .derive_key_from_this(&ADMIN_PROOF_SECRET_DERIVE_ORDER.to_be_bytes());
+        let s_last = self.consensus_seed.last();
 
-        self.admin_proof_secret = Some(admin_proof_secret);
+        // consensus_io_exchange_keypair
+        self.consensus_io_exchange_keypair = Some(KeyPair::from(
+            s_last.derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes()),
+        ));
 
-        let contract_key_proof_secret = self
-            .consensus_seed
-            .unwrap()
-            .current
-            .derive_key_from_this(&CONTRACT_KEY_PROOF_SECRET_DERIVE_ORDER.to_be_bytes());
+        self.consensus_callback_secret = Some(
+            self.consensus_seed
+                .last()
+                .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes()),
+        );
 
-        self.contract_key_proof_secret = Some(contract_key_proof_secret);
+        {
+            self.random_encryption_key = Some(self.consensus_seed.last().derive_key_from_this(
+                &RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes(),
+            ));
+
+            self.initial_randomness_seed =
+                Some(self.consensus_seed.last().derive_key_from_this(
+                    &INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes(),
+                ));
+        }
+
+        self.admin_proof_secret = Some(
+            self.consensus_seed
+                .last()
+                .derive_key_from_this(&ADMIN_PROOF_SECRET_DERIVE_ORDER.to_be_bytes()),
+        );
+
+        self.contract_key_proof_secret = Some(
+            self.consensus_seed
+                .last()
+                .derive_key_from_this(&CONTRACT_KEY_PROOF_SECRET_DERIVE_ORDER.to_be_bytes()),
+        );
 
         Ok(())
     }

@@ -337,8 +337,8 @@ func ConfigureSecret() *cobra.Command {
 
 			seed := args[1]
 			println(seed)
-			if (len(seed) != reg.LegacyEncryptedKeyLength && len(seed) != reg.EncryptedKeyLength) || !reg.IsHexString(seed) {
-				return fmt.Errorf("invalid encrypted seed format (requires hex string of length of at least 96 bytes without 0x prefix)")
+			if (len(seed)%reg.EncryptedKeyGranularity != 0) || !reg.IsHexString(seed) {
+				return fmt.Errorf("invalid encrypted seed format (requires hex string of multiples of 96 bytes without 0x prefix)")
 			}
 
 			cfg := reg.SeedConfig{
@@ -546,7 +546,7 @@ Please report any issues with this command
 				return err
 			}
 
-			if pulsarFlag { 
+			if pulsarFlag {
 				regUrl = pulsarRegistrationService
 				log.Println("Registering node on Pulsar testnet")
 			} else if customRegUrl != "" {
@@ -595,7 +595,7 @@ Please report any issues with this command
 				seed = seed[2:]
 			}
 
-			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
+			if (len(seed)%reg.EncryptedKeyGranularity != 0) || !reg.IsHexString(seed) {
 				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 148 without 0x prefix)")
 			}
 

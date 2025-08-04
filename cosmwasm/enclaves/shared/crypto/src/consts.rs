@@ -3,7 +3,6 @@ use std::env;
 use std::path;
 use std::string::ToString;
 
-pub use enclave_ffi_types::{INPUT_ENCRYPTED_SEED_SIZE, OUTPUT_ENCRYPTED_SEED_SIZE};
 use lazy_static::lazy_static;
 use log::*;
 use sgx_types::{sgx_quote_sign_type_t, sgx_report_body_t, sgx_self_report};
@@ -54,15 +53,14 @@ pub fn make_sgx_secret_path(file_name: &str) -> String {
         .into_owned()
 }
 
-pub const ATTESTATION_CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
-pub const ATTESTATION_DCAP_SAVE_PATH: &str = "attestation_dcap.quote";
-pub const COLLATERAL_DCAP_SAVE_PATH: &str = "attestation_dcap.collateral";
+pub const FILE_ATTESTATION_CERTIFICATE: &str = "attestation_cert.der";
 pub const FILE_CERT_COMBINED: &str = "attestation_combined.bin";
 pub const FILE_MIGRATION_CERT_LOCAL: &str = "migration_report_local.bin";
 pub const FILE_MIGRATION_CERT_REMOTE: &str = "migration_report_remote.bin";
 pub const FILE_MIGRATION_TARGET_INFO: &str = "migration_target_info.bin";
 pub const FILE_MIGRATION_DATA: &str = "migration_data.bin";
-pub const PUBKEY_SAVE_PATH: &str = "pubkey.bin";
+pub const FILE_PUBKEY: &str = "pubkey.bin";
+pub const FILE_MIGRATION_CONSENSUS: &str = "migration_consensus.json";
 
 pub const SEED_EXCH_KEY_SAVE_PATH: &str = "node-master-key.txt";
 pub const IO_KEY_SAVE_PATH: &str = "io-master-key.txt";
@@ -75,8 +73,6 @@ pub const SEALED_FILE_REGISTRATION_KEY: &str = "new_node_seed_exchange_keypair.s
 pub const SEALED_FILE_REK: &str = "rek.sealed";
 pub const SEALED_FILE_IRS: &str = "irs.sealed";
 pub const SEALED_FILE_VALIDATOR_SET: &str = "validator_set.sealed";
-
-pub const MIGRATION_CONSENSUS_SAVE_PATH: &str = "migration_consensus.json";
 
 #[cfg(feature = "production")]
 pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_LINKABLE_SIGNATURE;
@@ -92,44 +88,6 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
 
 #[cfg(all(not(feature = "production"), feature = "test"))]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
-
-lazy_static! {
-    pub static ref ATTESTATION_CERT_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(ATTESTATION_CERTIFICATE_SAVE_PATH)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-    pub static ref ATTESTATION_DCAP_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(ATTESTATION_DCAP_SAVE_PATH)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-    pub static ref COLLATERAL_DCAP_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(COLLATERAL_DCAP_SAVE_PATH)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-    pub static ref PUBKEY_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(PUBKEY_SAVE_PATH)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-    pub static ref MIGRATION_CONSENSUS_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(MIGRATION_CONSENSUS_SAVE_PATH)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-}
 
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
 pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 2;

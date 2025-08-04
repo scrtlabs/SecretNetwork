@@ -1,11 +1,14 @@
 package app
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	packetforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/types"
 	ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
@@ -62,6 +65,7 @@ import (
 	v1_18 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.18"
 	v1_19 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.19"
 	v1_20 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.20"
+	v1_21 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.21"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
@@ -137,6 +141,7 @@ var (
 		v1_18.Upgrade,
 		v1_19.Upgrade,
 		v1_20.Upgrade,
+		v1_21.Upgrade,
 	}
 )
 
@@ -430,12 +435,53 @@ func NewSecretNetworkApp(
 	return app
 }
 
+func (app *SecretNetworkApp) RotateStore() {
+	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
+	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
+	_ = app.AppKeepers.ComputeKeeper.RotateContractsStore(ctx)
+
+	p, err := os.FindProcess(os.Getpid())
+	if err == nil {
+		_ = p.Signal(syscall.SIGINT) // Sends interrupt, causing Tendermint node to stop
+	}
+}
+
+func (app *SecretNetworkApp) UpdateOneKey(ctx sdk.Context, filePath string, keyID string) {
+	keyB64, err := os.ReadFile(filePath)
+	if err != nil {
+		return
+	}
+
+	keyBz, err := base64.StdEncoding.DecodeString(string(keyB64))
+	if err != nil {
+		return
+	}
+
+	keyNew := reg.MasterKey{Bytes: keyBz}
+	ctx2 := sdk.UnwrapSDKContext(ctx)
+
+	keyOld := app.AppKeepers.RegKeeper.GetMasterKey(ctx2, keyID)
+	if (keyOld == nil) || !bytes.Equal(keyOld.Bytes, keyNew.Bytes) {
+		app.AppKeepers.RegKeeper.SetMasterKey(ctx2, keyNew, keyID)
+		fmt.Printf("%s set to %s\n", keyID, keyB64)
+	}
+}
+
+func (app *SecretNetworkApp) UpdateNetworkKeys() {
+	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
+	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
+
+	app.UpdateOneKey(ctx, reg.NodeExchMasterKeyPath, reg.MasterNodeKeyId)
+	app.UpdateOneKey(ctx, reg.IoExchMasterKeyPath, reg.MasterIoKeyId)
+}
+
 func (app *SecretNetworkApp) Initialize() {
 	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
 
 	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
 
 	_ = app.AppKeepers.ComputeKeeper.SetValidatorSetEvidence(ctx)
+	app.UpdateNetworkKeys()
 }
 
 // Name returns the name of the App
