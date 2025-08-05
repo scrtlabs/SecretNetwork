@@ -1634,7 +1634,7 @@ pub unsafe extern "C" fn ecall_validate_random(
         // debug!("Got proof: {:?}", proof_slice);
 
         if calculated_proof == proof_slice {
-            return sgx_status_t::sgx_success;
+            return sgx_status_t::SGX_SUCCESS;
         }
 
         // try older seeds
