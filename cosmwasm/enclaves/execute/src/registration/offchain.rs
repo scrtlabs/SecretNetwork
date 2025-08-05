@@ -100,10 +100,11 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
             }
         };
 
+        let genesis_seed = key_manager.get_consensus_seed().unwrap().arr[0];
         let new_consensus_seed = match get_next_consensus_seed_from_service(
             &mut key_manager,
             0,
-            key_manager.get_consensus_seed().unwrap().arr[0],
+            genesis_seed,
             api_key_slice,
             temp_keypair,
             CONSENSUS_SEED_VERSION,
