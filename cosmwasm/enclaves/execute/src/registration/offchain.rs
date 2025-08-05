@@ -1196,9 +1196,6 @@ fn apply_rot_seed() -> sgx_status_t {
             error!("seeds count mismatch");
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
-
-        let mut extra = key_manager.extra_data.lock().unwrap();
-        extra.last_evidence_seed = Some(*seeds.last());
     }
 
     let mut rs2 = enclave_crypto::Seed::default();
@@ -1519,17 +1516,23 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
 
         #[cfg(feature = "light-client-validation")]
         {
-            let mut expected_evidence = KEY_MANAGER.encrypt_hash(validator_set_hash, height);
             let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+            let mut is_match = false;
 
-            let mut is_match = verified_msgs.next_validators_evidence == expected_evidence;
-            if !is_match && extra.last_evidence_seed.is_some() {
-                expected_evidence = Keychain::encrypt_hash_ex(
-                    &extra.last_evidence_seed.unwrap(),
+            let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
+            for i_seed in extra.last_block_seed .. seeds.arr.len() as u16 {
+
+                let expected_evidence = Keychain::encrypt_hash_ex(
+                    &seeds.arr[i_seed as usize],
                     validator_set_hash,
                     height,
                 );
+
                 is_match = verified_msgs.next_validators_evidence == expected_evidence;
+                if is_match {
+                    extra.last_block_seed = i_seed;
+                    break;
+                }
             }
 
             if !is_match {
@@ -1569,7 +1572,6 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
         {
             extra.height = height;
             extra.validator_set_serialized = validator_set_slice.to_vec();
-            extra.last_evidence_seed = None;
         }
     }
     KEY_MANAGER.save();
@@ -1631,12 +1633,34 @@ pub unsafe extern "C" fn ecall_validate_random(
         // debug!("Calculated proof: {:?}", calculated_proof);
         // debug!("Got proof: {:?}", proof_slice);
 
-        if calculated_proof != proof_slice {
-            // otherwise on an upgrade this will break horribly - next patch we can remove this
-            let legacy_proof = create_legacy_proof(_height, random_slice, block_hash_slice);
-            if legacy_proof != calculated_proof {
-                return sgx_status_t::SGX_ERROR_INVALID_SIGNATURE;
+        if calculated_proof == proof_slice {
+            return sgx_status_t::sgx_success;
+        }
+
+        // try older seeds
+        let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
+        let extra = KEY_MANAGER.extra_data.lock().unwrap();
+
+        for i_seed in extra.last_block_seed .. seeds.arr.len() as u16 {
+
+            let randomness_seed = Keychain::generate_randomness_seed(&seeds.arr[i_seed as usize]);
+
+            let calculated_proof_prev = enclave_utils::random::create_random_proof(
+                &randomness_seed,
+                _height,
+                random_slice,
+                block_hash_slice,
+            );
+
+            if calculated_proof_prev == proof_slice {
+                return sgx_status_t::SGX_SUCCESS;
             }
+        }
+            
+        // otherwise on an upgrade this will break horribly - next patch we can remove this
+        let legacy_proof = create_legacy_proof(_height, random_slice, block_hash_slice);
+        if legacy_proof != calculated_proof {
+            return sgx_status_t::SGX_ERROR_INVALID_SIGNATURE;
         }
     }
 

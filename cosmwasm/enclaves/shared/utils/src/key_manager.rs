@@ -41,7 +41,7 @@ pub struct KeychainMutableData {
     pub height: u64,
     pub validator_set_serialized: Vec<u8>,
     pub next_mr_enclave: Option<sgx_measurement_t>,
-    pub last_evidence_seed: Option<Seed>,
+    pub last_block_seed: u16,
 }
 
 impl KeychainMutableData {
@@ -92,6 +92,7 @@ lazy_static! {
 }
 
 const KEYCHAIN_DATA_VER: u32 = 1;
+const DEF_LAST_BLOCK_SEED: u16 = 1;
 
 #[allow(clippy::new_without_default)]
 impl Keychain {
@@ -125,7 +126,7 @@ impl Keychain {
             1_u8
         } else {
             0_u8
-        }) | (if extra.last_evidence_seed.is_some() {
+        }) | (if extra.last_block_seed != DEF_LAST_BLOCK_SEED {
             2_u8
         } else {
             0_u8
@@ -137,11 +138,17 @@ impl Keychain {
             writer.write_all(&val.m)?;
         }
 
-        if let Some(val) = extra.last_evidence_seed {
-            writer.write_all(val.as_slice())?;
+        if extra.last_block_seed != DEF_LAST_BLOCK_SEED {
+            writer.write_all(&extra.last_block_seed.to_le_bytes())?;
         }
 
         Ok(())
+    }
+
+    fn read_u16(reader: &mut dyn Read) -> std::io::Result<u16> {
+        let mut buf = [0u8; 2];
+        reader.read_exact(&mut buf)?;
+        Ok(u16::from_le_bytes(buf))
     }
 
     fn read_u32(reader: &mut dyn Read) -> std::io::Result<u32> {
@@ -210,11 +217,9 @@ impl Keychain {
         }
 
         if (flag_bytes[0] & 2_u8) != 0 {
-            let mut buf = Ed25519PrivateKey::default();
-            reader.read_exact(buf.get_mut())?;
-            extra.last_evidence_seed = Some(Seed::from(buf));
+            extra.last_block_seed = Self::read_u16(reader)?;
         } else {
-            extra.last_evidence_seed = None;
+            extra.last_block_seed = DEF_LAST_BLOCK_SEED;
         }
 
         Ok(())
@@ -284,7 +289,7 @@ impl Keychain {
                 height: 0,
                 validator_set_serialized: Vec::new(),
                 next_mr_enclave: None,
-                last_evidence_seed: None,
+                last_block_seed: DEF_LAST_BLOCK_SEED,
             }),
         }
     }
@@ -458,6 +463,10 @@ impl Keychain {
         seed.derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes())
     }
 
+    pub fn generate_randomness_seed(seed: &Seed) -> AESKey {
+        seed.derive_key_from_this(&INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes())
+    }
+
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
         if !self.is_consensus_seed_set() {
             trace!("Seed not initialized, skipping derivation of enclave keys");
@@ -497,9 +506,7 @@ impl Keychain {
             ));
 
             self.initial_randomness_seed =
-                Some(self.consensus_seed.last().derive_key_from_this(
-                    &INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes(),
-                ));
+                Some(Self::generate_randomness_seed(self.consensus_seed.last()));
         }
 
         self.admin_proof_secret = Some(
