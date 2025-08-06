@@ -8,8 +8,8 @@ replace (
 	cosmossdk.io/api => github.com/scrtlabs/cosmos-sdk-api v0.7.6-secret.0
 	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v1.1.1-secret.1
 	cosmossdk.io/x/tx => github.com/scrtlabs/cosmos-sdk-x-tx v0.13.7-secret.0
-	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.17-secret-5
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.14-secret.1
+	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.17-secret-6
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.14-secret.2
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.2.2-secret.0
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 
