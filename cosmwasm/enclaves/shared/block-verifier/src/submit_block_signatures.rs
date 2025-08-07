@@ -115,15 +115,20 @@ pub unsafe fn submit_block_signatures_impl(
         message_verifier.clear();
     }
 
-    let mut hasher = Sha256::new();
-    hasher.update(cron_msgs_slice);
-    let hash_result = hasher.finalize();
-    let hash_result: [u8; 32] = hash_result.into();
+    if let Some(implicit_hash_val) = header.header.implicit_hash {
+        let mut hasher = Sha256::new();
+        hasher.update(cron_msgs_slice);
+        let hash_result = hasher.finalize();
+        let hash_result: [u8; 32] = hash_result.into();
 
-    let implicit_hash = tendermint::Hash::Sha256(hash_result);
+        let implicit_hash = tendermint::Hash::Sha256(hash_result);
 
-    if implicit_hash != header.header.implicit_hash {
-        error!("Implicit hash does not match header implicit hash");
+        if implicit_hash != implicit_hash_val {
+            error!("Implicit hash does not match header implicit hash");
+            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+        }
+    } else if !cron_msgs_slice.is_empty() {
+        error!("Implicit hash not specified, yet implicit msgs provided");
         return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     }
 
