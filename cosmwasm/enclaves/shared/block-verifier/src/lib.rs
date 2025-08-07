@@ -14,7 +14,7 @@ mod txs;
 pub mod validator_whitelist;
 
 pub mod submit_block_signatures;
-mod verify;
+pub mod verify;
 
 #[cfg(feature = "test")]
 pub mod tests {

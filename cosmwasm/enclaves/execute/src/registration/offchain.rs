@@ -16,8 +16,7 @@ use enclave_crypto::consts::{
 };
 #[cfg(feature = "random")]
 use enclave_crypto::{
-    consts::SELF_REPORT_BODY, sha_256, AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable,
-    PUBLIC_KEY_SIZE,
+    consts::SELF_REPORT_BODY, AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE,
 };
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::key_manager::KeychainMutableData;
@@ -1520,8 +1519,7 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
             let mut is_match = false;
 
             let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
-            for i_seed in extra.last_block_seed .. seeds.arr.len() as u16 {
-
+            for i_seed in extra.last_block_seed..seeds.arr.len() as u16 {
                 let expected_evidence = Keychain::encrypt_hash_ex(
                     &seeds.arr[i_seed as usize],
                     validator_set_hash,
@@ -1623,57 +1621,15 @@ pub unsafe extern "C" fn ecall_validate_random(
         let proof_slice = slice::from_raw_parts(proof, proof_len as usize);
         let block_hash_slice = slice::from_raw_parts(block_hash, block_hash_len as usize);
 
-        let calculated_proof = enclave_utils::random::create_random_proof(
-            &KEY_MANAGER.initial_randomness_seed.unwrap(),
-            _height,
+        if let Err(e) = block_verifier::verify::random::validate_random_proof(
             random_slice,
+            proof_slice,
             block_hash_slice,
-        );
-
-        // debug!("Calculated proof: {:?}", calculated_proof);
-        // debug!("Got proof: {:?}", proof_slice);
-
-        if calculated_proof == proof_slice {
-            return sgx_status_t::SGX_SUCCESS;
-        }
-
-        // try older seeds
-        let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
-        let extra = KEY_MANAGER.extra_data.lock().unwrap();
-
-        for i_seed in extra.last_block_seed .. seeds.arr.len() as u16 {
-
-            let randomness_seed = Keychain::generate_randomness_seed(&seeds.arr[i_seed as usize]);
-
-            let calculated_proof_prev = enclave_utils::random::create_random_proof(
-                &randomness_seed,
-                _height,
-                random_slice,
-                block_hash_slice,
-            );
-
-            if calculated_proof_prev == proof_slice {
-                return sgx_status_t::SGX_SUCCESS;
-            }
-        }
-            
-        // otherwise on an upgrade this will break horribly - next patch we can remove this
-        let legacy_proof = create_legacy_proof(_height, random_slice, block_hash_slice);
-        if legacy_proof != calculated_proof {
-            return sgx_status_t::SGX_ERROR_INVALID_SIGNATURE;
+            _height,
+        ) {
+            return e;
         }
     }
 
     sgx_status_t::SGX_SUCCESS
-}
-
-#[cfg(feature = "random")]
-fn create_legacy_proof(height: u64, random: &[u8], block_hash: &[u8]) -> [u8; 32] {
-    let mut data = vec![];
-    data.extend_from_slice(&height.to_be_bytes());
-    data.extend_from_slice(random);
-    data.extend_from_slice(block_hash);
-    data.extend_from_slice(KEY_MANAGER.initial_randomness_seed.unwrap().get());
-
-    sha_256(data.as_slice())
 }

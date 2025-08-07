@@ -467,6 +467,10 @@ impl Keychain {
         seed.derive_key_from_this(&INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes())
     }
 
+    pub fn generate_random_key(seed: &Seed) -> AESKey {
+        seed.derive_key_from_this(&RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes())
+    }
+
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
         if !self.is_consensus_seed_set() {
             trace!("Seed not initialized, skipping derivation of enclave keys");
@@ -501,9 +505,8 @@ impl Keychain {
         );
 
         {
-            self.random_encryption_key = Some(self.consensus_seed.last().derive_key_from_this(
-                &RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes(),
-            ));
+            self.random_encryption_key =
+                Some(Self::generate_random_key(self.consensus_seed.last()));
 
             self.initial_randomness_seed =
                 Some(Self::generate_randomness_seed(self.consensus_seed.last()));
