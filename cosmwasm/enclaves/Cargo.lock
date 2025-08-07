@@ -2097,7 +2097,7 @@ dependencies = [
 [[package]]
 name = "tendermint"
 version = "0.38.0"
-source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.5#10fe0bb1c3e774e0b7e1c7ce53b524de6b1a0837"
+source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.6#9067bdcfec84b0fcfa1ef76eba143a73a766e5cf"
 dependencies = [
  "bytes 1.7.1",
  "digest 0.10.7",
@@ -2125,7 +2125,7 @@ dependencies = [
 [[package]]
 name = "tendermint-light-client-verifier"
 version = "0.38.0"
-source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.5#10fe0bb1c3e774e0b7e1c7ce53b524de6b1a0837"
+source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.6#9067bdcfec84b0fcfa1ef76eba143a73a766e5cf"
 dependencies = [
  "derive_more",
  "flex-error",
@@ -2137,7 +2137,7 @@ dependencies = [
 [[package]]
 name = "tendermint-proto"
 version = "0.38.0"
-source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.5#10fe0bb1c3e774e0b7e1c7ce53b524de6b1a0837"
+source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.6#9067bdcfec84b0fcfa1ef76eba143a73a766e5cf"
 dependencies = [
  "bytes 1.7.1",
  "flex-error",
