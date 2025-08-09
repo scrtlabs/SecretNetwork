@@ -1,3 +1,4 @@
+use enclave_utils::{Keychain, KEY_MANAGER};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "random")]
@@ -19,7 +20,8 @@ use crate::cosmwasm_config::ContractOperation;
 use crate::contract_validation::verify_block_info;
 
 use crate::contract_validation::{
-    generate_admin_proof, generate_contract_key_proof, ReplyParams, ValidatedMessage,
+    generate_admin_proof, generate_contract_key_proof, validate_admin_proof, ReplyParams,
+    ValidatedMessage,
 };
 use crate::external::results::{
     HandleSuccess, InitSuccess, MigrateSuccess, QuerySuccess, UpdateAdminSuccess,
@@ -240,7 +242,11 @@ pub fn init(
 
     // todo: can move the key to somewhere in the output message if we want
 
-    let admin_proof = generate_admin_proof(&canonical_admin_address.0 .0, &og_contract_key);
+    let admin_proof = generate_admin_proof(
+        &Keychain::generate_admin_proof_secret(KEY_MANAGER.get_consensus_seed().unwrap().last()),
+        &canonical_admin_address.0 .0,
+        &og_contract_key,
+    );
 
     Ok(InitSuccess {
         output,
@@ -328,12 +334,13 @@ pub fn migrate(
     ) {
         debug!("Found hardcoded admin for migrate");
     } else {
-        let sender_admin_proof =
-            generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
-
-        if admin_proof != sender_admin_proof {
+        if let Err(e) = validate_admin_proof(
+            &canonical_sender_address.0 .0,
+            &og_contract_key,
+            admin_proof,
+        ) {
             error!("Failed to validate sender as current admin for migrate");
-            return Err(EnclaveError::ValidationFailure);
+            return Err(e);
         }
         debug!("Validated migrate proof successfully");
     }
@@ -442,6 +449,9 @@ pub fn migrate(
     // todo: can move the key to somewhere in the output message if we want
 
     let new_contract_key_proof = generate_contract_key_proof(
+        &Keychain::generate_contract_key_proof_secret(
+            KEY_MANAGER.get_consensus_seed().unwrap().last(),
+        ),
         &canonical_contract_address.0 .0,
         &contract_code.hash(),
         &og_contract_key,
@@ -495,12 +505,15 @@ pub fn update_admin(
 
     let og_contract_key = base_env.get_og_contract_key()?;
 
-    let sender_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
-
-    if sender_admin_proof != current_admin_proof {
+    if let Err(e) = validate_admin_proof(
+        &canonical_sender_address.0 .0,
+        &og_contract_key,
+        current_admin_proof,
+    ) {
         error!("Failed to validate sender as current admin for update_admin");
-        return Err(EnclaveError::ValidationFailure);
+        return Err(e);
     }
+
     debug!("Validated update_admin proof successfully");
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
@@ -522,7 +535,11 @@ pub fn update_admin(
         Some(&canonical_new_admin_address),
     )?;
 
-    let new_admin_proof = generate_admin_proof(&canonical_new_admin_address.0 .0, &og_contract_key);
+    let new_admin_proof = generate_admin_proof(
+        &Keychain::generate_admin_proof_secret(KEY_MANAGER.get_consensus_seed().unwrap().last()),
+        &canonical_new_admin_address.0 .0,
+        &og_contract_key,
+    );
 
     debug!("update_admin success: {:?}", new_admin_proof);
 

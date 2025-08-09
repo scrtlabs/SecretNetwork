@@ -70,8 +70,6 @@ pub struct Keychain {
     pub random_encryption_key: Option<AESKey>,
     pub initial_randomness_seed: Option<AESKey>,
     registration_key: Option<KeyPair>,
-    admin_proof_secret: Option<AESKey>,
-    contract_key_proof_secret: Option<AESKey>,
     pub extra_data: SgxMutex<KeychainMutableData>,
 }
 
@@ -283,8 +281,6 @@ impl Keychain {
             initial_randomness_seed: None,
             //#[cfg(feature = "random")]
             random_encryption_key: None,
-            admin_proof_secret: None,
-            contract_key_proof_secret: None,
             extra_data: SgxMutex::new(KeychainMutableData {
                 height: 0,
                 validator_set_serialized: Vec::new(),
@@ -433,20 +429,6 @@ impl Keychain {
         })
     }
 
-    pub fn get_admin_proof_secret(&self) -> Result<AESKey, CryptoError> {
-        self.admin_proof_secret.ok_or_else(|| {
-            error!("Error accessing admin_proof_secret (does not exist, or was not initialized)");
-            CryptoError::ParsingError
-        })
-    }
-
-    pub fn get_contract_key_proof_secret(&self) -> Result<AESKey, CryptoError> {
-        self.contract_key_proof_secret.ok_or_else(|| {
-            error!("Error accessing contract_key_proof_secret (does not exist, or was not initialized)");
-            CryptoError::ParsingError
-        })
-    }
-
     pub fn delete_consensus_seed(&mut self) {
         self.consensus_seed.arr.clear();
     }
@@ -469,6 +451,14 @@ impl Keychain {
 
     pub fn generate_random_key(seed: &Seed) -> AESKey {
         seed.derive_key_from_this(&RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes())
+    }
+
+    pub fn generate_contract_key_proof_secret(seed: &Seed) -> AESKey {
+        seed.derive_key_from_this(&CONTRACT_KEY_PROOF_SECRET_DERIVE_ORDER.to_be_bytes())
+    }
+
+    pub fn generate_admin_proof_secret(seed: &Seed) -> AESKey {
+        seed.derive_key_from_this(&ADMIN_PROOF_SECRET_DERIVE_ORDER.to_be_bytes())
     }
 
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
@@ -511,18 +501,6 @@ impl Keychain {
             self.initial_randomness_seed =
                 Some(Self::generate_randomness_seed(self.consensus_seed.last()));
         }
-
-        self.admin_proof_secret = Some(
-            self.consensus_seed
-                .last()
-                .derive_key_from_this(&ADMIN_PROOF_SECRET_DERIVE_ORDER.to_be_bytes()),
-        );
-
-        self.contract_key_proof_secret = Some(
-            self.consensus_seed
-                .last()
-                .derive_key_from_this(&CONTRACT_KEY_PROOF_SECRET_DERIVE_ORDER.to_be_bytes()),
-        );
 
         Ok(())
     }

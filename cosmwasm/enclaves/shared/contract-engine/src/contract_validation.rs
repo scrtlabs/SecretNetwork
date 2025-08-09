@@ -13,7 +13,7 @@ use enclave_cosmos_types::types::{
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE};
 use enclave_ffi_types::EnclaveError;
-use enclave_utils::KEY_MANAGER;
+use enclave_utils::{Keychain, KEY_MANAGER};
 use protobuf::Message;
 
 use crate::hardcoded_admins::is_code_hash_allowed;
@@ -308,19 +308,13 @@ pub fn validate_contract_key(
 
         let sent_contract_key_proof = base_env.get_current_contract_key_proof()?;
 
-        let contract_key_proof = generate_contract_key_proof(
+        validate_contract_key_proof(
             &canonical_contract_address.0 .0,
             &contract_code.hash(),
             &og_contract_key,
-            &current_contract_key, // this is already validated
-        );
-
-        if sent_contract_key_proof != contract_key_proof {
-            error!("Failed to validate contract key proof for a migrated contract");
-            return Err(EnclaveError::ValidationFailure);
-        }
-
-        Ok(())
+            &current_contract_key,
+            &sent_contract_key_proof,
+        )
     } else {
         trace!("Contract still has original code, validating contract_key");
 
@@ -335,17 +329,42 @@ pub fn validate_contract_key(
     }
 }
 
-pub fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
+pub fn generate_admin_proof(
+    proof_secret: &AESKey,
+    admin: &[u8],
+    contract_key: &[u8],
+) -> [u8; enclave_crypto::HASH_SIZE] {
     let mut data_to_sign = vec![];
     data_to_sign.extend_from_slice(admin);
     data_to_sign.extend_from_slice(contract_key);
 
-    let admin_proof_secret = KEY_MANAGER.get_admin_proof_secret().unwrap();
+    proof_secret.sign_sha_256(data_to_sign.as_slice())
+}
 
-    admin_proof_secret.sign_sha_256(data_to_sign.as_slice())
+pub fn validate_admin_proof(
+    admin: &[u8],
+    contract_key: &[u8],
+    proof: &[u8],
+) -> Result<(), EnclaveError> {
+    let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
+    for i_seed in 1..seeds.arr.len() {
+        let expected_proof = generate_admin_proof(
+            &Keychain::generate_admin_proof_secret(&seeds.arr[i_seed]),
+            admin,
+            contract_key,
+        );
+
+        if proof == &expected_proof {
+            return Ok(());
+        }
+    }
+
+    error!("Failed to validate admin key proof for a migrated contract");
+    Err(EnclaveError::ValidationFailure)
 }
 
 pub fn generate_contract_key_proof(
+    proof_secret: &AESKey,
     contract_address: &[u8],
     code_hash: &[u8],
     og_contract_key: &[u8],
@@ -357,9 +376,33 @@ pub fn generate_contract_key_proof(
     data_to_sign.extend_from_slice(og_contract_key);
     data_to_sign.extend_from_slice(new_contract_key);
 
-    let contract_key_proof_secret = KEY_MANAGER.get_contract_key_proof_secret().unwrap();
+    proof_secret.sign_sha_256(data_to_sign.as_slice())
+}
 
-    contract_key_proof_secret.sign_sha_256(data_to_sign.as_slice())
+pub fn validate_contract_key_proof(
+    contract_address: &[u8],
+    code_hash: &[u8],
+    og_contract_key: &[u8],
+    new_contract_key: &[u8],
+    proof: &[u8; enclave_crypto::HASH_SIZE],
+) -> Result<(), EnclaveError> {
+    let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
+    for i_seed in 1..seeds.arr.len() {
+        let expected_proof = generate_contract_key_proof(
+            &Keychain::generate_contract_key_proof_secret(&seeds.arr[i_seed]),
+            contract_address,
+            code_hash,
+            og_contract_key,
+            new_contract_key,
+        );
+
+        if proof == &expected_proof {
+            return Ok(());
+        }
+    }
+
+    error!("Failed to validate contract key proof for a migrated contract");
+    Err(EnclaveError::ValidationFailure)
 }
 
 pub struct ValidatedMessage {
