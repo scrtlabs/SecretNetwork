@@ -1194,11 +1194,8 @@ func (k Keeper) GetScheduledMsgs(ctx sdk.Context, execution_stage crontypes.Exec
 			ctx.Logger().Info("executeSchedule: failed to convert contract address from bech32.", "err", err)
 			return nil, nil, err
 		}
-		// contractAddr := msg.Contract
-		fmt.Printf("contractAddr: %s\n", contractAddr.String())
 
 		encryptedMsg, err := cronkeeper.Encrypt(ctx, &k.cronKeeper, []byte(msg.Msg))
-		// encryptedMsg := msg.Msg
 		if err != nil {
 			ctx.Logger().Info("executeSchedule: failed to decode base64 msg", "err", err)
 			return nil, nil, err
