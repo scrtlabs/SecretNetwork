@@ -45,10 +45,6 @@ func (msg *MsgAddSchedule) Validate() error {
 		return errors.Wrap(sdkerrors.ErrInvalidRequest, "msgs should not be empty")
 	}
 
-	if _, ok := ExecutionStage_name[int32(msg.ExecutionStage)]; !ok {
-		return errors.Wrap(sdkerrors.ErrInvalidRequest, "execution stage is invalid")
-	}
-
 	return nil
 }
 
