@@ -28,3 +28,4 @@ hyper = { version = "0.14.15", features = ["full"] }
 tokio = { version = "1.32", features = ["full"] }
 mio = "0.8.11"
 base64 = "0.21"
+hex = "0.4"

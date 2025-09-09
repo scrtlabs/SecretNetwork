@@ -1,7 +1,6 @@
 mod enclave;
 mod enclave_api;
 mod types;
-
 use clap::App;
 use lazy_static::lazy_static;
 use sgx_types::{sgx_status_t, sgx_enclave_id_t};
@@ -9,11 +8,14 @@ use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::sync::Arc;
+use std::net::SocketAddr;
+use std::time::{SystemTime, UNIX_EPOCH};
 use hyper::service::{make_service_fn, service_fn};
+use hyper::server::conn::AddrStream; 
 use hyper::{Body, Request, Response};
 use hyper::server::Server;
 use base64::{engine::general_purpose, Engine as _};
- 
+use hex;
 
 use crate::{
     enclave_api::ecall_check_patch_level, enclave_api::ecall_migration_op, types::EnclaveDoorbell,
@@ -84,12 +86,43 @@ fn export_rot_seed(eid: sgx_enclave_id_t, remote_report: &[u8]) -> Option<Vec<u8
     Some(res.to_vec())
 }
 
-async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
+fn log_request(remote_addr: SocketAddr, remote_report: &[u8], metadata: &str) -> std::io::Result<()> {
+
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let filename = format!("request_log_{}_{}.txt", now.as_secs(), now.subsec_micros());    
+
+    let mut file = File::create(&filename)?;
+    writeln!(file, "Remote Addr: {}", remote_addr)?;
+    writeln!(file, "Metadata: {}", metadata)?;
+    writeln!(file, "Body (hex): {}", hex::encode(&remote_report))?;
+
+    Ok(())
+}
+
+async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, req: Request<Body>, remote_addr: SocketAddr) -> Result<Response<Body>, hyper::Error> {
     if req.method() == hyper::Method::POST {
+
+        let metadata = if let Some(value) = req.headers().get("secret_metadata") {
+            if let Ok(value_str) = value.to_str() {
+                //println!("secret_metadata: {}", value_str);
+                //println!("addr: {}", remote_addr);
+                Some(value_str.to_owned())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let whole_body = hyper::body::to_bytes(req.into_body()).await?;
 
         match export_rot_seed(eid, &whole_body) {
             Some(res) => {
+
+                if let Some(metadata_value) = metadata {
+                    let _res = log_request(remote_addr, &whole_body, &metadata_value);
+                }
+
                 let b64_buf1 = general_purpose::STANDARD.encode(&**self_report);
                 let b64_buf2 = general_purpose::STANDARD.encode(res);
 
@@ -132,14 +165,15 @@ async fn serve_rot_seed(eid: sgx_enclave_id_t) {
         let make_svc = {
             let self_report = Arc::clone(&self_report); // clone it into the outer closure
 
-            make_service_fn(move |_conn| {
+            make_service_fn(move |conn: &AddrStream| {
                 let self_report = Arc::clone(&self_report); // clone again into inner closure
+                let remote_addr = conn.remote_addr();
 
                 async move {
                     Ok::<_, hyper::Error>(service_fn(move |req| {
                         let self_report = Arc::clone(&self_report); // clone per request
                         async move {
-                            handle_http_request(eid, &self_report, req).await
+                            handle_http_request(eid, &self_report, req, remote_addr).await
                         }
                     }))
                 }
