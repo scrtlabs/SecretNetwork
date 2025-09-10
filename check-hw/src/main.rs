@@ -15,7 +15,6 @@ use hyper::server::conn::AddrStream;
 use hyper::{Body, Request, Response};
 use hyper::server::Server;
 use base64::{engine::general_purpose, Engine as _};
-use hex;
 
 use crate::{
     enclave_api::ecall_check_patch_level, enclave_api::ecall_migration_op, types::EnclaveDoorbell,
@@ -86,15 +85,13 @@ fn export_rot_seed(eid: sgx_enclave_id_t, remote_report: &[u8]) -> Option<Vec<u8
     Some(res.to_vec())
 }
 
-fn log_request(remote_addr: SocketAddr, remote_report: &[u8], metadata: &str) -> std::io::Result<()> {
+fn log_request(remote_addr: SocketAddr, whole_body: &[u8]) -> std::io::Result<()> {
 
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let filename = format!("request_log_{}_{}.txt", now.as_secs(), now.subsec_micros());    
+    let filename = format!("request_log_{}_{}_from_{}.txt", now.as_secs(), now.subsec_micros(), remote_addr);
 
     let mut file = File::create(&filename)?;
-    writeln!(file, "Remote Addr: {}", remote_addr)?;
-    writeln!(file, "Metadata: {}", metadata)?;
-    writeln!(file, "Body (hex): {}", hex::encode(&remote_report))?;
+    file.write_all(whole_body)?;
 
     Ok(())
 }
@@ -102,26 +99,12 @@ fn log_request(remote_addr: SocketAddr, remote_report: &[u8], metadata: &str) ->
 async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, req: Request<Body>, remote_addr: SocketAddr) -> Result<Response<Body>, hyper::Error> {
     if req.method() == hyper::Method::POST {
 
-        let metadata = if let Some(value) = req.headers().get("secret_metadata") {
-            if let Ok(value_str) = value.to_str() {
-                //println!("secret_metadata: {}", value_str);
-                //println!("addr: {}", remote_addr);
-                Some(value_str.to_owned())
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
         let whole_body = hyper::body::to_bytes(req.into_body()).await?;
 
         match export_rot_seed(eid, &whole_body) {
             Some(res) => {
 
-                if let Some(metadata_value) = metadata {
-                    let _res = log_request(remote_addr, &whole_body, &metadata_value);
-                }
+                let _res = log_request(remote_addr, &whole_body);
 
                 let b64_buf1 = general_purpose::STANDARD.encode(&**self_report);
                 let b64_buf2 = general_purpose::STANDARD.encode(res);
