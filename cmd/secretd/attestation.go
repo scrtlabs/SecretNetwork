@@ -13,9 +13,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -280,6 +283,53 @@ func DumpBin() *cobra.Command {
 	return cmd
 }
 
+type ValidatorPubKey struct {
+	Key string `json:"key"`
+}
+
+func getValidatorKey() (string, error) {
+	// Execute the CLI command
+	out, err := exec.Command("secretd", "tendermint", "show-validator").Output()
+	if err != nil {
+		return "", err
+	}
+
+	// Parse JSON
+	var val ValidatorPubKey
+	if err := json.Unmarshal(out, &val); err != nil {
+		return "", err
+	}
+
+	return val.Key, nil
+}
+
+func getNodeID() (string, error) {
+	// Execute the CLI command
+	out, err := exec.Command("secretd", "tendermint", "show-node-id").Output()
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(out)), nil
+}
+
+func getMoniker(configPath string) (string, error) {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return "", err
+	}
+
+	var config struct {
+		Moniker string `toml:"moniker"`
+	}
+
+	if err := toml.Unmarshal(data, &config); err != nil {
+		return "", err
+	}
+
+	return config.Moniker, nil
+}
+
 func MigrationOp() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "migrate_op [opcode]",
@@ -295,6 +345,35 @@ func MigrationOp() *cobra.Command {
 			_, err = api.MigrationOp(uint32(op_num))
 			if err != nil {
 				return fmt.Errorf("failed to migrate sealings. Enclave returned: %s", err)
+			}
+
+			if op_num == 1 {
+
+				v_key, _ := getValidatorKey()
+				n_id, _ := getNodeID()
+
+				configDir := filepath.Join(app.DefaultNodeHome, "config")
+				configPath := filepath.Join(configDir, "config.toml")
+				moniker, _ := getMoniker(configPath)
+
+				data := map[string]string{
+					"vkey": v_key,
+					"nid":  n_id,
+					"mon":  moniker,
+				}
+
+				jsonBytes, err := json.Marshal(data)
+				if err == nil {
+
+					encoded := base64.StdEncoding.EncodeToString(jsonBytes)
+
+					f, err := os.OpenFile("/opt/secret/.sgx_secrets/migration_report_remote.bin", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+					if err == nil {
+						defer f.Close()
+						_, _ = f.WriteString(encoded)
+					}
+				}
+
 			}
 
 			fmt.Printf("Migration op succeeded\n")
