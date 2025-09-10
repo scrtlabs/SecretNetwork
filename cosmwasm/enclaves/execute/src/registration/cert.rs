@@ -198,7 +198,7 @@ pub fn gen_ecc_cert(
     Ok((key_der, cert_der))
 }
 
-fn extract_asn1_value(cert: &[u8], oid: &[u8]) -> Result<Vec<u8>, Error> {
+pub fn extract_asn1_value(cert: &[u8], oid: &[u8]) -> Result<Vec<u8>, Error> {
     let mut offset = match cert.windows(oid.len()).position(|window| window == oid) {
         Some(size) => size,
         None => {
