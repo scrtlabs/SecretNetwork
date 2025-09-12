@@ -354,6 +354,7 @@ pub fn validate_admin_proof(
             contract_key,
         );
 
+        #[allow(clippy::op_ref)]
         if proof == &expected_proof {
             return Ok(());
         }
@@ -396,6 +397,7 @@ pub fn validate_contract_key_proof(
             new_contract_key,
         );
 
+        #[allow(clippy::op_ref)]
         if proof == &expected_proof {
             return Ok(());
         }
