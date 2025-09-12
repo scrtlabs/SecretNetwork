@@ -39,9 +39,14 @@ jobs:
           rustup component add rust-src clippy
       - name: Install xargo
         run: |
+          cd cosmwasm/enclaves/execute/
           cargo --version
           rustc --version  
-          cargo +stable install xargo --version 0.3.25
+          pushd ~
+          git clone https://github.com/scrtlabs/xargo.git --branch fix
+          cd xargo
+          cargo install --path .
+          popd
           xargo --version
       - name: Test enclave
         run: |
@@ -246,7 +251,11 @@ jobs:
           cd cosmwasm/enclaves/execute/
           cargo --version
           rustc --version  
-          cargo +stable install xargo --version 0.3.25
+          pushd ~
+          git clone https://github.com/scrtlabs/xargo.git --branch fix
+          cd xargo
+          cargo install --path .
+          popd
           xargo --version
       - name: Clippy
         run: |

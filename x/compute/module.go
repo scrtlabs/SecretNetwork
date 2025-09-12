@@ -16,11 +16,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
-	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/client/cli"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-	crontypes "github.com/scrtlabs/SecretNetwork/x/cron/types"
 	tmenclave "github.com/scrtlabs/tm-secret-enclave"
 )
 
@@ -161,13 +159,13 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	ctx := c.(sdk.Context)
 	block_header := ctx.BlockHeader()
 
-	execCronMsgs, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
-	if err != nil {
-		ctx.Logger().Error("Failed to get scheduled cron msgs")
-		return err
-	}
+	// execCronMsgs, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
+	// if err != nil {
+	// 	ctx.Logger().Error("Failed to get scheduled cron msgs")
+	// 	return err
+	// }
 
-	cron_msgs := tm_type.Data{Txs: bytesCronMsgs}
+	cron_msgs := tm_type.Data{Txs: [][]byte{}}
 	cron_data, err := cron_msgs.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal cron_msgs")
@@ -202,13 +200,13 @@ func (am AppModule) BeginBlock(c context.Context) error {
 			return err
 		}
 
-		for idx, msg := range execCronMsgs {
-			ctx = ctx.WithTxBytes(bytesCronMsgs[idx])
-			_, err := am.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, wasmtypes.HandleTypeExecute)
-			if err != nil {
-				ctx.Logger().Error("Failed to execute cron message", "error", err)
-			}
-		}
+		// for idx, msg := range execCronMsgs {
+		// 	ctx = ctx.WithTxBytes(bytesCronMsgs[idx])
+		// 	_, err := am.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, wasmtypes.HandleTypeExecute)
+		// 	if err != nil {
+		// 		ctx.Logger().Error("Failed to execute cron message", "error", err)
+		// 	}
+		// }
 
 		am.keeper.SetRandomSeed(ctx, random, validator_set_evidence)
 	} else {
@@ -221,13 +219,13 @@ func (am AppModule) BeginBlock(c context.Context) error {
 func (am AppModule) EndBlock(c context.Context) error {
 	ctx := c.(sdk.Context)
 
-	_, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_END_BLOCKER)
-	if err != nil {
-		ctx.Logger().Error("Failed to get scheduled cron msgs")
-		return err
-	}
+	// _, _, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_END_BLOCKER)
+	// if err != nil {
+	// 	ctx.Logger().Error("Failed to get scheduled cron msgs")
+	// 	return err
+	// }
 
-	cron_msgs := tm_type.Data{Txs: bytesCronMsgs}
+	cron_msgs := tm_type.Data{Txs: [][]byte{}}
 	cron_data, err := cron_msgs.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal cron_msgs")
