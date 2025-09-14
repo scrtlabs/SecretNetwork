@@ -3,13 +3,17 @@ mod enclave_api;
 mod types;
 use clap::App;
 use lazy_static::lazy_static;
-use sgx_types::{sgx_status_t, sgx_enclave_id_t};
+use sgx_types::{sgx_status_t, sgx_enclave_id_t, sgx_quote_t, sgx_ql_ecdsa_sig_data_t, sgx_ql_auth_data_t, sgx_ql_certification_data_t};
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::sync::Arc;
 use std::net::SocketAddr;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::mem;
+use std::slice;
+use std::fs;
+use std::net::IpAddr;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::server::conn::AddrStream; 
 use hyper::{Body, Request, Response};
@@ -174,6 +178,220 @@ async fn serve_rot_seed(eid: sgx_enclave_id_t) {
     }
 }
 
+fn extract_asn1_value(cert: &[u8], oid: &[u8]) -> Option<Vec<u8>> {
+    let mut offset = match cert.windows(oid.len()).position(|window| window == oid) {
+        Some(size) => size,
+        None => {
+            return None;
+        }
+    };
+
+    offset += 12; // 11 + TAG (0x04)
+
+    if offset + 2 >= cert.len() {
+        return None;
+    }
+
+    // Obtain Netscape Comment length
+    let mut len = cert[offset] as usize;
+    if len > 0x80 {
+        len = (cert[offset + 1] as usize) * 0x100 + (cert[offset + 2] as usize);
+        offset += 2;
+    }
+
+    // Obtain Netscape Comment
+    offset += 1;
+
+    if offset + len >= cert.len() {
+        return None;
+    }
+
+    let payload = cert[offset..offset + len].to_vec();
+
+    Some(payload)
+}
+
+fn extract_cpu_cert_from_cert(cert_data: &[u8]) -> Option<Vec<u8>> {
+    //println!("******** cert_data: {}", orig_hex::encode(cert_data));
+
+    let pem_text = match std::str::from_utf8(cert_data) {
+        Ok(x) => x,
+        Err(_) => {
+            return None;
+        }
+    };
+
+    //println!("******** pem: {}", pem_text);
+
+    // Find the first PEM block
+    let begin_marker = "-----BEGIN CERTIFICATE-----";
+    let end_marker = "-----END CERTIFICATE-----";
+    let start = match pem_text.find(begin_marker) {
+        Some(x) => x + begin_marker.len(),
+        None => {
+            println!("no begin");
+            return None;
+        }
+    };
+
+    let end = match pem_text.find(end_marker) {
+        Some(x) => x,
+        None => {
+            println!("no end");
+            return None;
+        }
+    };
+    let b64 = &pem_text[start..end];
+
+    // Remove whitespace and line breaks
+    let b64_clean: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
+
+    // Decode Base64 into DER
+    let der_bytes = match base64::decode(&b64_clean) {
+        Ok(x) => x,
+        Err(_) => {
+            return None;
+        }
+    };
+
+    //println!("Leaf certificate: {}", orig_hex::encode(&der_bytes));
+
+    let ppid_oid = &[
+        0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x01, 0x0D, 0x01,
+    ];
+
+    let res = match extract_asn1_value(&der_bytes, ppid_oid) {
+        Some(x) => x,
+        None => {
+            return None;
+        }
+    };
+
+    Some(res)
+}
+
+unsafe fn extract_cpu_cert_from_quote(vec_quote: &[u8]) -> Option<Vec<u8>> {
+    let my_p_quote = vec_quote.as_ptr() as *const sgx_quote_t;
+
+    let sig_len = (*my_p_quote).signature_len as usize;
+    let whole_len = sig_len.wrapping_add(mem::size_of::<sgx_quote_t>());
+    if (whole_len > sig_len)
+        && (whole_len <= vec_quote.len())
+        && (sig_len >= mem::size_of::<sgx_ql_ecdsa_sig_data_t>())
+    {
+        let p_ecdsa_sig = (*my_p_quote).signature.as_ptr() as *const sgx_ql_ecdsa_sig_data_t;
+
+        let auth_size_brutto = sig_len - mem::size_of::<sgx_ql_ecdsa_sig_data_t>();
+        if auth_size_brutto >= mem::size_of::<sgx_ql_auth_data_t>() {
+            let auth_size_max = auth_size_brutto - mem::size_of::<sgx_ql_auth_data_t>();
+
+            let auth_data_wrapper =
+                (*p_ecdsa_sig).auth_certification_data.as_ptr() as *const sgx_ql_auth_data_t;
+
+            let auth_hdr_size = (*auth_data_wrapper).size as usize;
+            if auth_hdr_size <= auth_size_max {
+                let auth_size = auth_size_max - auth_hdr_size;
+
+                if auth_size > mem::size_of::<sgx_ql_certification_data_t>() {
+                    let cert_data = (*auth_data_wrapper)
+                        .auth_data
+                        .as_ptr()
+                        .offset(auth_hdr_size as isize)
+                        as *const sgx_ql_certification_data_t;
+
+                    let cert_size_max = auth_size - mem::size_of::<sgx_ql_certification_data_t>();
+                    let cert_size = (*cert_data).size as usize;
+                    if (cert_size <= cert_size_max) && ((*cert_data).cert_key_type == 5) {
+                        let cert_data = slice::from_raw_parts(
+                            (*cert_data).certification_data.as_ptr(),
+                            cert_size,
+                        );
+
+                        return extract_cpu_cert_from_cert(cert_data);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+
+
+
+fn print_request_details(file_path: &std::path::Path, ip: IpAddr) {
+
+    let mut f_in = File::open(file_path).unwrap();
+
+    let mut buf = [0u8; 4];
+    f_in.read_exact(&mut buf).unwrap();
+    let size_epid = u32::from_le_bytes(buf);
+
+    f_in.read_exact(&mut buf).unwrap();
+    let size_dcap_q = u32::from_le_bytes(buf);
+
+    f_in.read_exact(&mut buf).unwrap();
+    let size_dcap_c = u32::from_le_bytes(buf);
+
+    let mut buf = Vec::new();
+    buf.resize(size_epid as usize, 0);
+    f_in.read_exact(buf.as_mut_slice()).unwrap();
+
+    buf.resize(size_dcap_q as usize, 0);
+    f_in.read_exact(buf.as_mut_slice()).unwrap();
+
+    let ppid = unsafe { extract_cpu_cert_from_quote(&buf.as_slice()) };
+
+    buf.resize(size_dcap_c as usize, 0);
+    f_in.read_exact(buf.as_mut_slice()).unwrap();
+
+    buf.resize(0, 0);
+    f_in.read_to_end(&mut buf).unwrap();
+
+    println!("IP: {}", ip);
+
+    let data = base64::decode(&buf).unwrap();
+    let s = String::from_utf8(data).unwrap();
+    println!("Metadata: {}", &s);
+
+    if let Some(ppid_val) = ppid {
+        println!("ppid: {}", hex::encode(&ppid_val));
+    }
+}
+
+fn print_request_details2(file_path: &std::path::Path) -> bool {
+    if let Some(name) = file_path.file_name().and_then(|n| n.to_str()) {
+        if name.starts_with("request_log_") {
+            // Example: request_log_1757752506_456332_from_23.81.165.91:40186.txt
+            if let Some(from_idx) = name.find("_from_") {
+                let after = &name[from_idx + "_from_".len()..];
+                if let Some(colon_idx) = after.find(':') {
+                    let ip_str = &after[..colon_idx];
+                    if let Ok(ip) = ip_str.parse::<IpAddr>() {
+                        print_request_details(file_path, ip);
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+fn print_request_details_dir(directory_path: &str) {
+    for entry in fs::read_dir(directory_path).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+
+        if path.is_file() {
+            if !print_request_details2(&path) {
+                println!("Skipped: {}", path.display());
+            }
+        }
+    }
+}
+
 fn main() {
     let matches = App::new("Check HW")
         .version("1.0")
@@ -194,6 +412,13 @@ fn main() {
             clap::Arg::with_name("server_seed")
                 .long("server_seed")
                 .help("Serve the generated seed"),
+        )
+        .arg(
+            clap::Arg::with_name("parse_req")
+                .long("parse_req")
+                .value_name("path")
+                .help("path to the request file")
+                .takes_value(true), // Indicates this flag takes a value
         )
         .get_matches();
 
@@ -238,6 +463,9 @@ fn main() {
         println!("Migration op reval: {}, {}", status, retval);
     } else if matches.is_present("server_seed") {
         serve_rot_seed(eid);
+    } else if let Some(req_path) = matches.value_of("parse_req") {
+        let dir = req_path.parse::<String>().unwrap();
+        print_request_details_dir(&dir);
     } else {
         let mut retval = NodeAuthResult::Success;
         let status = unsafe {
