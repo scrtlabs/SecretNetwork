@@ -218,7 +218,7 @@ pub unsafe extern "C" fn ecall_init_node(
         // this validates the cert and handles the "what if it fails" inside as well
         let res = crate::registration::attestation::validate_enclave_version(
             temp_key_result.as_ref().unwrap(),
-            SIGNATURE_TYPE,
+            enclave_crypto::consts::SIGNATURE_TYPE,
             api_key_slice,
             None,
         );
