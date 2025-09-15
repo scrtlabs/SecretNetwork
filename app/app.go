@@ -14,6 +14,8 @@ import (
 	ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 
+	cosmwasm_api "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
 	circuittypes "cosmossdk.io/x/circuit/types"
@@ -448,24 +450,20 @@ func (app *SecretNetworkApp) RotateStore() {
 	}
 }
 
-func (app *SecretNetworkApp) UpdateOneKey(ctx sdk.Context, filePath string, keyID string) {
-	keyB64, err := os.ReadFile(filePath)
-	if err != nil {
+func (app *SecretNetworkApp) UpdateOneKey(ctx sdk.Context, keyID string, value []byte) {
+	if len(value) == 0 {
 		return
 	}
 
-	keyBz, err := base64.StdEncoding.DecodeString(string(keyB64))
-	if err != nil {
-		return
-	}
-
-	keyNew := reg.MasterKey{Bytes: keyBz}
+	keyNew := reg.MasterKey{Bytes: value}
 	ctx2 := sdk.UnwrapSDKContext(ctx)
 
 	keyOld := app.AppKeepers.RegKeeper.GetMasterKey(ctx2, keyID)
 	if (keyOld == nil) || !bytes.Equal(keyOld.Bytes, keyNew.Bytes) {
 		app.AppKeepers.RegKeeper.SetMasterKey(ctx2, keyNew, keyID)
-		fmt.Printf("%s set to %s\n", keyID, keyB64)
+
+		value_b64 := base64.StdEncoding.EncodeToString(value)
+		fmt.Printf("%s set to %s\n", keyID, value_b64)
 	}
 }
 
@@ -473,8 +471,28 @@ func (app *SecretNetworkApp) UpdateNetworkKeys() {
 	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
 	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
 
-	app.UpdateOneKey(ctx, reg.NodeExchMasterKeyPath, reg.MasterNodeKeyId)
-	app.UpdateOneKey(ctx, reg.IoExchMasterKeyPath, reg.MasterIoKeyId)
+	var node_pk, io_pk []byte
+
+	for i := 0; ; i++ {
+		{
+			next_node_pk, next_io_pk := cosmwasm_api.GetNetworkPubkey(uint32(i))
+
+			// Stop when both buffers are empty
+			if len(next_node_pk) == 0 && len(next_io_pk) == 0 {
+				break
+			}
+
+			node_pk = next_node_pk
+			io_pk = next_io_pk
+		}
+
+		// node_pk_b64 := base64.StdEncoding.EncodeToString(node_pk)
+		// io_pk_b64 := base64.StdEncoding.EncodeToString(io_pk)
+		// fmt.Printf("iSeed=%d, nodePK=%s, ioPK=%s\n", i, node_pk_b64, io_pk_b64)
+	}
+
+	app.UpdateOneKey(ctx, reg.MasterNodeKeyId, node_pk)
+	app.UpdateOneKey(ctx, reg.MasterIoKeyId, io_pk)
 }
 
 func (app *SecretNetworkApp) Initialize() {
