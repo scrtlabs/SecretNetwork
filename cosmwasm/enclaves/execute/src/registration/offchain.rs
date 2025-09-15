@@ -1526,7 +1526,7 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
                 return sgx_status_t::SGX_SUCCESS;
             }
 
-            if extra.height != 0 {
+            if extra.height > height {
                 error!(
                     "Height range not consequent: current={}, submitted={}",
                     extra.height, height
