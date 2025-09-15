@@ -155,34 +155,6 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	if err != nil {
 		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
-
-	if !fileExists(legacySeedPath) {
-		sgxSecretsFolder := os.Getenv("SCRT_SGX_STORAGE")
-		if sgxSecretsFolder == "" {
-			sgxSecretsFolder = os.ExpandEnv("/opt/secret/.sgx_secrets")
-		}
-
-		sgxAttestationCertPath := filepath.Join(sgxSecretsFolder, types.AttestationCertPath)
-		if !fileExists(sgxAttestationCertPath) {
-			fmt.Printf("Failed to create legacy seed file. Attestation certificate does not exist in %s. Try to re-initialize the enclave\n", sgxAttestationCertPath)
-			return
-		}
-
-		cert, err := os.ReadFile(sgxAttestationCertPath)
-		if err != nil {
-			panic(errorsmod.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Failed to read attestation certificate at %s", sgxAttestationCertPath)))
-		}
-
-		key, err := ra.UNSAFE_VerifyRaCert(cert)
-		if err != nil {
-			panic(errorsmod.Wrap(types.ErrSeedInitFailed, "Failed to get key from cert"))
-		}
-
-		err = createOldSecret(key, legacySeedPath, enclave)
-		if err != nil {
-			panic(errorsmod.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("%s was not found and could not be created", legacySeedPath)))
-		}
-	}
 }
 
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {

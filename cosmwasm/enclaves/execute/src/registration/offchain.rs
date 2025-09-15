@@ -1,18 +1,16 @@
 //!
-use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
+use super::attestation::get_quote_ecdsa;
 use super::seed_service::get_next_consensus_seed_from_service;
 use crate::registration::attestation::verify_quote_sgx;
 use crate::registration::onchain::split_combined_cert;
 #[cfg(feature = "verify-validator-whitelist")]
 use block_verifier::validator_whitelist;
 use core::convert::TryInto;
-use core::ptr::null;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
     make_sgx_secret_path, CONSENSUS_SEED_VERSION, FILE_ATTESTATION_CERTIFICATE, FILE_CERT_COMBINED,
     FILE_MIGRATION_CERT_LOCAL, FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS,
     FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY, SEED_UPDATE_SAVE_PATH,
-    SIGNATURE_TYPE,
 };
 #[cfg(feature = "random")]
 use enclave_crypto::{
@@ -375,38 +373,6 @@ pub unsafe extern "C" fn ecall_init_node(
     sgx_status_t::SGX_SUCCESS
 }
 
-unsafe fn get_attestation_report_epid(
-    api_key: *const u8,
-    api_key_len: u32,
-    kp: &KeyPair,
-) -> Result<Vec<u8>, sgx_status_t> {
-    // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
-
-    validate_const_ptr!(
-        api_key,
-        api_key_len as usize,
-        Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
-    );
-    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
-
-    let (_private_key_der, cert) =
-        match create_attestation_certificate(kp, SIGNATURE_TYPE, api_key_slice, None) {
-            Err(e) => {
-                warn!("Error in create_attestation_certificate: {:?}", e);
-                return Err(e);
-            }
-            Ok(res) => res,
-        };
-
-    #[cfg(feature = "SGX_MODE_HW")]
-    {
-        crate::registration::print_report::print_local_report_info(cert.as_slice());
-    }
-
-    Ok(cert)
-}
-
 pub unsafe fn get_attestation_report_dcap(
     pub_k: &[u8],
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
@@ -539,11 +505,7 @@ fn get_verified_migration_report_body() -> SgxResult<sgx_report_body_t> {
  * # Safety
  * Something should go here
 */
-pub unsafe extern "C" fn ecall_get_attestation_report(
-    api_key: *const u8,
-    api_key_len: u32,
-    flags: u32,
-) -> sgx_status_t {
+pub unsafe extern "C" fn ecall_get_attestation_report(flags: u32) -> sgx_status_t {
     let mut report_data: [u8; 48] = [0; 48];
 
     let (kp, is_migration_report) = match 0x10 & flags {
@@ -573,10 +535,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         }
     };
 
-    let res_epid = match 1 & flags {
-        0 => get_attestation_report_epid(api_key, api_key_len, &kp),
-        _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
-    };
+    let res_epid = Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED);
 
     let res_dcap = match 2 & flags {
         0 => {
@@ -745,7 +704,7 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
             println!("Create self migration report");
 
             export_local_migration_report();
-            ecall_get_attestation_report(null(), 0, 0x11) // migration, no-epid
+            ecall_get_attestation_report(0x11) // migration, no-epid
         }
         2 => {
             println!("Export encrypted data to the next aurhorized enclave");

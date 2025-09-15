@@ -16,8 +16,6 @@ use sgx_types::{
 //     pub fn ecall_get_attestation_report(
 //         eid: sgx_enclave_id_t,
 //         retval: *mut sgx_status_t,
-//         api_key: *const u8,
-//         api_key_len: u32,
 //         dry_run: u8,
 //     ) -> sgx_status_t;
 // }
