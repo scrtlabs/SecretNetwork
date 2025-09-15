@@ -124,7 +124,10 @@ pub struct WasmOutput {
 }
 
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
-    let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
+    let enclave_io_key = KEY_MANAGER
+        .get_consensus_io_exchange_keypair()
+        .unwrap()
+        .last();
 
     let tx_encryption_ikm = enclave_io_key.diffie_hellman(user_public_key);
 
