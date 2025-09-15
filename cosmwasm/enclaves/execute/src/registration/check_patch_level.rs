@@ -45,7 +45,7 @@ pub unsafe extern "C" fn ecall_check_patch_level() -> NodeAuthResult {
 unsafe fn check_patch_level_dcap(pub_k: &[u8; 32]) -> NodeAuthResult {
     match get_quote_ecdsa_untested(pub_k) {
         Ok((vec_quote, vec_coll)) => {
-            match verify_quote_sgx(&vec_quote, &vec_coll, 0) {
+            match verify_quote_sgx(&vec_quote, &vec_coll, 0, false) {
                 Ok(r) => {
                     if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
                         println!("WARNING: {}", r.1);

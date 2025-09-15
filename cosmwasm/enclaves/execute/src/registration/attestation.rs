@@ -344,6 +344,7 @@ pub fn verify_quote_sgx(
     vec_quote: &[u8],
     vec_coll: &[u8],
     time_s: i64,
+    check_ppid_wl: bool,
 ) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
     let qv_result = verify_quote_any(vec_quote, vec_coll, time_s)?;
 
@@ -362,12 +363,14 @@ pub fn verify_quote_sgx(
         } else {
             let report_body = (*my_p_quote).report_body;
 
-            let _ppid = extract_cpu_cert_from_quote(vec_quote);
+            if check_ppid_wl {
+                let _ppid = extract_cpu_cert_from_quote(vec_quote);
 
-            // TODO: verify wrt whitelist
-            // if let Some(ppid) = _ppid {
-            //     println!("PPID: {}", orig_hex::encode(&ppid));
-            // }
+                // TODO: verify wrt whitelist
+                // if let Some(ppid) = _ppid {
+                //     println!("PPID: {}", orig_hex::encode(&ppid));
+                // }
+            }
 
             Ok((report_body, qv_result))
         }
@@ -506,7 +509,7 @@ pub fn get_quote_ecdsa(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t>
     let (vec_quote, vec_coll) = get_quote_ecdsa_untested(pub_k)?;
 
     // test self
-    match verify_quote_sgx(&vec_quote, &vec_coll, 0) {
+    match verify_quote_sgx(&vec_quote, &vec_coll, 0, false) {
         Ok(r) => {
             trace!("Self quote verified ok");
             if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {

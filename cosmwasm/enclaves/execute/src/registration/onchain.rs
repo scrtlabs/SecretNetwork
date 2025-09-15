@@ -103,7 +103,7 @@ fn verify_attestation_dcap(
     trace!("Current block time: {}", tm_s);
 
     // test self
-    let report_body = match verify_quote_sgx(vec_quote, vec_coll, tm_s) {
+    let report_body = match verify_quote_sgx(vec_quote, vec_coll, tm_s, true) {
         Ok(r) => {
             trace!("Remote quote verified ok");
             if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {

@@ -450,7 +450,7 @@ pub fn save_attestation_combined(
     sgx_status_t::SGX_SUCCESS
 }
 
-fn get_verified_migration_report_body() -> SgxResult<sgx_report_body_t> {
+fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_report_body_t> {
     if let Ok(mut f_in) = File::open(make_sgx_secret_path(FILE_MIGRATION_CERT_LOCAL)) {
         let mut buffer = vec![0u8; std::mem::size_of::<sgx_report_t>()];
         if f_in.read_exact(&mut buffer).is_ok() {
@@ -477,7 +477,7 @@ fn get_verified_migration_report_body() -> SgxResult<sgx_report_body_t> {
 
         let (_, vec_quote, vec_coll) = split_combined_cert(cert.as_ptr(), cert.len() as u32);
 
-        match verify_quote_sgx(vec_quote.as_slice(), vec_coll.as_slice(), 0) {
+        match verify_quote_sgx(vec_quote.as_slice(), vec_coll.as_slice(), 0, check_ppid_wl) {
             Ok((body, _)) => {
                 return Ok(body);
             }
@@ -1061,7 +1061,7 @@ fn get_dh_aes_key_from_report(other_report: &sgx_report_body_t, kp: &KeyPair) ->
 }
 
 fn get_seed_rot_report() -> SgxResult<sgx_report_body_t> {
-    let next_report = match get_verified_migration_report_body() {
+    let next_report = match get_verified_migration_report_body(false) {
         Ok(report) => report,
         Err(e) => {
             error!("No migration report: {}", e);
@@ -1257,7 +1257,7 @@ fn export_local_migration_report() -> sgx_status_t {
 }
 
 fn export_sealed_data() -> sgx_status_t {
-    let next_report = match get_verified_migration_report_body() {
+    let next_report = match get_verified_migration_report_body(true) {
         Ok(report) => report,
         Err(e) => {
             error!("No next migration report: {}", e);
