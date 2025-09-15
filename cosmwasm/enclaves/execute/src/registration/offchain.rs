@@ -706,7 +706,7 @@ pub unsafe extern "C" fn ecall_rotate_store(p_buf: *mut u8, n_buf: u32) -> sgx_t
         }
     };
 
-    let rot_seed = match read_rot_seed() {
+    let (rot_seed, _) = match read_rot_seed() {
         Ok(seed) => seed,
         Err(e) => {
             return e;
@@ -1074,10 +1074,11 @@ fn get_rot_seed_encrypted_path() -> String {
     make_sgx_secret_path("rot_seed_encr.bin")
 }
 
-fn save_rot_seed(rot_seed: &enclave_crypto::Seed) {
+fn save_rot_seed(rot_seed: &enclave_crypto::Seed, flags: u8) {
     let (path, kdk) = get_rot_seed_file_params();
     let mut file = SgxFile::create_ex(path, &kdk).unwrap();
     file.write_all(rot_seed.as_slice()).unwrap();
+    file.write_all(&[flags]).unwrap();
 }
 
 fn generate_rot_seed() -> sgx_status_t {
@@ -1089,7 +1090,7 @@ fn generate_rot_seed() -> sgx_status_t {
         }
     };
 
-    save_rot_seed(&rot_seed);
+    save_rot_seed(&rot_seed, 1);
     println!("New seed generated");
 
     sgx_status_t::SGX_SUCCESS
@@ -1127,7 +1128,7 @@ fn get_dh_aes_key_from_rot_report() -> SgxResult<AESKey> {
     }
 }
 
-fn read_rot_seed() -> SgxResult<enclave_crypto::Seed> {
+fn read_rot_seed() -> SgxResult<(enclave_crypto::Seed, u8)> {
     let (path, kdk) = get_rot_seed_file_params();
     let mut file = match SgxFile::open_ex(path, &kdk) {
         Ok(f) => f,
@@ -1138,18 +1139,29 @@ fn read_rot_seed() -> SgxResult<enclave_crypto::Seed> {
     };
 
     let mut seed = enclave_crypto::Seed::default();
-    match file.read_exact(seed.as_mut()) {
-        Ok(()) => Ok(seed),
-        Err(e) => {
-            error!("can't read rot seed file: {}", e);
-            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-        }
+    if let Err(e) = file.read_exact(seed.as_mut()) {
+        error!("can't read rot seed file: {}", e);
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
+
+    let mut flags_buf = [0u8; 1]; // a real 1-byte buffer
+    if let Err(e) = file.read_exact(&mut flags_buf) {
+        error!("can't read rot seed file: {}", e);
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
+
+    Ok((seed, flags_buf[0]))
 }
 
 fn export_rot_seed() -> sgx_status_t {
     let rot_seed = match read_rot_seed() {
-        Ok(seed) => seed,
+        Ok((seed, flags)) => {
+            if flags == 0 {
+                println!("Not a source of seed. Export disallowed");
+                return sgx_status_t::SGX_ERROR_ECALL_NOT_ALLOWED;
+            }
+            seed
+        }
         Err(e) => return e,
     };
 
@@ -1200,7 +1212,7 @@ fn import_rot_seed() -> sgx_status_t {
     let mut rot_seed = enclave_crypto::Seed::default();
     rot_seed.as_mut().copy_from_slice(&data_plain);
 
-    save_rot_seed(&rot_seed);
+    save_rot_seed(&rot_seed, 0);
 
     println!("Seed imported");
     sgx_status_t::SGX_SUCCESS
