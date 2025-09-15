@@ -23,6 +23,9 @@ extern "C" {
         retval: *mut NodeAuthResult,
         api_key: *const u8,
         api_key_len: u32,
+        p_ppid: *mut u8,
+        n_ppid: u32,
+        p_ppid_size: *mut u32,
     ) -> sgx_status_t;
 
     pub fn ecall_migration_op(

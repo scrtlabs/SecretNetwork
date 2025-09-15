@@ -468,12 +468,19 @@ fn main() {
         print_request_details_dir(&dir);
     } else {
         let mut retval = NodeAuthResult::Success;
+
+        let mut ppid_buf = vec![0u8; 1024]; // initial buffer capacity
+        let mut ppid_required_size: u32 = 0;
+
         let status = unsafe {
             ecall_check_patch_level(
                 eid,
                 &mut retval,
                 api_key_bytes.as_ptr(),
                 api_key_bytes.len() as u32,
+                ppid_buf.as_mut_ptr(),
+                ppid_buf.len() as u32,
+                &mut ppid_required_size,
             )
         };
 
@@ -493,6 +500,12 @@ fn main() {
             println!(
                 "Platform verification successful! You are able to run a mainnet Secret node"
             )
+        }
+
+        if (ppid_required_size > 0) && (ppid_required_size as usize <= ppid_buf.len()) {
+            ppid_buf.truncate(ppid_required_size as usize);
+
+            println!("Your PPID: {}", hex::encode(&ppid_buf));
         }
     }
 }

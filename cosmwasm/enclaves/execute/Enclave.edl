@@ -69,7 +69,10 @@ enclave {
 
         public NodeAuthResult ecall_check_patch_level(
             [in, count=api_key_len] const uint8_t* api_key,
-            uint32_t api_key_len
+            uint32_t api_key_len,
+            [out, count=n_ppid] uint8_t* p_ppid,
+            uint32_t n_ppid,
+            [out] uint32_t* p_ppid_size
         );
 
         public sgx_status_t ecall_get_genesis_seed(
