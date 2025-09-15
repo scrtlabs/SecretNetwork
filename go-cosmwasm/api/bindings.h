@@ -77,6 +77,11 @@ typedef struct EnclaveRuntimeConfig {
   uint32_t module_cache_size;
 } EnclaveRuntimeConfig;
 
+typedef struct TwoBuffers {
+  Buffer buf1;
+  Buffer buf2;
+} TwoBuffers;
+
 /**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
  */
@@ -143,11 +148,6 @@ typedef struct GoQuerier {
   Querier_vtable vtable;
 } GoQuerier;
 
-typedef struct TwoBuffers {
-  Buffer buf1;
-  Buffer buf2;
-} TwoBuffers;
-
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 AnalysisReport analyze_code(cache_t *cache, Buffer checksum, Buffer *error_msg);
@@ -169,6 +169,8 @@ Buffer get_encrypted_genesis_seed(Buffer pk, Buffer *err);
 Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 
 Buffer get_health_check(Buffer *err);
+
+TwoBuffers get_network_pubkey(uint32_t i_seed);
 
 Buffer handle(cache_t *cache,
               Buffer code_id,

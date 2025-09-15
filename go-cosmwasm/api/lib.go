@@ -134,6 +134,11 @@ func MigrationOp(op uint32) (bool, error) {
 	return true, nil
 }
 
+func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
+	res := C.get_network_pubkey(u32(i_seed))
+	return receiveVector(res.buf1), receiveVector(res.buf2)
+}
+
 func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
 	nodeDirBuf := sendSlice([]byte(nodeDir))
 	defer freeAfterSend(nodeDirBuf)

@@ -281,6 +281,10 @@ func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool, is_migra
 	return true, nil
 }
 
+func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
+	return nil, nil
+}
+
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	//errmsg := C.Buffer{}
 	//certSlice := sendSlice(cert)

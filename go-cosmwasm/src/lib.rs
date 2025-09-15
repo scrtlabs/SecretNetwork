@@ -13,9 +13,10 @@ use base64;
 use cosmwasm_sgx_vm::{
     call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, call_update_admin_raw,
     create_attestation_report_u, features_from_csv, untrusted_approve_upgrade,
-    untrusted_get_encrypted_genesis_seed, untrusted_get_encrypted_seed, untrusted_health_check,
-    untrusted_init_bootstrap, untrusted_init_node, untrusted_key_gen, untrusted_migration_op,
-    untrusted_rotate_store, untrusted_submit_validator_set_evidence, Checksum, CosmCache, Extern,
+    untrusted_get_encrypted_genesis_seed, untrusted_get_encrypted_seed,
+    untrusted_get_network_pubkey, untrusted_health_check, untrusted_init_bootstrap,
+    untrusted_init_node, untrusted_key_gen, untrusted_migration_op, untrusted_rotate_store,
+    untrusted_submit_validator_set_evidence, Checksum, CosmCache, Extern,
 };
 use ctor::ctor;
 pub use db::{db_t, DB};
@@ -877,6 +878,29 @@ pub extern "C" fn migration_op(opcode: u32) -> bool {
 
     clear_error();
     true
+}
+
+#[no_mangle]
+pub extern "C" fn get_network_pubkey(i_seed: u32) -> TwoBuffers {
+    match untrusted_get_network_pubkey(i_seed) {
+        Ok((seeds, node_pk, io_pk)) => {
+            if i_seed < seeds {
+                //let node_buf = Buffer::from_vec(node_pk.to_vec());
+                //let io_buf = Buffer::from_vec(io_pk.to_vec());
+
+                return TwoBuffers {
+                    buf1: Buffer::from_vec(node_pk.to_vec()),
+                    buf2: Buffer::from_vec(io_pk.to_vec()),
+                };
+            }
+        }
+        Err(e) => {
+            error!("get_network_pubkey error: {}", e);
+        }
+    }
+
+    clear_error();
+    TwoBuffers::default()
 }
 
 #[derive(Deserialize)]

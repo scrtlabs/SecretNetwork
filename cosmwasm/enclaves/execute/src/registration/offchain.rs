@@ -141,6 +141,37 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     sgx_status_t::SGX_SUCCESS
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn ecall_get_network_pubkey(
+    i_seed: u32,
+    p_node: *mut u8,
+    p_io: *mut u8,
+    p_seeds: *mut u32,
+) -> sgx_status_t {
+    validate_mut_ptr!(p_node, PUBLIC_KEY_SIZE, sgx_status_t::SGX_ERROR_UNEXPECTED);
+    validate_mut_ptr!(p_io, PUBLIC_KEY_SIZE, sgx_status_t::SGX_ERROR_UNEXPECTED);
+
+    if let Ok(seeds) = KEY_MANAGER.get_consensus_seed() {
+        if (i_seed as usize) < seeds.arr.len() {
+            let node_pk =
+                &KEY_MANAGER.seed_exchange_key().unwrap().arr[i_seed as usize].get_pubkey();
+
+            slice::from_raw_parts_mut(p_node, PUBLIC_KEY_SIZE).copy_from_slice(node_pk);
+
+            let io_pk = &KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap().arr
+                [i_seed as usize]
+                .get_pubkey();
+
+            slice::from_raw_parts_mut(p_io, PUBLIC_KEY_SIZE).copy_from_slice(io_pk);
+        }
+        *p_seeds = seeds.arr.len() as u32;
+    } else {
+        *p_seeds = 0;
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
 ///
 ///  `ecall_init_node`
 ///

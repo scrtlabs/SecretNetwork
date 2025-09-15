@@ -1,4 +1,4 @@
-use enclave_ffi_types::HealthCheckResult;
+use enclave_ffi_types::{HealthCheckResult, PUBLIC_KEY_SIZE};
 use sgx_types::*;
 
 use log::info;
@@ -37,6 +37,15 @@ extern "C" {
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         opcode: u32,
+    ) -> sgx_status_t;
+
+    pub fn ecall_get_network_pubkey(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        i_seed: u32,
+        p_node: *mut u8,
+        p_io: *mut u8,
+        p_seeds: *mut u32,
     ) -> sgx_status_t;
 
     pub fn ecall_rotate_store(
@@ -200,6 +209,44 @@ pub fn untrusted_migration_op(opcode: u32) -> SgxResult<()> {
     }
 
     Ok(())
+}
+
+pub fn untrusted_get_network_pubkey(
+    i_seed: u32,
+) -> SgxResult<(u32, [u8; PUBLIC_KEY_SIZE], [u8; PUBLIC_KEY_SIZE])> {
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
+    let mut pk_node = [0u8; PUBLIC_KEY_SIZE];
+    let mut pk_io = [0u8; PUBLIC_KEY_SIZE];
+    let mut seeds: u32 = 0;
+
+    let eid = enclave.geteid();
+    let mut ret = sgx_status_t::SGX_SUCCESS;
+    let status = unsafe {
+        ecall_get_network_pubkey(
+            eid,
+            &mut ret,
+            i_seed,
+            pk_node.as_mut_ptr(),
+            pk_io.as_mut_ptr(),
+            &mut seeds,
+        )
+    };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if ret != sgx_status_t::SGX_SUCCESS {
+        return Err(ret);
+    }
+
+    Ok((seeds, pk_node, pk_io))
 }
 
 pub fn untrusted_approve_upgrade(msg_slice: &[u8]) -> SgxResult<()> {
