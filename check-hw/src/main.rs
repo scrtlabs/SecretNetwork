@@ -214,7 +214,7 @@ fn main() {
         )
         .get_matches();
 
-    let is_testnet = matches.is_present("testnet");
+    //let is_testnet = matches.is_present("testnet");
 
     println!("Creating enclave instance..");
 
@@ -237,13 +237,6 @@ fn main() {
         return;
     }
 
-    #[allow(clippy::if_same_then_else)]
-    let api_key_bytes = if is_testnet {
-        include_bytes!("../../ias_keys/develop/api_key.txt")
-    } else {
-        include_bytes!("../../ias_keys/production/api_key.txt")
-    };
-
     let eid = enclave.unwrap().geteid();
 
     if let Some(migrate_op) = matches.value_of("migrate_op") {
@@ -261,8 +254,6 @@ fn main() {
             ecall_check_patch_level(
                 eid,
                 &mut retval,
-                api_key_bytes.as_ptr(),
-                api_key_bytes.len() as u32,
             )
         };
 

@@ -68,8 +68,6 @@ enclave {
         );
 
         public NodeAuthResult ecall_check_patch_level(
-            [in, count=api_key_len] const uint8_t* api_key,
-            uint32_t api_key_len
         );
 
         public sgx_status_t ecall_get_network_pubkey(
