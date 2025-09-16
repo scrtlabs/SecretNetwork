@@ -66,6 +66,9 @@ enclave {
         );
 
         public NodeAuthResult ecall_check_patch_level(
+            [out, count=n_ppid] uint8_t* p_ppid,
+            uint32_t n_ppid,
+            [out] uint32_t* p_ppid_size
         );
 
         public sgx_status_t ecall_get_network_pubkey(

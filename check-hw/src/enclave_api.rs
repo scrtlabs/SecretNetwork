@@ -21,6 +21,9 @@ extern "C" {
     pub fn ecall_check_patch_level(
         eid: sgx_enclave_id_t,
         retval: *mut NodeAuthResult,
+        p_ppid: *mut u8,
+        n_ppid: u32,
+        p_ppid_size: *mut u32,
     ) -> sgx_status_t;
 
     pub fn ecall_migration_op(
