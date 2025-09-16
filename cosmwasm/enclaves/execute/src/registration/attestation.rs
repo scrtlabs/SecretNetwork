@@ -420,9 +420,9 @@ pub fn verify_quote_sgx(
                     if wl.contains(&ppid_addr) {
                         true
                     } else {
-                        println!("PPID not in allow list");
-                        println!("PPID: {}", orig_hex::encode(&ppid));
-                        println!("PPID short: {}", orig_hex::encode(&ppid_addr));
+                        println!("Machine-ID not in hard-coded allow list");
+                        //println!("PPID: {}", orig_hex::encode(&ppid));
+                        println!("Machine-ID: {}", orig_hex::encode(&ppid_addr));
                         false
                     }
                 }

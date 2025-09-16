@@ -640,13 +640,13 @@ fn main() {
         if (ppid_required_size > 0) && (ppid_required_size as usize <= ppid_buf.len()) {
             ppid_buf.truncate(ppid_required_size as usize);
 
-            println!("Your PPID: {}", hex::encode(&ppid_buf));
+//            println!("Your PPID: {}", hex::encode(&ppid_buf));
+            let machine_id = calculate_truncated_hash(&ppid_buf);
+            println!("Your machine ID: {}", hex::encode(machine_id));
+
 
             match get_allowed_hashes() {
                 Ok(allowlist) => {
-
-                    let machine_id = calculate_truncated_hash(&ppid_buf);
-                    println!("Your machine ID: {}", hex::encode(machine_id));
 
                     if allowlist.contains(&machine_id) {
                         println!("✅ This machine is present in the allowlist");
