@@ -16,12 +16,12 @@ use std::mem;
 use std::slice;
 use std::fs;
 use std::net::IpAddr;
+use std::io::Cursor;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::server::conn::AddrStream; 
 use hyper::{Body, Request, Response};
 use hyper::server::Server;
 use hyper::Client;
-use hyper::body::to_bytes;
 use hyper::header::{AUTHORIZATION, ACCEPT, USER_AGENT};
 use base64::{engine::general_purpose, Engine as _};
 use hex;
@@ -109,42 +109,41 @@ fn log_request(remote_addr: SocketAddr, whole_body: &[u8]) -> std::io::Result<()
     Ok(())
 }
 
-async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, req: Request<Body>, remote_addr: SocketAddr) -> Result<Response<Body>, hyper::Error> {
+async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, req: Request<Body>, remote_addr: SocketAddr, allow_list: &HashSet<[u8; 20]>) -> Result<Response<Body>, hyper::Error> {
     if req.method() == hyper::Method::POST {
 
         let whole_body = hyper::body::to_bytes(req.into_body()).await?;
+        let mut cursor = Cursor::new(&whole_body);
 
-        let ppid = match unsafe { extract_cpu_cert_from_quote(&whole_body) } {
-            Some(val) => val,
-            None => {
+        let ppid = match extract_cpu_cert_from_attestation_combined(&mut cursor) {
+            Ok(maybe_ppid) => {
+                match maybe_ppid {
+                    Some(val) => val,
+                    None => {
+                        return Ok(Response::builder()
+                            .status(500)
+                            .body("Couldn't fetch machine ID".into())
+                            .unwrap());
+
+                    }
+                }
+
+            },
+            Err(_) => {
                 return Ok(Response::builder()
                     .status(500)
-                    .body("Couldn't fetch machine ID".into())
+                    .body("invalid attestation blob".into())
                     .unwrap());
-
             }
         };
 
-        match get_allowed_hashes() {
-            Ok(allowlist) => {
-
-                let machine_id = calculate_truncated_hash(&ppid);
-
-                if !allowlist.contains(&machine_id) {
-                    return Ok(Response::builder()
-                        .status(500)
-                        .body("Not in allow list".into())
-                        .unwrap());
-                }
-            }
-            Err(_e) => {
-                return Ok(Response::builder()
-                    .status(500)
-                    .body("Couldn't fetch allow list".into())
-                    .unwrap());
-            }
+        let machine_id = calculate_truncated_hash(&ppid);
+        if !allow_list.contains(&machine_id) {
+            return Ok(Response::builder()
+                .status(500)
+                .body("Not in allow list".into())
+                .unwrap());
         }
-
 
         match export_rot_seed(eid, &whole_body) {
             Some(res) => {
@@ -242,7 +241,7 @@ pub fn calculate_truncated_hash(input: &[u8]) -> [u8; 20] {
 }
 
 #[tokio::main]
-async fn serve_rot_seed(eid: sgx_enclave_id_t) {
+async fn serve_rot_seed(eid: sgx_enclave_id_t, allow_list: HashSet<[u8; 20]>) {
 
     let mut retval = sgx_status_t::SGX_ERROR_BUSY;
     let _status = unsafe { ecall_migration_op(eid, &mut retval, 1) };
@@ -260,16 +259,19 @@ async fn serve_rot_seed(eid: sgx_enclave_id_t) {
 
         let make_svc = {
             let self_report = Arc::clone(&self_report); // clone it into the outer closure
+            let allow_list = allow_list.clone(); // clone it into the outer closure
 
             make_service_fn(move |conn: &AddrStream| {
                 let self_report = Arc::clone(&self_report); // clone again into inner closure
                 let remote_addr = conn.remote_addr();
+                let allow_list = allow_list.clone(); // clone it into the outer closure
 
                 async move {
                     Ok::<_, hyper::Error>(service_fn(move |req| {
                         let self_report = Arc::clone(&self_report); // clone per request
+                        let allow_list = allow_list.clone(); // clone per request
                         async move {
-                            handle_http_request(eid, &self_report, req, remote_addr).await
+                            handle_http_request(eid, &self_report, req, remote_addr, &allow_list).await
                         }
                     }))
                 }
@@ -426,7 +428,31 @@ unsafe fn extract_cpu_cert_from_quote(vec_quote: &[u8]) -> Option<Vec<u8>> {
     None
 }
 
+fn extract_cpu_cert_from_attestation_combined<R: Read>(reader: &mut R) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error>> {
+    let mut buf = [0u8; 4];
+    reader.read_exact(&mut buf)?;
+    let size_epid = u32::from_le_bytes(buf);
 
+    reader.read_exact(&mut buf)?;
+    let size_dcap_q = u32::from_le_bytes(buf);
+
+    reader.read_exact(&mut buf)?;
+    let size_dcap_c = u32::from_le_bytes(buf);
+
+    let mut buf = Vec::new();
+    buf.resize(size_epid as usize, 0);
+    reader.read_exact(buf.as_mut_slice())?;
+
+    buf.resize(size_dcap_q as usize, 0);
+    reader.read_exact(buf.as_mut_slice())?;
+
+    let ppid = unsafe { extract_cpu_cert_from_quote(&buf.as_slice()) };
+
+    buf.resize(size_dcap_c as usize, 0);
+    reader.read_exact(buf.as_mut_slice())?;
+
+    Ok(ppid)
+}
 
 
 fn print_request_details(file_path: &std::path::Path, ip: IpAddr) {
@@ -564,7 +590,16 @@ fn main() {
 
         println!("Migration op reval: {}, {}", status, retval);
     } else if matches.is_present("server_seed") {
-        serve_rot_seed(eid);
+
+        let allow_list = match get_allowed_hashes() {
+            Ok(x) => x,
+            Err(e) => {
+                println!("couldn't get allow list: {}", e);
+                return;
+            }
+        };
+
+        serve_rot_seed(eid, allow_list);
     } else if let Some(req_path) = matches.value_of("parse_req") {
         let dir = req_path.parse::<String>().unwrap();
         print_request_details_dir(&dir);
