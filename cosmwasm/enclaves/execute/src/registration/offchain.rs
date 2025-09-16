@@ -824,6 +824,18 @@ pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
     sgx_types::sgx_status_t::SGX_SUCCESS
 }
 
+pub fn calculate_truncated_hash(input: &[u8]) -> [u8; 20] {
+    let mut res = [0u8; 20];
+
+    let mut hasher = Sha256::new();
+    hasher.update(input);
+
+    let res_full = hasher.finalize();
+    res.copy_from_slice(&res_full[..20]);
+
+    res
+}
+
 fn load_offchain_signers(
     mut f_in: File,
     report: &sgx_report_body_t,
@@ -841,13 +853,7 @@ fn load_offchain_signers(
         let pubkey_bytes = base64::decode(pubkey_str).unwrap();
 
         // calculate the address
-        let mut addr = [0u8; 20];
-        {
-            let mut hasher = Sha256::new();
-            hasher.update(&pubkey_bytes);
-            let res = hasher.finalize();
-            addr.copy_from_slice(&res[..20]);
-        }
+        let addr = calculate_truncated_hash(&pubkey_bytes);
 
         // make sure pubkey matches the address
         let res = hex::decode(addr_str).unwrap();

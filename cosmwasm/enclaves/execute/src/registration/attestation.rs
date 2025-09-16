@@ -2,6 +2,7 @@ use core::{mem, slice};
 
 use enclave_crypto::dcap::verify_quote_any;
 use enclave_crypto::KeyPair;
+use std::collections::HashSet;
 use std::vec::Vec;
 
 use log::*;
@@ -340,6 +341,13 @@ unsafe fn extract_cpu_cert_from_quote(vec_quote: &[u8]) -> Option<Vec<u8>> {
     None
 }
 
+lazy_static::lazy_static! {
+
+    static ref PPID_WHITELIST: HashSet<[u8; 20]>  = {
+        let mut set: HashSet<[u8; 20]> = HashSet::new();
+    };
+}
+
 pub fn verify_quote_sgx(
     vec_quote: &[u8],
     vec_coll: &[u8],
@@ -363,13 +371,28 @@ pub fn verify_quote_sgx(
         } else {
             let report_body = (*my_p_quote).report_body;
 
-            if check_ppid_wl {
-                let _ppid = extract_cpu_cert_from_quote(vec_quote);
+            let is_in_wl = match extract_cpu_cert_from_quote(vec_quote) {
+                Some(ppid) => {
+                    let ppid_addr = crate::registration::offchain::calculate_truncated_hash(&ppid);
 
-                // TODO: verify wrt whitelist
-                // if let Some(ppid) = _ppid {
-                //     println!("PPID: {}", orig_hex::encode(&ppid));
-                // }
+                    let wl = &PPID_WHITELIST;
+                    if wl.contains(&ppid_addr) {
+                        true
+                    } else {
+                        println!("PPID not in allow list");
+                        println!("PPID: {}", orig_hex::encode(&ppid));
+                        println!("PPID short: {}", orig_hex::encode(&ppid_addr));
+                        false
+                    }
+                }
+                None => {
+                    println!("PPID couldn't be extracted");
+                    false
+                }
+            };
+
+            if check_ppid_wl && !is_in_wl {
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
 
             Ok((report_body, qv_result))
