@@ -8,6 +8,8 @@ use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::sync::Arc;
+use std::collections::HashSet;
+use std::error::Error;
 use std::net::SocketAddr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::mem;
@@ -18,8 +20,12 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::server::conn::AddrStream; 
 use hyper::{Body, Request, Response};
 use hyper::server::Server;
+use hyper::Client;
+use hyper::body::to_bytes;
+use hyper::header::{AUTHORIZATION, ACCEPT, USER_AGENT};
 use base64::{engine::general_purpose, Engine as _};
 use hex;
+use sha2::{Sha256, Digest};
 
 use crate::{
     enclave_api::ecall_check_patch_level, enclave_api::ecall_migration_op, types::EnclaveDoorbell,
@@ -30,6 +36,8 @@ use enclave_ffi_types::NodeAuthResult;
 const ENCLAVE_FILE_TESTNET: &str = "check_hw_enclave_testnet.so";
 const ENCLAVE_FILE_MAINNET: &str = "check_hw_enclave.so";
 const TCS_NUM: u8 = 1;
+
+type HttpsClient = Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>;
 
 pub fn get_sgx_secret_path(file_name: &str) -> String {
     std::path::Path::new("/opt/secret/.sgx_secrets/")
@@ -131,6 +139,74 @@ async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, 
             .body("Only POST supported".into())
             .unwrap())
     }
+}
+
+async fn get_allowed_hashes_async() -> Result<HashSet<[u8; 20]>, Box<dyn Error>> {
+
+
+    let url = "https://api.github.com/repos/scrtlabs/whitelist-test/contents/whitelist.txt?ref=master";
+    let token = "";
+
+    let https = hyper_rustls::HttpsConnectorBuilder::new()
+        .with_native_roots()
+        .https_only()
+        .enable_http1()
+        .build();
+    let client: HttpsClient = Client::builder().build(https);
+
+    // Build request with headers
+    let req = Request::get(url)
+        .header(AUTHORIZATION, format!("token {}", token))
+        .header(ACCEPT, "application/vnd.github.v3.raw")
+        .header(USER_AGENT, "my-rust-client")
+        .body(Body::empty())?; // GET request has empty body
+
+    let response = client.request(req).await?;
+
+    // Read the body
+    let bytes = hyper::body::to_bytes(response.into_body()).await?;
+    let text = String::from_utf8(bytes.to_vec())?;    
+
+    let mut set: HashSet<[u8; 20]> = HashSet::new();
+
+    for s in text.lines() {
+
+        let bytes = match hex::decode(s) {
+            Ok(b) => b,
+            Err(e) => {
+                println!("couldn't decore {} - {}", s, e);
+                continue;
+            }
+        };
+
+        if bytes.len() < 20 {
+            println!("too short {}", s);
+            continue;
+        }
+
+        let addr: [u8; 20] = bytes[..20].try_into().unwrap();
+        set.insert(addr);
+
+    }
+
+    Ok(set)
+}
+
+fn get_allowed_hashes() -> Result<HashSet<[u8; 20]>, Box<dyn Error>> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(get_allowed_hashes_async())
+}
+
+pub fn calculate_truncated_hash(input: &[u8]) -> [u8; 20] {
+    let mut res = [0u8; 20];
+
+    let mut hasher = Sha256::new();
+    hasher.update(input);
+
+    let res_full = hasher.finalize();
+    res.copy_from_slice(&res_full[..20]);
+
+    res
 }
 
 #[tokio::main]
@@ -498,6 +574,24 @@ fn main() {
             ppid_buf.truncate(ppid_required_size as usize);
 
             println!("Your PPID: {}", hex::encode(&ppid_buf));
+
+            match get_allowed_hashes() {
+                Ok(allowlist) => {
+
+                    let machine_id = calculate_truncated_hash(&ppid_buf);
+                    println!("Your machine ID: {}", hex::encode(machine_id));
+
+                    if allowlist.contains(&machine_id) {
+                        println!("✅ This machine is present in the allowlist");
+                    } else {
+                        println!("🚫 This machine is not present in the allowlist");
+                    }
+                }
+                Err(e) => {
+                    println!("❌ Failed to open allowlist file: {}", e);
+                }
+            }
+
         }
     }
 }
