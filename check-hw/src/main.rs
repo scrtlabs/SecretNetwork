@@ -114,6 +114,38 @@ async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, 
 
         let whole_body = hyper::body::to_bytes(req.into_body()).await?;
 
+        let ppid = match unsafe { extract_cpu_cert_from_quote(&whole_body) } {
+            Some(val) => val,
+            None => {
+                return Ok(Response::builder()
+                    .status(500)
+                    .body("Couldn't fetch machine ID".into())
+                    .unwrap());
+
+            }
+        };
+
+        match get_allowed_hashes() {
+            Ok(allowlist) => {
+
+                let machine_id = calculate_truncated_hash(&ppid);
+
+                if !allowlist.contains(&machine_id) {
+                    return Ok(Response::builder()
+                        .status(500)
+                        .body("Not in allow list".into())
+                        .unwrap());
+                }
+            }
+            Err(_e) => {
+                return Ok(Response::builder()
+                    .status(500)
+                    .body("Couldn't fetch allow list".into())
+                    .unwrap());
+            }
+        }
+
+
         match export_rot_seed(eid, &whole_body) {
             Some(res) => {
 
