@@ -141,7 +141,7 @@ async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, 
         if !allow_list.contains(&machine_id) {
             return Ok(Response::builder()
                 .status(500)
-                .body("Not in allow list".into())
+                .body("Unknown machine ID".into())
                 .unwrap());
         }
 
@@ -649,13 +649,13 @@ fn main() {
                 Ok(allowlist) => {
 
                     if allowlist.contains(&machine_id) {
-                        println!("✅ This machine is present in the allowlist");
+                        println!("✅ This machine ID is known");
                     } else {
-                        println!("🚫 This machine is not present in the allowlist");
+                        println!("🚫 This machine is not known, please contact the dev team");
                     }
                 }
                 Err(e) => {
-                    println!("❌ Failed to open allowlist file: {}", e);
+                    println!("❌ Failed to verify: {}", e);
                 }
             }
 
