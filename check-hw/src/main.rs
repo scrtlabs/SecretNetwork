@@ -26,6 +26,7 @@ use hyper::header::{AUTHORIZATION, ACCEPT, USER_AGENT};
 use base64::{engine::general_purpose, Engine as _};
 use hex;
 use sha2::{Sha256, Digest};
+use serde::Serialize;
 
 use crate::{
     enclave_api::ecall_check_patch_level, enclave_api::ecall_migration_op, types::EnclaveDoorbell,
@@ -238,6 +239,49 @@ pub fn calculate_truncated_hash(input: &[u8]) -> [u8; 20] {
     res.copy_from_slice(&res_full[..20]);
 
     res
+}
+
+async fn send_machine_id_async(machine_id: &[u8; 20]) -> Result<(), Box<dyn std::error::Error>> {
+    #[derive(Serialize)]
+    struct MachineIdPayload<'a> {
+        machine_id: &'a str,
+    }
+
+    const SUBMISSION_URL: &str = "http://51.8.118.178:8765/";
+
+    let machine_id_hex = hex::encode(machine_id);
+
+    let payload = MachineIdPayload {
+        machine_id: &machine_id_hex,
+    };
+    let json_body = serde_json::to_string(&payload)?;
+
+    let https = hyper_rustls::HttpsConnectorBuilder::new()
+        .with_native_roots()
+        .https_or_http()
+        .enable_http1()
+        .build();
+    let client: HttpsClient = Client::builder().build(https);
+
+    let req = Request::post(SUBMISSION_URL)
+        .header(hyper::header::CONTENT_TYPE, "application/json")
+        .header(USER_AGENT, "my-rust-client")
+        .body(Body::from(json_body))?;
+
+    let response = client.request(req).await?;
+
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        let body_bytes = hyper::body::to_bytes(response.into_body()).await?;
+        let error_message = String::from_utf8_lossy(&body_bytes);
+        Err(format!("error: {}", error_message).into())
+    }
+}
+
+fn send_machine_id(machine_id: &[u8; 20]) -> Result<(), Box<dyn std::error::Error>> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(send_machine_id_async(machine_id))
 }
 
 #[tokio::main]
@@ -644,6 +688,7 @@ fn main() {
             let machine_id = calculate_truncated_hash(&ppid_buf);
             println!("Your machine ID: {}", hex::encode(machine_id));
 
+            let _res = send_machine_id(&machine_id);
 
             match get_allowed_hashes() {
                 Ok(allowlist) => {

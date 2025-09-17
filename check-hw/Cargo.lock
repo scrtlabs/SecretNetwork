@@ -138,6 +138,8 @@ dependencies = [
  "log",
  "mio",
  "parking_lot 0.11.2",
+ "serde",
+ "serde_json",
  "sgx_types",
  "sgx_urts",
  "sha2",
