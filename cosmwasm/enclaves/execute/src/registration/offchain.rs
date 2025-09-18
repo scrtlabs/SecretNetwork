@@ -149,32 +149,17 @@ pub unsafe extern "C" fn ecall_get_network_pubkey(
     validate_mut_ptr!(p_node, PUBLIC_KEY_SIZE, sgx_status_t::SGX_ERROR_UNEXPECTED);
     validate_mut_ptr!(p_io, PUBLIC_KEY_SIZE, sgx_status_t::SGX_ERROR_UNEXPECTED);
 
-    if i_seed == u32::max_value() {
-        let (rot_seed, _) = match read_rot_seed() {
-            Ok(seed) => seed,
-            Err(e) => {
-                return e;
-            }
-        };
-
-        let node_pk = Keychain::generate_consensus_seed_exchange_keypair(&rot_seed).get_pubkey();
-        let io_pk = Keychain::generate_consensus_io_exchange_keypair(&rot_seed).get_pubkey();
-
-        slice::from_raw_parts_mut(p_node, PUBLIC_KEY_SIZE).copy_from_slice(&node_pk);
-        slice::from_raw_parts_mut(p_io, PUBLIC_KEY_SIZE).copy_from_slice(&io_pk);
-    } else {
-    }
-
     if let Ok(seeds) = KEY_MANAGER.get_consensus_seed() {
         if (i_seed as usize) < seeds.arr.len() {
             let node_pk =
                 &KEY_MANAGER.seed_exchange_key().unwrap().arr[i_seed as usize].get_pubkey();
 
+            slice::from_raw_parts_mut(p_node, PUBLIC_KEY_SIZE).copy_from_slice(node_pk);
+
             let io_pk = &KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap().arr
                 [i_seed as usize]
                 .get_pubkey();
 
-            slice::from_raw_parts_mut(p_node, PUBLIC_KEY_SIZE).copy_from_slice(node_pk);
             slice::from_raw_parts_mut(p_io, PUBLIC_KEY_SIZE).copy_from_slice(io_pk);
         }
         *p_seeds = seeds.arr.len() as u32;
