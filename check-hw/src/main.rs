@@ -650,6 +650,15 @@ fn main() {
         let status = unsafe { ecall_migration_op(eid, &mut retval, op) };
 
         println!("Migration op reval: {}, {}", status, retval);
+
+        if retval != sgx_status_t::SGX_SUCCESS {
+            std::process::exit(retval as i32);
+        }
+
+        if status != sgx_status_t::SGX_SUCCESS {
+            std::process::exit(retval as i32);
+        }
+
     } else if matches.is_present("server_seed") {
 
         let allow_list = match get_allowed_hashes() {
