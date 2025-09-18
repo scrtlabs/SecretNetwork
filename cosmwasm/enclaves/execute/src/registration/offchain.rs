@@ -1214,7 +1214,7 @@ fn apply_rot_seed() -> sgx_status_t {
     {
         let seeds = key_manager.get_consensus_seed().unwrap();
 
-        if seeds.arr.len() != 2 {
+        if (seeds.arr.len() < 2) || (seeds.arr.len() > 4) {
             error!("seeds count mismatch");
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
