@@ -463,6 +463,18 @@ impl Keychain {
         seed.derive_key_from_this(&ADMIN_PROOF_SECRET_DERIVE_ORDER.to_be_bytes())
     }
 
+    pub fn generate_consensus_seed_exchange_keypair(seed: &Seed) -> KeyPair {
+        KeyPair::from(
+            seed.derive_key_from_this(&CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes()),
+        )
+    }
+
+    pub fn generate_consensus_io_exchange_keypair(seed: &Seed) -> KeyPair {
+        KeyPair::from(
+            seed.derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes()),
+        )
+    }
+
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
         if !self.is_consensus_seed_set() {
             trace!("Seed not initialized, skipping derivation of enclave keys");
@@ -473,9 +485,7 @@ impl Keychain {
             // consensus_seed_exchange_keypair
             self.consensus_seed_exchange_keypair
                 .arr
-                .push(KeyPair::from(s.derive_key_from_this(
-                    &CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes(),
-                )));
+                .push(Self::generate_consensus_seed_exchange_keypair(s));
 
             // consensus_state_ikm
             self.consensus_state_ikm
@@ -483,9 +493,9 @@ impl Keychain {
                 .push(Self::generate_consensus_ikm_key(s));
 
             // consensus_io_exchange_keypair
-            self.consensus_io_exchange_keypair.arr.push(KeyPair::from(
-                s.derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes()),
-            ));
+            self.consensus_io_exchange_keypair
+                .arr
+                .push(Self::generate_consensus_io_exchange_keypair(s));
         }
 
         self.consensus_callback_secret = Some(
