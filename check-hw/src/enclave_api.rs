@@ -31,6 +31,15 @@ extern "C" {
         retval: *mut sgx_status_t,
         opcode: u32,
     ) -> sgx_status_t;
+
+    pub fn ecall_get_network_pubkey(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        i_seed: u32,
+        p_node: *mut u8,
+        p_io: *mut u8,
+        p_seeds: *mut u32,
+    ) -> sgx_status_t;
 }
 
 // ocalls
