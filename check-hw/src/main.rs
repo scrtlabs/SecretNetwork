@@ -29,11 +29,10 @@ use sha2::{Sha256, Digest};
 use serde::Serialize;
 
 use crate::{
-    enclave_api::ecall_check_patch_level, enclave_api::ecall_migration_op, enclave_api::ecall_get_network_pubkey, types::EnclaveDoorbell,
+    enclave_api::ecall_check_patch_level, enclave_api::ecall_migration_op, types::EnclaveDoorbell,
 };
 
 use enclave_ffi_types::NodeAuthResult;
-use enclave_ffi_types::PUBLIC_KEY_SIZE;
 
 const ENCLAVE_FILE_TESTNET: &str = "check_hw_enclave_testnet.so";
 const ENCLAVE_FILE_MAINNET: &str = "check_hw_enclave.so";
@@ -289,22 +288,6 @@ fn send_machine_id(machine_id: &[u8; 20]) -> Result<(), Box<dyn std::error::Erro
 async fn serve_rot_seed(eid: sgx_enclave_id_t, allow_list: HashSet<[u8; 20]>) {
 
     let mut retval = sgx_status_t::SGX_ERROR_BUSY;
-
-    {
-        let mut node_pk = [0u8; PUBLIC_KEY_SIZE];
-        let mut io_pk = [0u8; PUBLIC_KEY_SIZE];
-        let mut seeds = 0u32;
-
-        let _status = unsafe { ecall_get_network_pubkey(eid, &mut retval, u32::max_value(), node_pk.as_mut_ptr(), io_pk.as_mut_ptr(), &mut seeds) };
-        if retval != sgx_status_t::SGX_SUCCESS {
-            println!("rot-seed can't be opened: {}", retval);
-            return;
-        }
-
-        println!("node_pk: {}", base64::encode(&node_pk));
-        println!("io_pk: {}", base64::encode(&io_pk));
-    }
-
     let _status = unsafe { ecall_migration_op(eid, &mut retval, 1) };
     if retval == sgx_status_t::SGX_SUCCESS {
 
