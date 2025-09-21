@@ -736,6 +736,10 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
             println!("Apply rotation seed");
             apply_rot_seed()
         }
+        10 => {
+            println!("Key config");
+            print_key_config()
+        }
         _ => sgx_status_t::SGX_ERROR_UNEXPECTED,
     }
 }
@@ -1217,6 +1221,23 @@ fn apply_rot_seed() -> sgx_status_t {
         Err(e) => e,
         Ok(()) => sgx_status_t::SGX_SUCCESS,
     }
+}
+
+fn print_key_config_ex(seed: &enclave_crypto::Seed) {
+    let node_pk = Keychain::generate_consensus_seed_exchange_keypair(seed).get_pubkey();
+    let io_pk = Keychain::generate_consensus_io_exchange_keypair(seed).get_pubkey();
+
+    println!("{},{}", base64::encode(&node_pk), base64::encode(&io_pk));
+}
+
+fn print_key_config() -> sgx_status_t {
+    if let Ok(seeds) = KEY_MANAGER.get_consensus_seed() {
+        for i_seed in 0..seeds.arr.len() {
+            print_key_config_ex(&seeds.arr[i_seed]);
+        }
+    }
+
+    sgx_status_t::SGX_SUCCESS
 }
 
 fn export_local_migration_report() -> sgx_status_t {
