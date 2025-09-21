@@ -129,7 +129,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         return status;
     }
 
-    public_key.copy_from_slice(&key_manager.seed_exchange_key().unwrap().last().get_pubkey());
+    public_key.copy_from_slice(&key_manager.seed_exchange_key().unwrap().get_pubkey());
 
     trace!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
@@ -151,16 +151,14 @@ pub unsafe extern "C" fn ecall_get_network_pubkey(
 
     if let Ok(seeds) = KEY_MANAGER.get_consensus_seed() {
         if (i_seed as usize) < seeds.arr.len() {
-            let node_pk =
-                &KEY_MANAGER.seed_exchange_key().unwrap().arr[i_seed as usize].get_pubkey();
+            let seed = &seeds.arr[i_seed as usize];
+            let node_pk = Keychain::generate_consensus_seed_exchange_keypair(seed).get_pubkey();
 
-            slice::from_raw_parts_mut(p_node, PUBLIC_KEY_SIZE).copy_from_slice(node_pk);
+            slice::from_raw_parts_mut(p_node, PUBLIC_KEY_SIZE).copy_from_slice(&node_pk);
 
-            let io_pk = &KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap().arr
-                [i_seed as usize]
-                .get_pubkey();
+            let io_pk = Keychain::generate_consensus_io_exchange_keypair(seed).get_pubkey();
 
-            slice::from_raw_parts_mut(p_io, PUBLIC_KEY_SIZE).copy_from_slice(io_pk);
+            slice::from_raw_parts_mut(p_io, PUBLIC_KEY_SIZE).copy_from_slice(&io_pk);
         }
         *p_seeds = seeds.arr.len() as u32;
     } else {
