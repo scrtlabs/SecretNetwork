@@ -1046,6 +1046,8 @@ fn save_rot_seed(rot_seed: &enclave_crypto::Seed, flags: u8) {
     let mut file = SgxFile::create_ex(path, &kdk).unwrap();
     file.write_all(rot_seed.as_slice()).unwrap();
     file.write_all(&[flags]).unwrap();
+
+    print_key_config_rot(rot_seed);
 }
 
 fn generate_rot_seed() -> sgx_status_t {
@@ -1117,6 +1119,8 @@ fn read_rot_seed() -> SgxResult<(enclave_crypto::Seed, u8)> {
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
+    print_key_config_rot(&seed);
+
     Ok((seed, flags_buf[0]))
 }
 
@@ -1186,14 +1190,11 @@ fn import_rot_seed() -> sgx_status_t {
 }
 
 fn apply_rot_seed() -> sgx_status_t {
-    let rot_seed = {
-        let (path, kdk) = get_rot_seed_file_params();
-        let mut file = SgxFile::open_ex(path, &kdk).unwrap();
-
-        let mut rot_seed: [u8; 32] = [0; 32];
-
-        file.read_exact(&mut rot_seed).unwrap();
-        rot_seed
+    let (rot_seed, _) = match read_rot_seed() {
+        Ok(seed) => seed,
+        Err(e) => {
+            return e;
+        }
     };
 
     let mut key_manager = Keychain::new();
@@ -1207,10 +1208,7 @@ fn apply_rot_seed() -> sgx_status_t {
         }
     }
 
-    let mut rs2 = enclave_crypto::Seed::default();
-    rs2.as_mut().copy_from_slice(&rot_seed);
-
-    key_manager.push_consensus_seed(rs2);
+    key_manager.push_consensus_seed(rot_seed);
     key_manager.save();
 
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
@@ -1238,6 +1236,11 @@ fn print_key_config() -> sgx_status_t {
     }
 
     sgx_status_t::SGX_SUCCESS
+}
+
+fn print_key_config_rot(seed: &enclave_crypto::Seed) {
+    println!("rot_seed pubkey");
+    print_key_config_ex(&seed);
 }
 
 fn export_local_migration_report() -> sgx_status_t {
