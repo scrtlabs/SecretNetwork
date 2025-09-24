@@ -27,6 +27,7 @@ use base64::{engine::general_purpose, Engine as _};
 use hex;
 use sha2::{Sha256, Digest};
 use serde::Serialize;
+use crate::fs::OpenOptions;
 
 use crate::{
     enclave_api::ecall_check_patch_level, enclave_api::ecall_migration_op, types::EnclaveDoorbell,
@@ -571,6 +572,39 @@ fn print_request_details_dir(directory_path: &str) {
     }
 }
 
+fn add_cpu_info()
+{
+    // append self CPU info
+    let cpuinfo = match fs::read_to_string("/proc/cpuinfo") {
+        Ok(x) => x,
+        Err(_) => {
+            return;
+        }
+    };
+
+    // path to the sgx file
+    let sgx_path = if let Ok(env_var) = std::env::var("SCRT_SGX_STORAGE") {
+        env_var
+    } else {
+        "/opt/secret/.sgx_secrets/".to_string()
+    };
+
+    let file_path = std::path::Path::new(&sgx_path)
+        .join("migration_report_remote.bin")
+        .to_string_lossy()
+        .into_owned();
+
+    let mut file = match OpenOptions::new().append(true).open(file_path) {
+        Ok(f) => f,
+        Err(_) => {
+            return;
+        }
+    };
+
+    let cpuinfo_encoded = base64::encode(cpuinfo);
+    let _ = file.write_all(cpuinfo_encoded.as_bytes());
+}
+
 fn main() {
     let matches = App::new("Check HW")
         .version("1.0")
@@ -640,6 +674,10 @@ fn main() {
 
         if status != sgx_status_t::SGX_SUCCESS {
             std::process::exit(retval as i32);
+        }
+
+        if op == 1 {
+            add_cpu_info();
         }
 
     } else if matches.is_present("server_seed") {
