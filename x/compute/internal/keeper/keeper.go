@@ -157,6 +157,7 @@ func NewKeeper(
 			capabilityKeeper,
 			portSource,
 			cdc,
+			cdc,
 		),
 		queryGasLimit:  wasmConfig.SmartQueryGasLimit,
 		maxCallDepth:   types.DefaultMaxCallDepth,
