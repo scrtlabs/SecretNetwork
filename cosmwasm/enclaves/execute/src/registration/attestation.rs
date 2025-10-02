@@ -462,6 +462,42 @@ lazy_static::lazy_static! {
     };
 }
 
+unsafe fn extract_fmspc_from_collateral(vec_coll: &[u8]) -> Option<String> {
+
+    struct CollHdr {
+        sizes: [u32; 8],
+    }
+    let i_tcb_idx = 5;
+    
+    let my_p_hdr = vec_coll.as_ptr() as *const CollHdr;
+
+    let mut size0: u64 = mem::size_of::<CollHdr>() as u64;
+    for i in 0..i_tcb_idx {
+        size0 += (*my_p_hdr).sizes[i] as u64;
+    }
+
+    let size_tcb_info = (*my_p_hdr).sizes[i_tcb_idx];
+    let size1 = size0 + size_tcb_info as u64;
+
+    if (size1 > size0) && (size1 <= vec_coll.len() as u64) {
+        let sub_slice = &vec_coll[size0 as usize .. (size1 - 1) as usize];
+
+        let my_val: Result<serde_json::Value, _> = serde_json::from_slice(sub_slice);
+        if let Ok(json_val) = my_val {
+
+            // Navigate to fmspc
+            let fmspc = &json_val["tcbInfo"]["fmspc"];
+            if let Some(fmspc_str) = fmspc.as_str() {
+                return Some(fmspc_str.to_string());
+            }
+        }
+    }
+
+
+    None
+
+}
+
 pub fn verify_quote_sgx(
     vec_quote: &[u8],
     vec_coll: &[u8],
@@ -484,6 +520,8 @@ pub fn verify_quote_sgx(
             Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
         } else {
             let report_body = (*my_p_quote).report_body;
+
+            let _fmspc = extract_fmspc_from_collateral(vec_coll);
 
             let is_in_wl = match extract_cpu_cert_from_quote(vec_quote) {
                 Some(ppid) => {
