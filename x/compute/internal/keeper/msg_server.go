@@ -225,7 +225,7 @@ func (m msgServer) UpgradeProposalPassed(goCtx context.Context, msg *types.MsgUp
 	return &types.MsgUpgradeProposalPassedResponse{}, nil
 }
 
-func (m msgServer) MigrateContractProposal(goCtx context.Context, msg *types.MsgMigrateContractProposal) (*types.MsgMigrateContractProposalResponse, error) {
+func (m msgServer) ContractGovernanceProposal(goCtx context.Context, msg *types.MsgContractGovernanceProposal) (*types.MsgContractGovernanceProposalResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	if err := msg.ValidateBasic(); err != nil {
@@ -249,14 +249,32 @@ func (m msgServer) MigrateContractProposal(goCtx context.Context, msg *types.Msg
 			return nil, errorsmod.Wrap(err, "updating contract governance requirement")
 		}
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
-			types.EventTypeMigrateContractProposal,
+			types.EventTypeContractGovernanceProposal,
 			sdk.NewAttribute(types.AttributeKeyContractAddr, contract.Address),
 			sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", contract.NewCodeId)),
 			sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
 		))
 	}
 
-	return &types.MsgMigrateContractProposalResponse{}, nil
+	for _, adminUpdate := range msg.AdminUpdates {
+		contractAddr, err := sdk.AccAddressFromBech32(adminUpdate.Address)
+		if err != nil {
+			return nil, errorsmod.Wrap(err, "admin update contract")
+		}
+		err = m.keeper.SetContractGovernanceRequirement(ctx, contractAddr)
+		if err != nil {
+			return nil, errorsmod.Wrap(err, "updating contract governance requirement in admin update")
+		}
+		m.keeper.SetAdminUpdate(ctx, adminUpdate.Address, adminUpdate.NewAdmin)
+		ctx.EventManager().EmitEvent(sdk.NewEvent(
+			types.EventTypeContractGovernanceProposal,
+			sdk.NewAttribute(types.AttributeKeyContractAddr, adminUpdate.Address),
+			sdk.NewAttribute("new_admin", adminUpdate.NewAdmin),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
+		))
+	}
+
+	return &types.MsgContractGovernanceProposalResponse{}, nil
 }
 
 func (m msgServer) SetContractGovernance(goCtx context.Context, msg *types.MsgSetContractGovernance) (*types.MsgSetContractGovernanceResponse, error) {

@@ -246,15 +246,15 @@ func (msg MsgUpgradeProposalPassed) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{senderAddr}
 }
 
-func (msg MsgMigrateContractProposal) Route() string {
+func (msg MsgContractGovernanceProposal) Route() string {
 	return RouterKey
 }
 
-func (msg MsgMigrateContractProposal) Type() string {
+func (msg MsgContractGovernanceProposal) Type() string {
 	return "migrate-contract-proposal"
 }
 
-func (msg MsgMigrateContractProposal) ValidateBasic() error {
+func (msg MsgContractGovernanceProposal) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
 		return errorsmod.Wrap(err, "authority")
 	}
@@ -263,14 +263,25 @@ func (msg MsgMigrateContractProposal) ValidateBasic() error {
 			return errorsmod.Wrap(err, "contract")
 		}
 	}
+	for _, adminUpdate := range msg.AdminUpdates {
+		if _, err := sdk.AccAddressFromBech32(adminUpdate.Address); err != nil {
+			return errorsmod.Wrap(err, "contract")
+		}
+		if adminUpdate.NewAdmin == "" {
+			continue
+		}
+		if _, err := sdk.AccAddressFromBech32(adminUpdate.NewAdmin); err != nil {
+			return errorsmod.Wrap(err, "new admin")
+		}
+	}
 	return nil
 }
 
-func (msg MsgMigrateContractProposal) GetSignBytes() []byte {
+func (msg MsgContractGovernanceProposal) GetSignBytes() []byte {
 	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
-func (msg MsgMigrateContractProposal) GetSigners() []sdk.AccAddress {
+func (msg MsgContractGovernanceProposal) GetSigners() []sdk.AccAddress {
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Authority)
 	if err != nil { // should never happen as valid basic rejects invalid addresses
 		panic(err.Error())

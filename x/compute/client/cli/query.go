@@ -53,6 +53,7 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdDecryptText(),
 		GetCmdGetContractHistory(),
 		GetCmdQueryAuthorizedMigration(),
+		GetCmdQueryAuthorizedAdminUpdate(),
 	)
 	return queryCmd
 }
@@ -671,6 +672,37 @@ Examples:
 			contractAddr := args[0]
 
 			res, err := queryClient.AuthorizedMigration(context.Background(), &types.QueryAuthorizedMigrationRequest{
+				ContractAddress: contractAddr,
+			})
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintProto(res)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func GetCmdQueryAuthorizedAdminUpdate() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "authorized-admin-update [contract-address]",
+		Short: "Query authorized-admin-update for a contract",
+		Long: `Query whether a contract has an authorized admin-update set.
+
+Examples:
+  # Check if the contract has authorized admin-update
+  secretcli query compute authorized-admin-update secret1sscrt123...`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			queryClient := types.NewQueryClient(clientCtx)
+
+			contractAddr := args[0]
+
+			res, err := queryClient.AuthorizedAdminUpdate(context.Background(), &types.QueryAuthorizedAdminUpdateRequest{
 				ContractAddress: contractAddr,
 			})
 			if err != nil {
