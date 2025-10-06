@@ -238,16 +238,12 @@ func (m msgServer) ContractGovernanceProposal(goCtx context.Context, msg *types.
 	}
 
 	for _, contract := range msg.Contracts {
-		contractAddr, err := sdk.AccAddressFromBech32(contract.Address)
+		_, err := sdk.AccAddressFromBech32(contract.Address)
 		if err != nil {
 			return nil, errorsmod.Wrap(err, "contract")
 		}
 		// Store the authorized migration
 		m.keeper.SetAuthorizedMigration(ctx, contract.Address, contract.NewCodeId)
-		err = m.keeper.SetContractGovernanceRequirement(ctx, contractAddr)
-		if err != nil {
-			return nil, errorsmod.Wrap(err, "updating contract governance requirement")
-		}
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventTypeContractGovernanceProposal,
 			sdk.NewAttribute(types.AttributeKeyContractAddr, contract.Address),
@@ -257,13 +253,9 @@ func (m msgServer) ContractGovernanceProposal(goCtx context.Context, msg *types.
 	}
 
 	for _, adminUpdate := range msg.AdminUpdates {
-		contractAddr, err := sdk.AccAddressFromBech32(adminUpdate.Address)
+		_, err := sdk.AccAddressFromBech32(adminUpdate.Address)
 		if err != nil {
 			return nil, errorsmod.Wrap(err, "admin update contract")
-		}
-		err = m.keeper.SetContractGovernanceRequirement(ctx, contractAddr)
-		if err != nil {
-			return nil, errorsmod.Wrap(err, "updating contract governance requirement in admin update")
 		}
 		m.keeper.SetAdminUpdate(ctx, adminUpdate.Address, adminUpdate.NewAdmin)
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
