@@ -17,6 +17,8 @@ const (
 	EventTypeUpdateContractAdmin        = "update_contract_admin"
 	EventTypeUpgradeProposalPassed      = "upgrade_proposal_passed"
 	EventTypeContractGovernanceProposal = "contract_governance_proposal"
+	EventTypeMachineWhitelistProposal   = "machine_whitelist_proposal"
+	EventTypeMachineWhitelistUpdate     = "machine_whitelist_update"
 )
 
 // event attributes returned from contract execution

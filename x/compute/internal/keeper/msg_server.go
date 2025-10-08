@@ -313,3 +313,41 @@ func (m msgServer) SetContractGovernance(goCtx context.Context, msg *types.MsgSe
 
 	return &types.MsgSetContractGovernanceResponse{}, nil
 }
+
+func (m msgServer) UpdateMachineWhitelistProposal(goCtx context.Context, msg *types.MsgUpdateMachineWhitelistProposal) (*types.MsgUpdateMachineWhitelistProposalResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	// Verify sender has authority (only governance module)
+	if m.keeper.authority != msg.Authority {
+		return nil, errorsmod.Wrapf(govtypes.ErrInvalidSigner, "invalid authority; expected %s, got %s", m.keeper.authority, msg.Authority)
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeMachineWhitelistProposal,
+		sdk.NewAttribute("machine_count", fmt.Sprintf("%d", len(msg.MachineIds))),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
+	))
+
+	return &types.MsgUpdateMachineWhitelistProposalResponse{}, nil
+}
+
+func (m msgServer) UpdateMachineWhitelist(goCtx context.Context, msg *types.MsgUpdateMachineWhitelist) (*types.MsgUpdateMachineWhitelistResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeMachineWhitelistUpdate,
+		sdk.NewAttribute("proposal_id", fmt.Sprintf("%d", msg.ProposalId)),
+		sdk.NewAttribute("machine_count", fmt.Sprintf("%d", len(msg.MachineIds))),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+	))
+
+	return &types.MsgUpdateMachineWhitelistResponse{}, nil
+}

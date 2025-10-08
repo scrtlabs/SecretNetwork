@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -643,4 +644,81 @@ Examples:
 
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
+}
+
+func UpdateMachineWhitelistCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "update-machine-whitelist [proposal-id] [machine-ids-file]",
+		Short: "Update machine whitelist after governance approval",
+		Long: `Execute machine whitelist update after governance proposal passes.
+Machine IDs must match the approved proposal exactly.
+
+Machine IDs file format (JSON):
+{
+  "machine_ids": [
+    "01507c9577896bc1afde972d67f1fd53af1a8da",
+    "a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6"
+  ]
+}
+
+Each machine ID must be exactly 20 bytes.`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			proposalID, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid proposal ID: %w", err)
+			}
+
+			// Read machine IDs from file
+			machineIDs, err := readMachineIDsFromFile(args[1])
+			if err != nil {
+				return err
+			}
+
+			msg := &types.MsgUpdateMachineWhitelist{
+				Sender:     clientCtx.GetFromAddress().String(),
+				ProposalId: proposalID,
+				MachineIds: machineIDs,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+func readMachineIDsFromFile(filename string) ([][]byte, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	var config struct {
+		MachineIDs []string `json:"machine_ids"`
+	}
+
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	machineIDs := make([][]byte, len(config.MachineIDs))
+	for i, idHex := range config.MachineIDs {
+		id, err := hex.DecodeString(idHex)
+		if err != nil {
+			return nil, fmt.Errorf("invalid hex at index %d: %w", i, err)
+		}
+		if len(id) != 20 {
+			return nil, fmt.Errorf("machine ID at index %d must be 20 bytes, got %d", i, len(id))
+		}
+		machineIDs[i] = id
+	}
+
+	return machineIDs, nil
 }

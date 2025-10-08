@@ -26,7 +26,10 @@ type CountTXDecorator struct {
 	storeService store.KVStoreService
 }
 
-const msgSoftwareUpgradeTypeURL = "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade"
+const (
+	msgSoftwareUpgradeTypeURL                = "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade"
+	msgUpdateMachineWhitelistProposalTypeURL = "/secret.compute.v1beta1.MsgUpdateMachineWhitelistProposal"
+)
 
 // NewCountTXDecorator constructor
 func NewCountTXDecorator(appcodec codec.Codec, govkeeper govkeeper.Keeper, storeService store.KVStoreService) *CountTXDecorator {
@@ -96,6 +99,14 @@ func (a CountTXDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, 
 				return ctx, err
 			}
 		}
+		msgUpdateWhitelist, ok := msg.(*types.MsgUpdateMachineWhitelist)
+		if ok {
+			err = a.validateUpdateMachineWhitelist(ctx, msgUpdateWhitelist)
+			if err != nil {
+				ctx.Logger().Error("*** update machine whitelist rejected: ", err.Error())
+				return ctx, err
+			}
+		}
 	}
 
 	return next(types.WithTXCounter(ctx, txCounter), tx, simulate)
@@ -111,6 +122,41 @@ func extractInfoFromProposalMessages(message *types1.Any, cdc codec.Codec) (stri
 	}
 
 	return softwareUpgradeMsg.Plan.Info, nil
+}
+
+func (a *CountTXDecorator) validateUpdateMachineWhitelist(ctx sdk.Context, msgUpdateWhitelist *types.MsgUpdateMachineWhitelist) error {
+	proposal, err := a.govkeeper.Proposals.Get(ctx, msgUpdateWhitelist.ProposalId) // just to ensure the proposal exists
+	if err != nil {
+		ctx.Logger().Error("*** proposal with such id %d not found: ", msgUpdateWhitelist.ProposalId, err.Error())
+		return err
+	}
+	if proposal.Status != govtypes.ProposalStatus_PROPOSAL_STATUS_PASSED {
+		return sdkerrors.ErrInvalidRequest.Wrapf("proposal with id %d not passed", msgUpdateWhitelist.ProposalId)
+	}
+	if len(proposal.Messages) != 1 {
+		return sdkerrors.ErrInvalidRequest.Wrapf("proposal with id %d has %d messages, expected exactly 1", msgUpdateWhitelist.ProposalId, len(proposal.Messages))
+	}
+	if proposal.Messages[0].GetTypeUrl() != msgUpdateMachineWhitelistProposalTypeURL {
+		return sdkerrors.ErrInvalidRequest.Wrapf("proposal with id %d is not of type MsgUpdateMachineWhitelist", msgUpdateWhitelist.ProposalId)
+	}
+
+	var updateMachineWhitelistProposalMsg *types.MsgUpdateMachineWhitelistProposal
+	err = a.appcodec.UnpackAny(proposal.Messages[0], &updateMachineWhitelistProposalMsg)
+	if err != nil {
+		ctx.Logger().Error("*** failed to unpack UpdateMachineWhitelist proposal message: ", err.Error())
+		return err
+	}
+
+	if len(msgUpdateWhitelist.MachineIds) != len(updateMachineWhitelistProposalMsg.MachineIds) {
+		return sdkerrors.ErrInvalidRequest.Wrapf("machine ids count %d does not match the proposal %d", len(msgUpdateWhitelist.MachineIds), len(updateMachineWhitelistProposalMsg.MachineIds))
+	}
+	// ensure the machine ids match the proposal exactly in order
+	for i, mid := range msgUpdateWhitelist.MachineIds {
+		if !bytes.Equal(mid, updateMachineWhitelistProposalMsg.MachineIds[i]) {
+			return sdkerrors.ErrInvalidRequest.Wrapf("machine id %s at position %d does not match the proposal", mid, i)
+		}
+	}
+	return nil
 }
 
 // verifyUpgradeProposal verifies the latest passed upgrade proposal to ensure the MREnclave hash matches.
