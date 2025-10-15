@@ -460,6 +460,23 @@ lazy_static::lazy_static! {
 
         set
     };
+
+    static ref FMSPC_EOL: HashSet<&'static str> = HashSet::from([
+        "00706A100000",
+        "00706A800000",
+        "00706E470000",
+        "00806EA60000",
+        "00806EB70000",
+        "00906EA10000",
+        "00906EA50000",
+        "00906EB10000",
+        "00906EC10000",
+        "00906EC50000",
+        "00906ED50000",
+        "00A065510000",
+        "20806EB70000",
+        "20906EC10000",
+    ]);
 }
 
 unsafe fn extract_fmspc_from_collateral(vec_coll: &[u8]) -> Option<String> {
@@ -498,6 +515,25 @@ unsafe fn extract_fmspc_from_collateral(vec_coll: &[u8]) -> Option<String> {
 
 }
 
+
+unsafe fn verify_fmspc_from_collateral(vec_coll: &[u8]) -> bool {
+
+    if let Some(fmspc) = extract_fmspc_from_collateral(vec_coll) {
+
+        let set = &FMSPC_EOL;
+        let fmspc_str :&str = &fmspc;
+        if set.contains(fmspc_str) {
+            warn!("The CPU is deprecated");
+        }
+        // fmspc.starts_with("0090")
+
+    } else {
+        warn!("failed to fetch fmspc from attestation");
+    }
+
+    true
+}
+
 pub fn verify_quote_sgx(
     vec_quote: &[u8],
     vec_coll: &[u8],
@@ -521,7 +557,9 @@ pub fn verify_quote_sgx(
         } else {
             let report_body = (*my_p_quote).report_body;
 
-            let _fmspc = extract_fmspc_from_collateral(vec_coll);
+            if !verify_fmspc_from_collateral(vec_coll) {
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
 
             let is_in_wl = match extract_cpu_cert_from_quote(vec_quote) {
                 Some(ppid) => {
