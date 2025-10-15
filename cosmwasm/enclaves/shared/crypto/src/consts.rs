@@ -64,7 +64,6 @@ pub const FILE_MIGRATION_CONSENSUS: &str = "migration_consensus.json";
 
 pub const SEED_EXCH_KEY_SAVE_PATH: &str = "node-master-key.txt";
 pub const IO_KEY_SAVE_PATH: &str = "io-master-key.txt";
-pub const SEED_UPDATE_SAVE_PATH: &str = "seed.txt";
 
 pub const SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS: &str = "consensus_seed.sealed";
 pub const SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT: &str = "consensus_seed_current.sealed";

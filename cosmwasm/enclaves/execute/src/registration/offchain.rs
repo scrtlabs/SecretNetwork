@@ -1,6 +1,5 @@
 //!
 use super::attestation::get_quote_ecdsa;
-use super::seed_service::get_next_consensus_seed_from_service;
 use crate::registration::attestation::verify_quote_sgx;
 use crate::registration::onchain::split_combined_cert;
 #[cfg(feature = "verify-validator-whitelist")]
@@ -8,9 +7,9 @@ use block_verifier::validator_whitelist;
 use core::convert::TryInto;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
-    make_sgx_secret_path, CONSENSUS_SEED_VERSION, FILE_ATTESTATION_CERTIFICATE, FILE_CERT_COMBINED,
+    make_sgx_secret_path, FILE_ATTESTATION_CERTIFICATE, FILE_CERT_COMBINED,
     FILE_MIGRATION_CERT_LOCAL, FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS,
-    FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY, SEED_UPDATE_SAVE_PATH,
+    FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY,
 };
 #[cfg(feature = "random")]
 use enclave_crypto::{
@@ -40,7 +39,7 @@ use std::sgxfs::SgxFile;
 use std::slice;
 use tendermint::Hash::Sha256 as tm_Sha256;
 
-use super::persistency::{write_master_pub_keys, write_seed};
+use super::persistency::write_master_pub_keys;
 use super::seed_exchange::{decrypt_seed, encrypt_seed};
 
 #[cfg(feature = "light-client-validation")]
@@ -83,37 +82,6 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
 
     if let Err(_e) = key_manager.create_consensus_seed() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    #[cfg(feature = "use_seed_service_on_bootstrap")]
-    {
-        let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
-
-        let temp_keypair = match KeyPair::new() {
-            Ok(kp) => kp,
-            Err(e) => {
-                error!("failed to create keypair {:?}", e);
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        };
-
-        let genesis_seed = key_manager.get_consensus_seed().unwrap().arr[0];
-        let new_consensus_seed = match get_next_consensus_seed_from_service(
-            &mut key_manager,
-            0,
-            genesis_seed,
-            api_key_slice,
-            temp_keypair,
-            CONSENSUS_SEED_VERSION,
-        ) {
-            Ok(s) => s,
-            Err(e) => {
-                error!("Consensus seed failure: {}", e as u64);
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        };
-
-        key_manager.push_consensus_seed(new_consensus_seed);
     }
 
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
@@ -202,7 +170,7 @@ pub unsafe extern "C" fn ecall_init_node(
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
 
-    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+    let _api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
     {
@@ -217,7 +185,7 @@ pub unsafe extern "C" fn ecall_init_node(
         let res = crate::registration::attestation::validate_enclave_version(
             temp_key_result.as_ref().unwrap(),
             enclave_crypto::consts::SIGNATURE_TYPE,
-            api_key_slice,
+            _api_key_slice,
             None,
         );
         if res.is_err() {
@@ -313,49 +281,6 @@ pub unsafe extern "C" fn ecall_init_node(
         };
 
         key_manager.push_consensus_seed(seed);
-    }
-
-    if seeds_count == 1 {
-        let reg_key = key_manager.get_registration_key().unwrap();
-        let my_pub_key = reg_key.get_pubkey();
-
-        debug!("New consensus seed not found! Need to get it from service");
-        let genesis_seed = key_manager.get_consensus_seed().unwrap().arr[0];
-        if key_manager.get_consensus_seed().is_err() {
-            let new_consensus_seed = match get_next_consensus_seed_from_service(
-                &mut key_manager,
-                1,
-                genesis_seed,
-                api_key_slice,
-                reg_key,
-                CONSENSUS_SEED_VERSION,
-            ) {
-                Ok(s) => s,
-                Err(e) => {
-                    error!("Consensus seed failure: {}", e as u64);
-                    return sgx_status_t::SGX_ERROR_UNEXPECTED;
-                }
-            };
-
-            key_manager.push_consensus_seed(new_consensus_seed);
-        } else {
-            debug!("New consensus seed already exists, no need to get it from service");
-        }
-
-        let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
-
-        let mut res = Vec::new();
-
-        for s in &seeds.arr {
-            let res_current: Vec<u8> = encrypt_seed(my_pub_key, s, false).unwrap();
-            res.extend(&res_current);
-        }
-
-        trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
-
-        if let Err(_e) = write_seed(&res, SEED_UPDATE_SAVE_PATH) {
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
     }
 
     // this initializes the key manager with all the keys we need for computations
