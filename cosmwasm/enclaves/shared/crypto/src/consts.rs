@@ -51,7 +51,6 @@ pub fn make_sgx_secret_path(file_name: &str) -> String {
         .into_owned()
 }
 
-pub const FILE_ATTESTATION_CERTIFICATE: &str = "attestation_cert.der";
 pub const FILE_CERT_COMBINED: &str = "attestation_combined.bin";
 pub const FILE_MIGRATION_CERT_LOCAL: &str = "migration_report_local.bin";
 pub const FILE_MIGRATION_CERT_REMOTE: &str = "migration_report_remote.bin";

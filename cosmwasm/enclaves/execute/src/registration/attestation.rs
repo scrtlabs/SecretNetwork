@@ -1,9 +1,10 @@
 use core::{mem, slice};
 
 use enclave_crypto::dcap::verify_quote_any;
-
+ use std::untrusted::fs::File;
 use std::collections::HashSet;
 use std::vec::Vec;
+use std::io::Write;
 
 use log::*;
 
@@ -379,6 +380,111 @@ unsafe fn verify_fmspc_from_collateral(vec_coll: &[u8]) -> bool {
     }
 
     true
+}
+
+pub struct AttestationCombined {
+    pub quote: Vec<u8>,
+    pub coll: Vec<u8>,
+    pub epid_quote: Vec<u8>
+}
+
+impl AttestationCombined {
+
+    pub fn from_blob(blob_ptr: *const u8, blob_len: usize) -> AttestationCombined {
+
+        let mut res = AttestationCombined {
+            quote: Vec::new(),
+            coll: Vec::new(),
+            epid_quote: Vec::new(),
+        };
+
+        if (blob_len > 0) && (unsafe{ *blob_ptr } != 0) {
+
+            // try to deserialize in a newer format
+            let mut pos = 0;
+            while pos + mem::size_of::<u32>() < blob_len {
+                let key = unsafe { *(blob_ptr.offset(pos as isize)) };
+                pos += 1;
+
+                let value_size = u32::from_le(unsafe { *(blob_ptr.offset(pos as isize) as *const u32) }) as usize;
+                pos += mem::size_of::<u32>();
+
+                if pos + value_size > blob_len {
+                    break;
+                }
+
+                let value = unsafe { slice::from_raw_parts(blob_ptr.offset(pos as isize), value_size) };
+                pos += value_size;
+
+                match key {
+                    1 => res.epid_quote = value.to_vec(),
+                    2 => res.quote = value.to_vec(),
+                    3 => res.coll = value.to_vec(),
+                    _ => {}
+                };
+            }
+        } else
+        {
+            // legacy
+            let n0 = mem::size_of::<u32>() as u32 * 3;
+
+            if blob_len >= n0 as usize {
+                let p_blob = blob_ptr as *const u32;
+                let s0 = u32::from_le(unsafe { *p_blob });
+                let s1 = u32::from_le(unsafe { *(p_blob.offset(1)) });
+                let s2 = u32::from_le(unsafe { *(p_blob.offset(2)) });
+
+                let size_total = (n0 as u64) + (s0 as u64) + (s1 as u64) + (s2 as u64);
+
+                if size_total <= blob_len as u64 {
+                    res.epid_quote =
+                        unsafe { slice::from_raw_parts(blob_ptr.offset(n0 as isize), s0 as usize).to_vec() };
+                    res.quote = unsafe {
+                        slice::from_raw_parts(blob_ptr.offset((n0 + s0) as isize), s1 as usize).to_vec()
+                    };
+                    res.coll = unsafe {
+                        slice::from_raw_parts(blob_ptr.offset((n0 + s0 + s1) as isize), s2 as usize).to_vec()
+                    };
+                }
+            }
+
+        }
+
+        res
+    }
+
+    pub fn save(&self, f_out: &mut File)
+    {
+        let is_legacy = true;
+
+        if is_legacy {
+
+            let size_epid: u32 = 0;
+            let size_dcap_q = self.quote.len() as u32;
+            let size_dcap_c = self.coll.len() as u32;
+
+            f_out.write_all(&size_epid.to_le_bytes()).unwrap();
+            f_out.write_all(&size_dcap_q.to_le_bytes()).unwrap();
+            f_out.write_all(&size_dcap_c.to_le_bytes()).unwrap();
+
+            f_out.write_all(&self.quote).unwrap();
+            f_out.write_all(&self.coll).unwrap();
+
+        } else {
+            Self::write_section(f_out, 2, &self.quote);
+            Self::write_section(f_out, 3, &self.coll);
+        }
+        
+    }
+
+    fn write_section(f_out: &mut File, key: u8, value: &[u8]) {
+        f_out.write_all(&key.to_le_bytes()).unwrap();
+
+        let len = value.len() as u32;
+        f_out.write_all(&len.to_le_bytes()).unwrap();
+
+        f_out.write_all(value).unwrap();
+    }
 }
 
 pub fn verify_quote_sgx(

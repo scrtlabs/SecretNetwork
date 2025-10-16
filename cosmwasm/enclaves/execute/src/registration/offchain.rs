@@ -1,13 +1,12 @@
 //!
 use super::attestation::get_quote_ecdsa;
-use crate::registration::attestation::verify_quote_sgx;
-use crate::registration::onchain::split_combined_attestation;
+use crate::registration::attestation::{verify_quote_sgx, AttestationCombined};
 #[cfg(feature = "verify-validator-whitelist")]
 use block_verifier::validator_whitelist;
 use core::convert::TryInto;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
-    make_sgx_secret_path, FILE_ATTESTATION_CERTIFICATE, FILE_CERT_COMBINED,
+    make_sgx_secret_path, FILE_CERT_COMBINED,
     FILE_MIGRATION_CERT_LOCAL, FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS,
     FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY,
 };
@@ -45,7 +44,6 @@ use super::seed_exchange::{decrypt_seed, encrypt_seed};
 #[cfg(feature = "light-client-validation")]
 use block_verifier::VERIFIED_BLOCK_MESSAGES;
 
-use enclave_utils::storage::write_to_untrusted;
 ///
 /// `ecall_init_bootstrap`
 ///
@@ -307,94 +305,6 @@ pub unsafe fn get_attestation_report_dcap(
     Ok((vec_quote, vec_coll))
 }
 
-pub fn save_attestation_combined(
-    res_dcap: &Result<(Vec<u8>, Vec<u8>), sgx_status_t>,
-    res_epid: &Result<Vec<u8>, sgx_status_t>,
-    is_migration_report: bool,
-) -> sgx_status_t {
-    let mut size_epid: u32 = 0;
-    let mut size_dcap_q: u32 = 0;
-    let mut size_dcap_c: u32 = 0;
-
-    if let Ok(ref vec_cert) = res_epid {
-        size_epid = vec_cert.len() as u32;
-
-        if !is_migration_report {
-            write_to_untrusted(
-                vec_cert.as_slice(),
-                make_sgx_secret_path(FILE_ATTESTATION_CERTIFICATE).as_str(),
-            )
-            .unwrap();
-        }
-    }
-
-    if let Ok((ref vec_quote, ref vec_coll)) = res_dcap {
-        size_dcap_q = vec_quote.len() as u32;
-        size_dcap_c = vec_coll.len() as u32;
-    }
-
-    let out_path = make_sgx_secret_path(if is_migration_report {
-        FILE_MIGRATION_CERT_REMOTE
-    } else {
-        FILE_CERT_COMBINED
-    });
-
-    let mut f_out = match File::create(out_path.as_str()) {
-        Ok(f) => f,
-        Err(e) => {
-            error!("failed to create file {}", e);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-    };
-    
-    let is_legacy = true;
-
-    if is_legacy {
-
-        f_out.write_all(&size_epid.to_le_bytes()).unwrap();
-        f_out.write_all(&size_dcap_q.to_le_bytes()).unwrap();
-        f_out.write_all(&size_dcap_c.to_le_bytes()).unwrap();
-
-        if let Ok(ref vec_cert) = res_epid {
-            f_out.write_all(vec_cert.as_slice()).unwrap();
-        }
-
-        if let Ok((vec_quote, vec_coll)) = res_dcap {
-            f_out.write_all(vec_quote.as_slice()).unwrap();
-            f_out.write_all(vec_coll.as_slice()).unwrap();
-        }
-
-    } else {
-
-        if let Ok(ref vec_cert) = res_epid {
-            write_attestation_section(&mut f_out, 1, &vec_cert);
-        }
-
-        if let Ok((vec_quote, vec_coll)) = res_dcap {
-            write_attestation_section(&mut f_out, 2, &vec_quote);
-            write_attestation_section(&mut f_out, 3, &vec_coll);
-        }
-    }
-
-    if (size_epid == 0) && (size_dcap_q == 0) {
-        if let Err(status) = res_epid {
-            return *status;
-        }
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    sgx_status_t::SGX_SUCCESS
-}
-
-fn write_attestation_section(f_out: &mut File, key: u8, value: &[u8]) {
-    f_out.write_all(&key.to_le_bytes()).unwrap();
-
-    let len = value.len() as u32;
-    f_out.write_all(&len.to_le_bytes()).unwrap();
-
-    f_out.write_all(value).unwrap();
-}
-
 fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_report_body_t> {
     if let Ok(mut f_in) = File::open(make_sgx_secret_path(FILE_MIGRATION_CERT_LOCAL)) {
         let mut buffer = vec![0u8; std::mem::size_of::<sgx_report_t>()];
@@ -420,9 +330,9 @@ fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_repo
         let mut cert = vec![];
         f_in.read_to_end(&mut cert).unwrap();
 
-        let (_, vec_quote, vec_coll) = split_combined_attestation(cert.as_ptr(), cert.len());
+        let attestation = AttestationCombined::from_blob(cert.as_ptr(), cert.len());
 
-        match verify_quote_sgx(vec_quote.as_slice(), vec_coll.as_slice(), 0, check_ppid_wl) {
+        match verify_quote_sgx(attestation.quote.as_slice(), attestation.coll.as_slice(), 0, check_ppid_wl) {
             Ok((body, _)) => {
                 return Ok(body);
             }
@@ -480,17 +390,43 @@ pub unsafe extern "C" fn ecall_get_attestation_report(flags: u32) -> sgx_status_
         }
     };
 
-    let res_epid = Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED);
-
-    let res_dcap = match 2 & flags {
+    let attestation = match 2 & flags {
         0 => {
             report_data[0..32].copy_from_slice(&kp.get_pubkey());
-            get_attestation_report_dcap(&report_data)
+
+            match get_attestation_report_dcap(&report_data) {
+                Ok((q, c)) => AttestationCombined {
+                    quote: q,
+                    coll: c,
+                    epid_quote: Vec::new()
+                },
+                Err(e) => {
+                    return e;
+                }
+            }
         }
-        _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
+        _ => {
+            return sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED;
+        }
     };
 
-    save_attestation_combined(&res_dcap, &res_epid, is_migration_report)
+    let out_path = make_sgx_secret_path(if is_migration_report {
+        FILE_MIGRATION_CERT_REMOTE
+    } else {
+        FILE_CERT_COMBINED
+    });
+
+    let mut f_out = match File::create(out_path.as_str()) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("failed to create file {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    attestation.save(&mut f_out);
+
+    sgx_status_t::SGX_SUCCESS
 }
 
 ///
