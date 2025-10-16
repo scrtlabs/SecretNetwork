@@ -4,15 +4,8 @@ use core::slice;
 
 use log::error;
 
-use enclave_crypto::consts::SIGNATURE_TYPE;
 use enclave_ffi_types::NodeAuthResult;
 use enclave_utils::validate_const_ptr;
-
-#[cfg(feature = "SGX_MODE_HW")]
-use crate::registration::attestation::create_attestation_report;
-
-#[cfg(feature = "SGX_MODE_HW")]
-use crate::registration::cert::verify_quote_status;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::attestation::get_quote_ecdsa_untested;
@@ -34,9 +27,6 @@ use std::{cmp, mem};
 
 #[cfg(not(feature = "epid_whitelist_disabled"))]
 use crate::registration::cert::check_epid_gid_is_whitelisted;
-
-#[cfg(feature = "SGX_MODE_HW")]
-use crate::registration::print_report::print_platform_info;
 
 use crate::registration::report::AttestationReport;
 

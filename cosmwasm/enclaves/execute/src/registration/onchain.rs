@@ -9,7 +9,6 @@ use enclave_ffi_types::NodeAuthResult;
 use crate::registration::attestation::verify_quote_sgx;
 use crate::registration::cert::verify_ra_report;
 
-use enclave_crypto::PUBLIC_KEY_SIZE;
 use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
     validate_const_ptr, validate_mut_ptr, KEY_MANAGER,
@@ -19,7 +18,6 @@ use sgx_types::sgx_ql_qv_result_t;
 
 use enclave_crypto::consts::SigningMethod;
 
-use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
 use core::mem;
 use std::slice;
@@ -70,28 +68,6 @@ pub fn split_combined_cert(cert: *const u8, cert_len: u32) -> (Vec<u8>, Vec<u8>,
     }
 
     (vec_cert, vec_quote, vec_coll)
-}
-
-fn verify_attestation_epid(cert_slice: &[u8], pub_key: &mut [u8; 32]) -> NodeAuthResult {
-    let pk = match verify_ra_cert(cert_slice, None, true) {
-        Ok(retval) => retval,
-        Err(e) => {
-            return e;
-        }
-    };
-
-    // just make sure the length isn't wrong for some reason (certificate may be malformed)
-    if pk.len() != PUBLIC_KEY_SIZE {
-        warn!(
-            "Got public key from certificate with the wrong size: {:?}",
-            pk.len()
-        );
-        return NodeAuthResult::MalformedPublicKey;
-    }
-
-    pub_key.copy_from_slice(&pk);
-
-    NodeAuthResult::Success
 }
 
 fn verify_attestation_dcap(
@@ -170,27 +146,16 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     let mut target_public_key: [u8; 32] = [0u8; 32];
 
-    let (vec_cert, vec_quote, vec_coll) = split_combined_cert(cert, cert_len);
+    let (_vec_cert, vec_quote, vec_coll) = split_combined_cert(cert, cert_len);
 
     if vec_quote.is_empty() || vec_coll.is_empty() {
-        if vec_cert.is_empty() {
-            warn!("No valid attestation method provided");
-            return NodeAuthResult::InvalidCert;
-        }
+        warn!("No valid attestation method provided");
+        return NodeAuthResult::InvalidCert;
+    }
 
-        trace!("EPID attestation");
-
-        let res = verify_attestation_epid(vec_cert.as_slice(), &mut target_public_key);
-        if NodeAuthResult::Success != res {
-            return res;
-        }
-    } else {
-        trace!("DCAP attestation");
-
-        let res = verify_attestation_dcap(&vec_quote, &vec_coll, &mut target_public_key);
-        if NodeAuthResult::Success != res {
-            return res;
-        }
+    let res = verify_attestation_dcap(&vec_quote, &vec_coll, &mut target_public_key);
+    if NodeAuthResult::Success != res {
+        return res;
     }
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
