@@ -83,112 +83,6 @@ pub fn in_grace_period(timestamp: u64) -> bool {
     timestamp < 1692626400_u64
 }
 
-fn extract_cpu_cert_from_cert(cert_data: &[u8]) -> Option<Vec<u8>> {
-    //println!("******** cert_data: {}", orig_hex::encode(cert_data));
-
-    let pem_text = match std::str::from_utf8(cert_data) {
-        Ok(x) => x,
-        Err(_) => {
-            return None;
-        }
-    };
-
-    //println!("******** pem: {}", pem_text);
-
-    // Find the first PEM block
-    let begin_marker = "-----BEGIN CERTIFICATE-----";
-    let end_marker = "-----END CERTIFICATE-----";
-    let start = match pem_text.find(begin_marker) {
-        Some(x) => x + begin_marker.len(),
-        None => {
-            println!("no begin");
-            return None;
-        }
-    };
-
-    let end = match pem_text.find(end_marker) {
-        Some(x) => x,
-        None => {
-            println!("no end");
-            return None;
-        }
-    };
-    let b64 = &pem_text[start..end];
-
-    // Remove whitespace and line breaks
-    let b64_clean: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
-
-    // Decode Base64 into DER
-    let der_bytes = match base64::decode(&b64_clean) {
-        Ok(x) => x,
-        Err(_) => {
-            return None;
-        }
-    };
-
-    //println!("Leaf certificate: {}", orig_hex::encode(&der_bytes));
-
-    let ppid_oid = &[
-        0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x01, 0x0D, 0x01,
-    ];
-
-    let res = match crate::registration::cert::extract_asn1_value(&der_bytes, ppid_oid) {
-        Ok(x) => x,
-        Err(_) => {
-            return None;
-        }
-    };
-
-    Some(res)
-}
-
-unsafe fn extract_cpu_cert_from_quote(vec_quote: &[u8]) -> Option<Vec<u8>> {
-    let my_p_quote = vec_quote.as_ptr() as *const sgx_quote_t;
-
-    let sig_len = (*my_p_quote).signature_len as usize;
-    let whole_len = sig_len.wrapping_add(mem::size_of::<sgx_quote_t>());
-    if (whole_len > sig_len)
-        && (whole_len <= vec_quote.len())
-        && (sig_len >= mem::size_of::<sgx_ql_ecdsa_sig_data_t>())
-    {
-        let p_ecdsa_sig = (*my_p_quote).signature.as_ptr() as *const sgx_ql_ecdsa_sig_data_t;
-
-        let auth_size_brutto = sig_len - mem::size_of::<sgx_ql_ecdsa_sig_data_t>();
-        if auth_size_brutto >= mem::size_of::<sgx_ql_auth_data_t>() {
-            let auth_size_max = auth_size_brutto - mem::size_of::<sgx_ql_auth_data_t>();
-
-            let auth_data_wrapper =
-                (*p_ecdsa_sig).auth_certification_data.as_ptr() as *const sgx_ql_auth_data_t;
-
-            let auth_hdr_size = (*auth_data_wrapper).size as usize;
-            if auth_hdr_size <= auth_size_max {
-                let auth_size = auth_size_max - auth_hdr_size;
-
-                if auth_size > mem::size_of::<sgx_ql_certification_data_t>() {
-                    let cert_data = (*auth_data_wrapper)
-                        .auth_data
-                        .as_ptr()
-                        .offset(auth_hdr_size as isize)
-                        as *const sgx_ql_certification_data_t;
-
-                    let cert_size_max = auth_size - mem::size_of::<sgx_ql_certification_data_t>();
-                    let cert_size = (*cert_data).size as usize;
-                    if (cert_size <= cert_size_max) && ((*cert_data).cert_key_type == 5) {
-                        let cert_data = slice::from_raw_parts(
-                            (*cert_data).certification_data.as_ptr(),
-                            cert_size,
-                        );
-
-                        return extract_cpu_cert_from_cert(cert_data);
-                    }
-                }
-            }
-        }
-    }
-
-    None
-}
-
 lazy_static::lazy_static! {
 
     static ref PPID_WHITELIST: HashSet<[u8; 20]>  = {
@@ -363,29 +257,10 @@ unsafe fn extract_fmspc_from_collateral(vec_coll: &[u8]) -> Option<String> {
 
 }
 
-
-unsafe fn verify_fmspc_from_collateral(vec_coll: &[u8]) -> bool {
-
-    if let Some(fmspc) = extract_fmspc_from_collateral(vec_coll) {
-
-        let set = &FMSPC_EOL;
-        let fmspc_str :&str = &fmspc;
-        if set.contains(fmspc_str) {
-            warn!("The CPU is deprecated");
-        }
-        // fmspc.starts_with("0090")
-
-    } else {
-        warn!("failed to fetch fmspc from attestation");
-    }
-
-    true
-}
-
 pub struct AttestationCombined {
     pub quote: Vec<u8>,
     pub coll: Vec<u8>,
-    pub epid_quote: Vec<u8>
+    pub jwt_token: Vec<u8>,
 }
 
 impl AttestationCombined {
@@ -395,7 +270,7 @@ impl AttestationCombined {
         let mut res = AttestationCombined {
             quote: Vec::new(),
             coll: Vec::new(),
-            epid_quote: Vec::new(),
+            jwt_token: Vec::new(),
         };
 
         if (blob_len > 0) && (unsafe{ *blob_ptr } != 0) {
@@ -417,9 +292,9 @@ impl AttestationCombined {
                 pos += value_size;
 
                 match key {
-                    1 => res.epid_quote = value.to_vec(),
                     2 => res.quote = value.to_vec(),
                     3 => res.coll = value.to_vec(),
+                    4 => res.jwt_token = value.to_vec(),
                     _ => {}
                 };
             }
@@ -437,8 +312,8 @@ impl AttestationCombined {
                 let size_total = (n0 as u64) + (s0 as u64) + (s1 as u64) + (s2 as u64);
 
                 if size_total <= blob_len as u64 {
-                    res.epid_quote =
-                        unsafe { slice::from_raw_parts(blob_ptr.offset(n0 as isize), s0 as usize).to_vec() };
+                    //res.epid_quote =
+                    //    unsafe { slice::from_raw_parts(blob_ptr.offset(n0 as isize), s0 as usize).to_vec() };
                     res.quote = unsafe {
                         slice::from_raw_parts(blob_ptr.offset((n0 + s0) as isize), s1 as usize).to_vec()
                     };
@@ -485,22 +360,147 @@ impl AttestationCombined {
 
         f_out.write_all(value).unwrap();
     }
+
+    pub unsafe fn extract_cpu_cert(&self) -> Option<Vec<u8>> {
+        let my_p_quote = self.quote.as_ptr() as *const sgx_quote_t;
+
+        let sig_len = (*my_p_quote).signature_len as usize;
+        let whole_len = sig_len.wrapping_add(mem::size_of::<sgx_quote_t>());
+        if (whole_len > sig_len)
+            && (whole_len <= self.quote.len())
+            && (sig_len >= mem::size_of::<sgx_ql_ecdsa_sig_data_t>())
+        {
+            let p_ecdsa_sig = (*my_p_quote).signature.as_ptr() as *const sgx_ql_ecdsa_sig_data_t;
+
+            let auth_size_brutto = sig_len - mem::size_of::<sgx_ql_ecdsa_sig_data_t>();
+            if auth_size_brutto >= mem::size_of::<sgx_ql_auth_data_t>() {
+                let auth_size_max = auth_size_brutto - mem::size_of::<sgx_ql_auth_data_t>();
+
+                let auth_data_wrapper =
+                    (*p_ecdsa_sig).auth_certification_data.as_ptr() as *const sgx_ql_auth_data_t;
+
+                let auth_hdr_size = (*auth_data_wrapper).size as usize;
+                if auth_hdr_size <= auth_size_max {
+                    let auth_size = auth_size_max - auth_hdr_size;
+
+                    if auth_size > mem::size_of::<sgx_ql_certification_data_t>() {
+                        let cert_data = (*auth_data_wrapper)
+                            .auth_data
+                            .as_ptr()
+                            .offset(auth_hdr_size as isize)
+                            as *const sgx_ql_certification_data_t;
+
+                        let cert_size_max = auth_size - mem::size_of::<sgx_ql_certification_data_t>();
+                        let cert_size = (*cert_data).size as usize;
+                        if (cert_size <= cert_size_max) && ((*cert_data).cert_key_type == 5) {
+                            let cert_data = slice::from_raw_parts(
+                                (*cert_data).certification_data.as_ptr(),
+                                cert_size,
+                            );
+
+                            return Self::extract_cpu_cert_raw(cert_data);
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+
+    fn extract_cpu_cert_raw(cert_data: &[u8]) -> Option<Vec<u8>> {
+        //println!("******** cert_data: {}", orig_hex::encode(cert_data));
+
+        let pem_text = match std::str::from_utf8(cert_data) {
+            Ok(x) => x,
+            Err(_) => {
+                return None;
+            }
+        };
+
+        //println!("******** pem: {}", pem_text);
+
+        // Find the first PEM block
+        let begin_marker = "-----BEGIN CERTIFICATE-----";
+        let end_marker = "-----END CERTIFICATE-----";
+        let start = match pem_text.find(begin_marker) {
+            Some(x) => x + begin_marker.len(),
+            None => {
+                println!("no begin");
+                return None;
+            }
+        };
+
+        let end = match pem_text.find(end_marker) {
+            Some(x) => x,
+            None => {
+                println!("no end");
+                return None;
+            }
+        };
+        let b64 = &pem_text[start..end];
+
+        // Remove whitespace and line breaks
+        let b64_clean: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
+
+        // Decode Base64 into DER
+        let der_bytes = match base64::decode(&b64_clean) {
+            Ok(x) => x,
+            Err(_) => {
+                return None;
+            }
+        };
+
+        //println!("Leaf certificate: {}", orig_hex::encode(&der_bytes));
+
+        let ppid_oid = &[
+            0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x01, 0x0D, 0x01,
+        ];
+
+        let res = match crate::registration::cert::extract_asn1_value(&der_bytes, ppid_oid) {
+            Ok(x) => x,
+            Err(_) => {
+                return None;
+            }
+        };
+
+        Some(res)
+    }
+
+    pub unsafe fn verify_fmspc(&self) -> bool {
+
+        if let Some(fmspc) = extract_fmspc_from_collateral(&self.coll) {
+
+            let set = &FMSPC_EOL;
+            let fmspc_str :&str = &fmspc;
+            if set.contains(fmspc_str) {
+                warn!("The CPU is deprecated");
+            }
+            // fmspc.starts_with("0090")
+
+        } else {
+            warn!("failed to fetch fmspc from attestation");
+        }
+
+        true
+    }
+
 }
 
 pub fn verify_quote_sgx(
-    vec_quote: &[u8],
-    vec_coll: &[u8],
+    attestation: &AttestationCombined,
     time_s: i64,
     check_ppid_wl: bool,
 ) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
-    let qv_result = verify_quote_any(vec_quote, vec_coll, time_s)?;
+    let qv_result = verify_quote_any(&attestation.quote, &attestation.coll, time_s)?;
 
-    if vec_quote.len() < mem::size_of::<sgx_quote_t>() {
+    if attestation.quote.len() < mem::size_of::<sgx_quote_t>() {
         trace!("Quote too small");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    let my_p_quote = vec_quote.as_ptr() as *const sgx_quote_t;
+    let my_p_quote = attestation.quote.as_ptr() as *const sgx_quote_t;
 
     unsafe {
         let version = (*my_p_quote).version;
@@ -510,11 +510,11 @@ pub fn verify_quote_sgx(
         } else {
             let report_body = (*my_p_quote).report_body;
 
-            if !verify_fmspc_from_collateral(vec_coll) {
+            if !attestation.verify_fmspc() {
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
 
-            let is_in_wl = match extract_cpu_cert_from_quote(vec_quote) {
+            let is_in_wl = match attestation.extract_cpu_cert() {
                 Some(ppid) => {
                     let ppid_addr = crate::registration::offchain::calculate_truncated_hash(&ppid);
 
@@ -533,6 +533,9 @@ pub fn verify_quote_sgx(
             };
 
             if check_ppid_wl && !is_in_wl {
+
+                // check jwt token
+
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
 
@@ -558,12 +561,12 @@ fn test_sgx_call_res(
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn get_quote_ecdsa(_pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa(_pub_k: &[u8]) -> Result<AttestationCombined, sgx_status_t> {
     Err(sgx_status_t::SGX_ERROR_NO_DEVICE)
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_quote_ecdsa_untested(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa_untested(pub_k: &[u8]) -> Result<AttestationCombined, sgx_status_t> {
     let mut qe_target_info = sgx_target_info_t::default();
     let mut quote_size: u32 = 0;
     let mut rt: sgx_status_t = sgx_status_t::default();
@@ -665,15 +668,19 @@ pub fn get_quote_ecdsa_untested(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_
         orig_hex::encode(my_report.body.report_data.d)
     );
 
-    Ok((vec_quote, vec_coll))
+    Ok(AttestationCombined {
+        quote: vec_quote,
+        coll: vec_coll,
+        jwt_token: Vec::new()
+    })
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_quote_ecdsa(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
-    let (vec_quote, vec_coll) = get_quote_ecdsa_untested(pub_k)?;
+pub fn get_quote_ecdsa(pub_k: &[u8]) -> Result<AttestationCombined, sgx_status_t> {
+    let attestation = get_quote_ecdsa_untested(pub_k)?;
 
     // test self
-    match verify_quote_sgx(&vec_quote, &vec_coll, 0, false) {
+    match verify_quote_sgx(&attestation, 0, false) {
         Ok(r) => {
             trace!("Self quote verified ok");
             if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
@@ -687,6 +694,6 @@ pub fn get_quote_ecdsa(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t>
         }
     };
 
-    Ok((vec_quote, vec_coll))
+    Ok(attestation)
 }
 

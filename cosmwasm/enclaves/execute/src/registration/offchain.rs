@@ -293,8 +293,8 @@ pub unsafe extern "C" fn ecall_init_node(
 
 pub unsafe fn get_attestation_report_dcap(
     pub_k: &[u8],
-) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
-    let (vec_quote, vec_coll) = match get_quote_ecdsa(pub_k) {
+) -> Result<AttestationCombined, sgx_status_t> {
+    let attestation = match get_quote_ecdsa(pub_k) {
         Ok(r) => r,
         Err(e) => {
             warn!("Error creating attestation report");
@@ -302,7 +302,7 @@ pub unsafe fn get_attestation_report_dcap(
         }
     };
 
-    Ok((vec_quote, vec_coll))
+    Ok(attestation)
 }
 
 fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_report_body_t> {
@@ -332,7 +332,7 @@ fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_repo
 
         let attestation = AttestationCombined::from_blob(cert.as_ptr(), cert.len());
 
-        match verify_quote_sgx(attestation.quote.as_slice(), attestation.coll.as_slice(), 0, check_ppid_wl) {
+        match verify_quote_sgx(&attestation, 0, check_ppid_wl) {
             Ok((body, _)) => {
                 return Ok(body);
             }
@@ -395,11 +395,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(flags: u32) -> sgx_status_
             report_data[0..32].copy_from_slice(&kp.get_pubkey());
 
             match get_attestation_report_dcap(&report_data) {
-                Ok((q, c)) => AttestationCombined {
-                    quote: q,
-                    coll: c,
-                    epid_quote: Vec::new()
-                },
+                Ok(x) => x,
                 Err(e) => {
                     return e;
                 }

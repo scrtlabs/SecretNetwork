@@ -40,15 +40,14 @@ fn get_current_block_time_s() -> i64 {
 }
 
 fn verify_attestation_dcap(
-    vec_quote: &[u8],
-    vec_coll: &[u8],
+    attestation: &AttestationCombined,
     pub_key: &mut [u8; 32],
 ) -> NodeAuthResult {
     let tm_s = get_current_block_time_s();
     trace!("Current block time: {}", tm_s);
 
     // test self
-    let report_body = match verify_quote_sgx(vec_quote, vec_coll, tm_s, true) {
+    let report_body = match verify_quote_sgx(attestation, tm_s, true) {
         Ok(r) => {
             trace!("Remote quote verified ok");
             if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
@@ -122,7 +121,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         return NodeAuthResult::InvalidCert;
     }
 
-    let res = verify_attestation_dcap(&attestation.quote, &attestation.coll, &mut target_public_key);
+    let res = verify_attestation_dcap(&attestation, &mut target_public_key);
     if NodeAuthResult::Success != res {
         return res;
     }

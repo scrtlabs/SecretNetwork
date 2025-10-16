@@ -759,7 +759,7 @@ pub mod tests {
     pub fn test_attestation_dcap() {
         let (vec_quote, vec_coll, time_s) = load_attestation_dcap();
 
-        let res = verify_quote_sgx(&vec_quote, &vec_coll, time_s, false);
+        let res = verify_quote_sgx(&vec_quote, &vec_coll, time_s, None, false);
         assert!(res.is_ok());
     }
 
@@ -774,7 +774,7 @@ pub mod tests {
             p_data.d[6] = p_data.d[6] ^ 4;
         };
 
-        let res = verify_quote_sgx(&vec_quote, &vec_coll, time_s, false);
+        let res = verify_quote_sgx(&vec_quote, &vec_coll, time_s, None, false);
         assert!(!res.is_ok());
     }
 }
