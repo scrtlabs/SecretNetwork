@@ -1,7 +1,7 @@
 //!
 use super::attestation::get_quote_ecdsa;
 use crate::registration::attestation::verify_quote_sgx;
-use crate::registration::onchain::split_combined_cert;
+use crate::registration::onchain::split_combined_attestation;
 #[cfg(feature = "verify-validator-whitelist")]
 use block_verifier::validator_whitelist;
 use core::convert::TryInto;
@@ -346,18 +346,34 @@ pub fn save_attestation_combined(
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
     };
+    
+    let is_legacy = true;
 
-    f_out.write_all(&size_epid.to_le_bytes()).unwrap();
-    f_out.write_all(&size_dcap_q.to_le_bytes()).unwrap();
-    f_out.write_all(&size_dcap_c.to_le_bytes()).unwrap();
+    if is_legacy {
 
-    if let Ok(ref vec_cert) = res_epid {
-        f_out.write_all(vec_cert.as_slice()).unwrap();
-    }
+        f_out.write_all(&size_epid.to_le_bytes()).unwrap();
+        f_out.write_all(&size_dcap_q.to_le_bytes()).unwrap();
+        f_out.write_all(&size_dcap_c.to_le_bytes()).unwrap();
 
-    if let Ok((vec_quote, vec_coll)) = res_dcap {
-        f_out.write_all(vec_quote.as_slice()).unwrap();
-        f_out.write_all(vec_coll.as_slice()).unwrap();
+        if let Ok(ref vec_cert) = res_epid {
+            f_out.write_all(vec_cert.as_slice()).unwrap();
+        }
+
+        if let Ok((vec_quote, vec_coll)) = res_dcap {
+            f_out.write_all(vec_quote.as_slice()).unwrap();
+            f_out.write_all(vec_coll.as_slice()).unwrap();
+        }
+
+    } else {
+
+        if let Ok(ref vec_cert) = res_epid {
+            write_attestation_section(&mut f_out, 1, &vec_cert);
+        }
+
+        if let Ok((vec_quote, vec_coll)) = res_dcap {
+            write_attestation_section(&mut f_out, 2, &vec_quote);
+            write_attestation_section(&mut f_out, 3, &vec_coll);
+        }
     }
 
     if (size_epid == 0) && (size_dcap_q == 0) {
@@ -368,6 +384,15 @@ pub fn save_attestation_combined(
     }
 
     sgx_status_t::SGX_SUCCESS
+}
+
+fn write_attestation_section(f_out: &mut File, key: u8, value: &[u8]) {
+    f_out.write_all(&key.to_le_bytes()).unwrap();
+
+    let len = value.len() as u32;
+    f_out.write_all(&len.to_le_bytes()).unwrap();
+
+    f_out.write_all(value).unwrap();
 }
 
 fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_report_body_t> {
@@ -395,7 +420,7 @@ fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_repo
         let mut cert = vec![];
         f_in.read_to_end(&mut cert).unwrap();
 
-        let (_, vec_quote, vec_coll) = split_combined_cert(cert.as_ptr(), cert.len() as u32);
+        let (_, vec_quote, vec_coll) = split_combined_attestation(cert.as_ptr(), cert.len());
 
         match verify_quote_sgx(vec_quote.as_slice(), vec_coll.as_slice(), 0, check_ppid_wl) {
             Ok((body, _)) => {

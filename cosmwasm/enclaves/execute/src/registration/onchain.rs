@@ -40,31 +40,61 @@ fn get_current_block_time_s() -> i64 {
     return 0 as i64;
 }
 
-pub fn split_combined_cert(cert: *const u8, cert_len: u32) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+pub fn split_combined_attestation(blob_ptr: *const u8, blob_len: usize) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let mut vec_cert: Vec<u8> = Vec::new();
     let mut vec_quote: Vec<u8> = Vec::new();
     let mut vec_coll: Vec<u8> = Vec::new();
 
-    let n0 = mem::size_of::<u32>() as u32 * 3;
+    if (blob_len > 0) && (unsafe{ *blob_ptr } != 0) {
 
-    if cert_len >= n0 {
-        let p_cert = cert as *const u32;
-        let s0 = u32::from_le(unsafe { *p_cert });
-        let s1 = u32::from_le(unsafe { *(p_cert.offset(1)) });
-        let s2 = u32::from_le(unsafe { *(p_cert.offset(2)) });
+        // try to deserialize in a newer format
+        let mut pos = 0;
+        while pos + mem::size_of::<u32>() < blob_len {
+            let key = unsafe { *(blob_ptr.offset(pos as isize)) };
+            pos += 1;
 
-        let size_total = (n0 as u64) + (s0 as u64) + (s1 as u64) + (s2 as u64);
+            let value_size = u32::from_le(unsafe { *(blob_ptr.offset(pos as isize) as *const u32) }) as usize;
+            pos += mem::size_of::<u32>();
 
-        if size_total <= cert_len as u64 {
-            vec_cert =
-                unsafe { slice::from_raw_parts(cert.offset(n0 as isize), s0 as usize).to_vec() };
-            vec_quote = unsafe {
-                slice::from_raw_parts(cert.offset((n0 + s0) as isize), s1 as usize).to_vec()
-            };
-            vec_coll = unsafe {
-                slice::from_raw_parts(cert.offset((n0 + s0 + s1) as isize), s2 as usize).to_vec()
+            if pos + value_size > blob_len {
+                break;
+            }
+
+            let value = unsafe { slice::from_raw_parts(blob_ptr.offset(pos as isize), value_size) };
+            pos += value_size;
+
+            match key {
+                1 => vec_cert = value.to_vec(),
+                2 => vec_quote = value.to_vec(),
+                3 => vec_coll = value.to_vec(),
+                _ => {}
             };
         }
+    } else
+    {
+        // legacy
+        let n0 = mem::size_of::<u32>() as u32 * 3;
+
+        if blob_len >= n0 as usize {
+            let p_blob = blob_ptr as *const u32;
+            let s0 = u32::from_le(unsafe { *p_blob });
+            let s1 = u32::from_le(unsafe { *(p_blob.offset(1)) });
+            let s2 = u32::from_le(unsafe { *(p_blob.offset(2)) });
+
+            let size_total = (n0 as u64) + (s0 as u64) + (s1 as u64) + (s2 as u64);
+
+            if size_total <= blob_len as u64 {
+                vec_cert =
+                    unsafe { slice::from_raw_parts(blob_ptr.offset(n0 as isize), s0 as usize).to_vec() };
+                vec_quote = unsafe {
+                    slice::from_raw_parts(blob_ptr.offset((n0 + s0) as isize), s1 as usize).to_vec()
+                };
+                vec_coll = unsafe {
+                    slice::from_raw_parts(blob_ptr.offset((n0 + s0 + s1) as isize), s2 as usize).to_vec()
+                };
+            }
+        }
+
     }
 
     (vec_cert, vec_quote, vec_coll)
@@ -146,7 +176,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     let mut target_public_key: [u8; 32] = [0u8; 32];
 
-    let (_vec_cert, vec_quote, vec_coll) = split_combined_cert(cert, cert_len);
+    let (_vec_cert, vec_quote, vec_coll) = split_combined_attestation(cert, cert_len as usize);
 
     if vec_quote.is_empty() || vec_coll.is_empty() {
         warn!("No valid attestation method provided");
