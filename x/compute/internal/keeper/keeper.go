@@ -1684,6 +1684,19 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 		return sdkerrors.ErrUnauthorized.Wrap("caller is not the admin")
 	}
 
+	// if the contract was set to require governance, check that the new admin matches
+	// the one set by governance
+	if contractInfo.RequireGovernance {
+		storedAdmin, found := k.GetNewAdmin(ctx, contractAddress.String())
+		if !found {
+			return sdkerrors.ErrUnauthorized.Wrap("requires governance approval for admin change")
+		}
+		if storedAdmin != newAdmin.String() {
+			return sdkerrors.ErrUnauthorized.Wrapf("admin mismatch: governance authorized '%s', attempting '%s'",
+				storedAdmin, newAdmin.String())
+		}
+	}
+
 	signBytes := []byte{}
 	signMode := sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED
 	modeInfoBytes := []byte{}
@@ -1733,6 +1746,10 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 	contractInfo.Admin = newAdmin.String()
 	contractInfo.AdminProof = newAdminProof
 	k.setContractInfo(ctx, contractAddress, &contractInfo)
+
+	if contractInfo.RequireGovernance {
+		k.ConsumeAdminUpdate(ctx, contractAddress.String())
+	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeUpdateContractAdmin,
@@ -1801,8 +1818,8 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if contractInfo.Admin == "" && !contractInfo.RequireGovernance {
 		return nil, errorsmod.Wrap(types.ErrMigrationFailed, "contract is not upgradable")
 	}
-	codeID, found := k.GetAuthorizedMigration(ctx, contractAddress.String())
 	if contractInfo.RequireGovernance {
+		codeID, found := k.GetAuthorizedMigration(ctx, contractAddress.String())
 		if !found {
 			return nil, errorsmod.Wrap(types.ErrMigrationFailed, "requires governance approval for migration")
 		}
@@ -1871,7 +1888,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	contractInfo.CodeID = newCodeID
 	k.setContractInfo(ctx, contractAddress, &contractInfo)
 
-	if contractInfo.RequireGovernance && found {
+	if contractInfo.RequireGovernance {
 		k.ConsumeAuthorizedMigration(ctx, contractAddress.String())
 	}
 
@@ -1990,6 +2007,16 @@ func (k Keeper) SetAuthorizedMigration(ctx sdk.Context, contractAddr string, new
 	}
 }
 
+func (k Keeper) SetAdminUpdate(ctx sdk.Context, contractAddr string, newAdmin string) {
+	store := k.storeService.OpenKVStore(ctx)
+	key := types.GetUpdateAdminKey(contractAddr)
+	value := []byte(newAdmin)
+	err := store.Set(key, value)
+	if err != nil {
+		ctx.Logger().Error("SetAdminUpdate:", err.Error())
+	}
+}
+
 // Get upgrade authorization
 func (k Keeper) GetAuthorizedMigration(ctx sdk.Context, contractAddr string) (uint64, bool) {
 	store := k.storeService.OpenKVStore(ctx)
@@ -2005,6 +2032,31 @@ func (k Keeper) GetAuthorizedMigration(ctx sdk.Context, contractAddr string) (ui
 	return sdk.BigEndianToUint64(bz), true
 }
 
+// GetNewAdmin returns the authorized new admin for a contract
+func (k Keeper) GetNewAdmin(ctx sdk.Context, contractAddr string) (string, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	key := types.GetUpdateAdminKey(contractAddr)
+
+	// Check if authorization exists
+	exists, err := store.Has(key)
+	if err != nil {
+		ctx.Logger().Error("GetNewAdmin.Has:", err.Error())
+		return "", false
+	}
+	if !exists {
+		return "", false // No authorization - this is normal, not an error
+	}
+
+	// Get the authorized admin value
+	bz, err := store.Get(key)
+	if err != nil {
+		ctx.Logger().Error("GetNewAdmin.Get:", err.Error())
+		return "", false
+	}
+
+	return string(bz), true // Can be empty string (valid: remove admin)
+}
+
 // Consume (delete) authorization after use
 func (k Keeper) ConsumeAuthorizedMigration(ctx sdk.Context, contractAddr string) {
 	store := k.storeService.OpenKVStore(ctx)
@@ -2012,6 +2064,16 @@ func (k Keeper) ConsumeAuthorizedMigration(ctx sdk.Context, contractAddr string)
 	err := store.Delete(key)
 	if err != nil {
 		ctx.Logger().Error("ConsumeAuthorizedMigration:", err.Error())
+	}
+}
+
+// ConsumeAdminUpdate deletes admin update authorization after use
+func (k Keeper) ConsumeAdminUpdate(ctx sdk.Context, contractAddr string) {
+	store := k.storeService.OpenKVStore(ctx)
+	key := types.GetUpdateAdminKey(contractAddr)
+	err := store.Delete(key)
+	if err != nil {
+		ctx.Logger().Error("ConsumeAdminUpdate:", err.Error())
 	}
 }
 
