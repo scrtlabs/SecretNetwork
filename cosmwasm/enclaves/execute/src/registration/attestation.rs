@@ -3,7 +3,7 @@ use core::{mem, slice};
 use base64ct::Encoding;
 use enclave_crypto::dcap::verify_quote_any;
 use serde_json::Value;
-use sha2::Sha256;
+use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::io::Write;
@@ -559,8 +559,6 @@ impl AttestationCombined {
             verifying_key
                 .verify(&message, &signature)
                 .map_err(|_| "invalid signature")?;
-
-            println!("sig valid");
         } else {
             return Err(format!("Unknown kid: {}", kid_str).into());
         }
@@ -569,10 +567,6 @@ impl AttestationCombined {
     }
 
     pub fn verify_jwt_token(&self) -> bool {
-        if self.jwt_token.is_empty() {
-            return false;
-        }
-
         let s = match std::str::from_utf8(&self.jwt_token) {
             Ok(s) => s,
             Err(e) => {
@@ -581,7 +575,7 @@ impl AttestationCombined {
             }
         };
 
-        let _token = match Self::decode_jwt(s) {
+        let claims_json = match Self::decode_jwt(s) {
             Ok(x) => x,
             Err(e) => {
                 println!("decode_jwt failed: {}", e);
@@ -589,7 +583,32 @@ impl AttestationCombined {
             }
         };
 
-        false
+        let quotehash_str =
+            if let Some(x) = claims_json["x-ms-sgx-collateral"]["quotehash"].as_str() {
+                x
+            } else {
+                println!("quotehash not found");
+                return false;
+            };
+
+        let quote_hash = match base64::decode(quotehash_str) {
+            Ok(x) => x,
+            Err(e) => {
+                println!("quotehash decode failed {}", e);
+                return false;
+            }
+        };
+
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(&self.quote);
+        let quote_hash_actual = hasher.finalize();
+
+        if (&quote_hash_actual as &[u8]) != quote_hash {
+            println!("quotehash masmatch");
+            return false;
+        }
+
+        true
     }
 }
 
@@ -637,7 +656,15 @@ pub fn verify_quote_sgx(
                 }
             };
 
-            let jwt_token_valid = attestation.verify_jwt_token();
+            let jwt_token_valid = if attestation.jwt_token.is_empty() {
+                false
+            } else {
+                if !attestation.verify_jwt_token() {
+                    return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+                }
+                println!("JWT token is valid");
+                true
+            };
 
             if check_ppid_wl && (!is_in_wl && !jwt_token_valid) {
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
