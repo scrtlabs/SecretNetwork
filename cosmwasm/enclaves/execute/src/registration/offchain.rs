@@ -6,9 +6,9 @@ use block_verifier::validator_whitelist;
 use core::convert::TryInto;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
-    make_sgx_secret_path, FILE_CERT_COMBINED,
-    FILE_MIGRATION_CERT_LOCAL, FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS,
-    FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY,
+    make_sgx_secret_path, FILE_CERT_COMBINED, FILE_MIGRATION_CERT_LOCAL,
+    FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS, FILE_MIGRATION_DATA,
+    FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY,
 };
 #[cfg(feature = "random")]
 use enclave_crypto::{

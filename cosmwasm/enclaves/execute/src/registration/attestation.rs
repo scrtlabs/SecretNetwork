@@ -1,33 +1,32 @@
 use core::{mem, slice};
 
+use base64ct::Encoding;
 use enclave_crypto::dcap::verify_quote_any;
- use std::untrusted::fs::File;
-use std::collections::HashSet;
-use std::vec::Vec;
+use serde_json::Value;
+use sha2::Sha256;
+use std::collections::{HashMap, HashSet};
+use std::convert::TryFrom;
 use std::io::Write;
+use std::untrusted::fs::File;
+use std::vec::Vec;
 
 use log::*;
+use rsa::signature::Verifier;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tse::rsgx_create_report;
 
 #[cfg(feature = "SGX_MODE_HW")]
-
 use sgx_types::{
     sgx_ql_auth_data_t, sgx_ql_certification_data_t, sgx_ql_ecdsa_sig_data_t, sgx_ql_qv_result_t,
     sgx_quote_t, sgx_report_body_t, sgx_status_t,
 };
 
 #[cfg(feature = "SGX_MODE_HW")]
-use sgx_types::{
-    sgx_report_data_t, sgx_report_t, sgx_target_info_t,
-};
+use sgx_types::{sgx_report_data_t, sgx_report_t, sgx_target_info_t};
 
 #[cfg(feature = "SGX_MODE_HW")]
-use std::{
-    str,
-    string::String,
-};
+use std::{str, string::String};
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use crate::registration::offchain::get_attestation_report_dcap;
@@ -40,22 +39,19 @@ use std::sgxfs::remove as SgxFsRemove;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::ocalls::{
-    ocall_get_quote_ecdsa, ocall_get_quote_ecdsa_collateral,
-    ocall_get_quote_ecdsa_params,
+    ocall_get_quote_ecdsa, ocall_get_quote_ecdsa_collateral, ocall_get_quote_ecdsa_params,
 };
 
 #[cfg(feature = "SGX_MODE_HW")]
 use ::hex as orig_hex;
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-pub fn validate_enclave_version(
-    kp: &enclave_crypto::KeyPair,
-) -> Result<(), sgx_status_t> {
+pub fn validate_enclave_version(kp: &enclave_crypto::KeyPair) -> Result<(), sgx_status_t> {
     let res_dcap = unsafe { get_attestation_report_dcap(&kp.get_pubkey()) };
 
     match res_dcap {
         Ok(_) => Ok(()),
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     }
 }
 
@@ -83,7 +79,53 @@ pub fn in_grace_period(timestamp: u64) -> bool {
     timestamp < 1692626400_u64
 }
 
+pub struct KnownJwtKeys {
+    pub coll: HashMap<Vec<u8>, rsa::pkcs1v15::VerifyingKey<Sha256>>,
+}
+
+fn my_decode_base64(enc: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    match base64ct::Base64UrlUnpadded::decode_vec(enc) {
+        Ok(x) => Ok(x),
+        Err(e) => Err(format!("base64 decode failed: {:?}", e).into()),
+    }
+}
+
+impl KnownJwtKeys {
+    fn add_key(
+        &mut self,
+        kid_b64: &str,
+        n_b64: &str,
+        e_b64: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let kid_bytes = base64::decode(kid_b64)?;
+        let n_bytes = my_decode_base64(n_b64)?;
+        let e_bytes = my_decode_base64(e_b64)?;
+
+        // 2️⃣ Construct RSA public key
+        let n = rsa::BigUint::from_bytes_be(&n_bytes);
+        let e = rsa::BigUint::from_bytes_be(&e_bytes);
+        let pubkey = rsa::RsaPublicKey::new(n, e).map_err(|_| "invalid RSA key components")?;
+
+        let verifying_key = rsa::pkcs1v15::VerifyingKey::<Sha256>::new(pubkey);
+        self.coll.insert(kid_bytes, verifying_key);
+
+        Ok(())
+    }
+}
+
 lazy_static::lazy_static! {
+
+    static ref KNOWN_JWT_KEYS: KnownJwtKeys  = {
+        let mut keys = KnownJwtKeys {
+            coll: HashMap::new()
+        };
+
+        keys.add_key("J0pAPdfXXHqWWimgrH853wMIdh5/fLe1z6uSXYPXCa0=", "2NBrEQdwXUzVy2p-SZ7sBjxbVd4iTGNEQJu_Ot_C0NCzXIDT6DMEAeVZLSoWWcW6oXQ81h-yQWtw-jFW_SPgG4FGSL1UnVO8Zak80thovQk0dbZDo-9lsoOnOfXfPUL0T9AgHtqJpUr3tCfyRRLdC0MgF1tAyjZbMj8bHe2ZmJ9GLTJT5v9E0i5l3S4WZY52vMzZaVpfxw-0_s5tRzcoPGqIrMOnX_7kv5j7sisqZKNq6fP-4MHvLb_tXyHCkW6FzX8mUlwyRNzBP3R4xaXBvykzJMaAiCW_Yr_TxycdnmwsTR7he1Q78q12KnYqLvUVjg_v39_RWGSbFnaP1YX5Hw", "AQAB").unwrap();
+        keys.add_key("ZOub53V4dZuruzP0dOOH0axfyks=", "svsohLQjA_aPyQ7EE9ZJYNYtNZ3QlFDMlVBNjurKl1r3WlM9089GMP1oc6pirai20_MuBISvmd-RDH4vLelHEfS9GrMROG-B0OrdB5mB8XlcA9ErN2_ztsqlhG28m3LTsAhMf8guhFR2-78ukOVhH0lJYFtpG9wbE0aCoBxXpSVS7JR_Otadv00EskIUoZkjx0YX94NVE7-fHMS6DD4TWEOng17mNAKELJbwdHgA5DyQsFMW7mVJVK-1BHQ5m14wYWeLadEGnzVgrc1T_x2-VJrAbSai9_xhrbZ7-RsCCTuQs0az2akbQyfb-zlyywNPIl8JO8_9j4JL8zdWNBiRAQ", "AQAB").unwrap();
+        keys.add_key("frVjcejaF7GhoPNgEN9FdDQp7/Iwlpl/Ug8/TMh/3eg=", "2WxgwBuJY-wZ_9rmTtxIHXzeqJc0qo72Ft6MYog9qY3K6ZgGmmii_pi1FvwQP43bgXyOALtbWzcmMp5gl3prnZeiNmnb_5bHys1C-0bBWO0z6NhpBevfbejmiBc63WuWl5ZEZF29hzkQyoHm-25NyYpqBtPw2469tvJoxhCng5u_tYLpI2qJljQazxyWcMj2LdTxr_LNBLPR5Naz8DgWPS5xEs3QTzoxzauA6G0PKRPdsIbWa-8ka5PPopdd41580t9j_mD6ia7muslk6D9a4g1VHlIcIA0Kv1CeWx1CLiMoEo1qE25f9qLc5HImZnhCmC25dP6PhEjS1rLaTOA_LQ", "AQAB").unwrap();
+
+        keys
+    };
 
     static ref PPID_WHITELIST: HashSet<[u8; 20]>  = {
         let mut set: HashSet<[u8; 20]> = HashSet::new();
@@ -222,12 +264,11 @@ lazy_static::lazy_static! {
 }
 
 unsafe fn extract_fmspc_from_collateral(vec_coll: &[u8]) -> Option<String> {
-
     struct CollHdr {
         sizes: [u32; 8],
     }
     let i_tcb_idx = 5;
-    
+
     let my_p_hdr = vec_coll.as_ptr() as *const CollHdr;
 
     let mut size0: u64 = mem::size_of::<CollHdr>() as u64;
@@ -239,11 +280,10 @@ unsafe fn extract_fmspc_from_collateral(vec_coll: &[u8]) -> Option<String> {
     let size1 = size0 + size_tcb_info as u64;
 
     if (size1 > size0) && (size1 <= vec_coll.len() as u64) {
-        let sub_slice = &vec_coll[size0 as usize .. (size1 - 1) as usize];
+        let sub_slice = &vec_coll[size0 as usize..(size1 - 1) as usize];
 
         let my_val: Result<serde_json::Value, _> = serde_json::from_slice(sub_slice);
         if let Ok(json_val) = my_val {
-
             // Navigate to fmspc
             let fmspc = &json_val["tcbInfo"]["fmspc"];
             if let Some(fmspc_str) = fmspc.as_str() {
@@ -252,9 +292,7 @@ unsafe fn extract_fmspc_from_collateral(vec_coll: &[u8]) -> Option<String> {
         }
     }
 
-
     None
-
 }
 
 pub struct AttestationCombined {
@@ -264,31 +302,31 @@ pub struct AttestationCombined {
 }
 
 impl AttestationCombined {
-
     pub fn from_blob(blob_ptr: *const u8, blob_len: usize) -> AttestationCombined {
-
         let mut res = AttestationCombined {
             quote: Vec::new(),
             coll: Vec::new(),
             jwt_token: Vec::new(),
         };
 
-        if (blob_len > 0) && (unsafe{ *blob_ptr } != 0) {
-
+        if (blob_len > 0) && (unsafe { *blob_ptr } != 0) {
             // try to deserialize in a newer format
             let mut pos = 0;
             while pos + mem::size_of::<u32>() < blob_len {
                 let key = unsafe { *(blob_ptr.offset(pos as isize)) };
                 pos += 1;
 
-                let value_size = u32::from_le(unsafe { *(blob_ptr.offset(pos as isize) as *const u32) }) as usize;
+                let value_size =
+                    u32::from_le(unsafe { *(blob_ptr.offset(pos as isize) as *const u32) })
+                        as usize;
                 pos += mem::size_of::<u32>();
 
                 if pos + value_size > blob_len {
                     break;
                 }
 
-                let value = unsafe { slice::from_raw_parts(blob_ptr.offset(pos as isize), value_size) };
+                let value =
+                    unsafe { slice::from_raw_parts(blob_ptr.offset(pos as isize), value_size) };
                 pos += value_size;
 
                 match key {
@@ -298,8 +336,7 @@ impl AttestationCombined {
                     _ => {}
                 };
             }
-        } else
-        {
+        } else {
             // legacy
             let n0 = mem::size_of::<u32>() as u32 * 3;
 
@@ -315,25 +352,24 @@ impl AttestationCombined {
                     //res.epid_quote =
                     //    unsafe { slice::from_raw_parts(blob_ptr.offset(n0 as isize), s0 as usize).to_vec() };
                     res.quote = unsafe {
-                        slice::from_raw_parts(blob_ptr.offset((n0 + s0) as isize), s1 as usize).to_vec()
+                        slice::from_raw_parts(blob_ptr.offset((n0 + s0) as isize), s1 as usize)
+                            .to_vec()
                     };
                     res.coll = unsafe {
-                        slice::from_raw_parts(blob_ptr.offset((n0 + s0 + s1) as isize), s2 as usize).to_vec()
+                        slice::from_raw_parts(blob_ptr.offset((n0 + s0 + s1) as isize), s2 as usize)
+                            .to_vec()
                     };
                 }
             }
-
         }
 
         res
     }
 
-    pub fn save(&self, f_out: &mut File)
-    {
+    pub fn save(&self, f_out: &mut File) {
         let is_legacy = true;
 
         if is_legacy {
-
             let size_epid: u32 = 0;
             let size_dcap_q = self.quote.len() as u32;
             let size_dcap_c = self.coll.len() as u32;
@@ -344,12 +380,10 @@ impl AttestationCombined {
 
             f_out.write_all(&self.quote).unwrap();
             f_out.write_all(&self.coll).unwrap();
-
         } else {
             Self::write_section(f_out, 2, &self.quote);
             Self::write_section(f_out, 3, &self.coll);
         }
-        
     }
 
     fn write_section(f_out: &mut File, key: u8, value: &[u8]) {
@@ -390,7 +424,8 @@ impl AttestationCombined {
                             .offset(auth_hdr_size as isize)
                             as *const sgx_ql_certification_data_t;
 
-                        let cert_size_max = auth_size - mem::size_of::<sgx_ql_certification_data_t>();
+                        let cert_size_max =
+                            auth_size - mem::size_of::<sgx_ql_certification_data_t>();
                         let cert_size = (*cert_data).size as usize;
                         if (cert_size <= cert_size_max) && ((*cert_data).cert_key_type == 5) {
                             let cert_data = slice::from_raw_parts(
@@ -408,18 +443,13 @@ impl AttestationCombined {
         None
     }
 
-
     fn extract_cpu_cert_raw(cert_data: &[u8]) -> Option<Vec<u8>> {
-        //println!("******** cert_data: {}", orig_hex::encode(cert_data));
-
         let pem_text = match std::str::from_utf8(cert_data) {
             Ok(x) => x,
             Err(_) => {
                 return None;
             }
         };
-
-        //println!("******** pem: {}", pem_text);
 
         // Find the first PEM block
         let begin_marker = "-----BEGIN CERTIFICATE-----";
@@ -452,8 +482,6 @@ impl AttestationCombined {
             }
         };
 
-        //println!("Leaf certificate: {}", orig_hex::encode(&der_bytes));
-
         let ppid_oid = &[
             0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x01, 0x0D, 0x01,
         ];
@@ -469,16 +497,13 @@ impl AttestationCombined {
     }
 
     pub unsafe fn verify_fmspc(&self) -> bool {
-
         if let Some(fmspc) = extract_fmspc_from_collateral(&self.coll) {
-
             let set = &FMSPC_EOL;
-            let fmspc_str :&str = &fmspc;
+            let fmspc_str: &str = &fmspc;
             if set.contains(fmspc_str) {
                 warn!("The CPU is deprecated");
             }
             // fmspc.starts_with("0090")
-
         } else {
             warn!("failed to fetch fmspc from attestation");
         }
@@ -486,6 +511,86 @@ impl AttestationCombined {
         true
     }
 
+    fn decode_jwt(jwt_token: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+        let parts: Vec<&str> = jwt_token.split('.').collect();
+        if parts.len() != 3 {
+            return Err("JWT must have exactly 3 parts".into());
+        }
+
+        let (header_b64, claims_b64, sig_b64) = (parts[0], parts[1], parts[2]);
+
+        let header_bytes = my_decode_base64(header_b64)?;
+        let header_json: Value = serde_json::from_slice(&header_bytes)?;
+
+        // Base64url decode and JSON parse claims
+        let claims_bytes = my_decode_base64(claims_b64)?;
+        let claims_json: Value = serde_json::from_slice(&claims_bytes)?;
+
+        // Base64url decode signature (raw bytes)
+        let signature_bytes = my_decode_base64(sig_b64)?;
+
+        // println!("JWT header {}", &header_json);
+        // println!("JWT claims {}", &claims_json);
+        // println!("JWT signature {}", hex::encode(&signature_bytes));
+
+        let kid_str = header_json
+            .get("kid")
+            .and_then(|v| v.as_str())
+            .ok_or("missing 'kid' in header")?;
+
+        //println!("kid_str {}", kid_str);
+
+        let kid_bytes = base64::decode(kid_str)?;
+        //println!("Kid {}", hex::encode(&kid_bytes));
+
+        let known_keys = &KNOWN_JWT_KEYS;
+
+        if let Some(verifying_key) = known_keys.coll.get(&kid_bytes) {
+            // 3️⃣ Prepare the signed message (header + '.' + claims)
+            let mut message = Vec::new();
+            message.extend_from_slice(header_b64.as_bytes());
+            message.push(b'.');
+            message.extend_from_slice(claims_b64.as_bytes());
+
+            let signature = rsa::pkcs1v15::Signature::try_from(signature_bytes.as_slice())
+                .map_err(|e| format!("invalid signature: {e}"))?;
+
+            // 5️⃣ Verify signature
+            verifying_key
+                .verify(&message, &signature)
+                .map_err(|_| "invalid signature")?;
+
+            println!("sig valid");
+        } else {
+            return Err(format!("Unknown kid: {}", kid_str).into());
+        }
+
+        Ok(claims_json)
+    }
+
+    pub fn verify_jwt_token(&self) -> bool {
+        if self.jwt_token.is_empty() {
+            return false;
+        }
+
+        let s = match std::str::from_utf8(&self.jwt_token) {
+            Ok(s) => s,
+            Err(e) => {
+                println!("Not a valid decode_jwt token: {}", e);
+                return false;
+            }
+        };
+
+        let _token = match Self::decode_jwt(s) {
+            Ok(x) => x,
+            Err(e) => {
+                println!("decode_jwt failed: {}", e);
+                return false;
+            }
+        };
+
+        false
+    }
 }
 
 pub fn verify_quote_sgx(
@@ -532,10 +637,9 @@ pub fn verify_quote_sgx(
                 }
             };
 
-            if check_ppid_wl && !is_in_wl {
+            let jwt_token_valid = attestation.verify_jwt_token();
 
-                // check jwt token
-
+            if check_ppid_wl && (!is_in_wl && !jwt_token_valid) {
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
 
@@ -671,7 +775,7 @@ pub fn get_quote_ecdsa_untested(pub_k: &[u8]) -> Result<AttestationCombined, sgx
     Ok(AttestationCombined {
         quote: vec_quote,
         coll: vec_coll,
-        jwt_token: Vec::new()
+        jwt_token: Vec::new(),
     })
 }
 
@@ -696,4 +800,3 @@ pub fn get_quote_ecdsa(pub_k: &[u8]) -> Result<AttestationCombined, sgx_status_t
 
     Ok(attestation)
 }
-
