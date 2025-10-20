@@ -591,7 +591,7 @@ impl AttestationCombined {
                 return false;
             };
 
-        let quote_hash = match base64::decode(quotehash_str) {
+        let quote_hash = match hex::decode(quotehash_str) {
             Ok(x) => x,
             Err(e) => {
                 println!("quotehash decode failed {}", e);
@@ -604,7 +604,7 @@ impl AttestationCombined {
         let quote_hash_actual = hasher.finalize();
 
         if (&quote_hash_actual as &[u8]) != quote_hash {
-            println!("quotehash masmatch");
+            println!("quotehash masmatch. in-token: {}, actual: {}", quotehash_str, hex::encode(&quote_hash_actual));
             return false;
         }
 
