@@ -1,13 +1,17 @@
 #!/bin/bash
 set -e  # exit immediately if any command fails
 set -u  # treat unset variables as errors
+set -euo pipefail
 
-export DEFAULT_STORAGE_PATH="/opt/secret/.sgx_secrets"
-export STORAGE_PATH="${SCRT_SGX_STORAGE:-$DEFAULT_STORAGE_PATH}"
-export SOURCE_FILE="$STORAGE_PATH/attestation_combined.bin"
-export OUTPUT_FILE="$STORAGE_PATH/attestation_with_azure"
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+    echo "Usage: $0 <source_file> [output_file]"
+    exit 1
+fi
 
-echo "Parsing attestation file " $SOURCE_FILE " ..."
+SOURCE_FILE="$1"
+OUTPUT_FILE="${2:-$SOURCE_FILE}"  # If no second arg, overwrite source
+
+echo "Parsing source file " $SOURCE_FILE " ..."
 
 read n1 n2 n3 < <(od -An -t u4 -N 12 -L $SOURCE_FILE)
 
@@ -43,7 +47,7 @@ append_kv() {
     cat "$file" >> "$OUTPUT_FILE"
 }
 
-echo "Repacking attestation file " $OUTPUT_FILE " ..."
+echo "Creating attestation file " $OUTPUT_FILE " ..."
 
 # Output file
 > "$OUTPUT_FILE"  # empty the file
