@@ -38,6 +38,7 @@ var (
 	UpdateAdminPrefix                              = []byte{0x0D}
 	RandomPrefix                                   = []byte{0xFF}
 	ValidatorSetEvidencePrefix                     = []byte{0xFE}
+	MachineIDEvidencePrefix                        = []byte{0xFD}
 
 	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
 	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)

@@ -315,3 +315,7 @@ func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
 func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	return nil
 }
+
+func OnUpdateMachineID(machineID []byte) (error, []byte) {
+	return nil, nil
+}

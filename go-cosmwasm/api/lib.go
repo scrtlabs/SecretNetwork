@@ -205,6 +205,23 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	return nil
 }
 
+func OnUpdateMachineID(machineID []byte) (error, []byte) {
+	msgBuf := sendSlice(machineID)
+	defer freeAfterSend(msgBuf)
+
+	proof := C.Buffer{}
+
+	ret, err := C.onchain_approve_machine_id(msgBuf, &proof)
+	if err != nil {
+		return err, nil
+	}
+	if !ret {
+		return errors.New("onchain_approve_machine_id failed"), nil
+	}
+
+	return nil, receiveVector(proof)
+}
+
 func Create(cache Cache, wasm []byte) ([]byte, error) {
 	code := sendSlice(wasm)
 	defer freeAfterSend(code)

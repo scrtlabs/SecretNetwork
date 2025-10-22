@@ -222,6 +222,8 @@ Buffer migrate(cache_t *cache,
 
 bool migration_op(uint32_t opcode);
 
+bool onchain_approve_machine_id(Buffer machine_id, Buffer *proof);
+
 bool onchain_approve_upgrade(Buffer msg);
 
 Buffer query(cache_t *cache,

@@ -349,5 +349,17 @@ func (m msgServer) UpdateMachineWhitelist(goCtx context.Context, msg *types.MsgU
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
+	store := m.keeper.storeService.OpenKVStore(ctx)
+
+	for _, id := range msg.MachineIds {
+		if err, proof := api.OnUpdateMachineID(id); err != nil {
+			return nil, err
+
+			key := append(types.MachineIDEvidencePrefix, id...)
+			_ = store.Set(key, proof)
+
+		}
+	}
+
 	return &types.MsgUpdateMachineWhitelistResponse{}, nil
 }

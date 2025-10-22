@@ -705,6 +705,20 @@ pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
     sgx_types::sgx_status_t::SGX_SUCCESS
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
+    p_id: *const u8,
+    n_id: u32,
+    p_proof: *mut u8,
+) -> sgx_types::sgx_status_t {
+    validate_const_ptr!(p_id, n_id as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
+    validate_mut_ptr!(p_proof, 32, sgx_status_t::SGX_ERROR_UNEXPECTED);
+
+    // TODO
+
+    sgx_types::sgx_status_t::SGX_SUCCESS
+}
+
 pub fn calculate_truncated_hash(input: &[u8]) -> [u8; 20] {
     let mut res = [0u8; 20];
 

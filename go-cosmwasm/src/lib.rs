@@ -12,8 +12,8 @@ pub use api::GoApi;
 use base64;
 use cosmwasm_sgx_vm::{
     call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, call_update_admin_raw,
-    create_attestation_report_u, features_from_csv, untrusted_approve_upgrade,
-    untrusted_get_encrypted_genesis_seed, untrusted_get_encrypted_seed,
+    create_attestation_report_u, features_from_csv, untrusted_approve_machine_id,
+    untrusted_approve_upgrade, untrusted_get_encrypted_genesis_seed, untrusted_get_encrypted_seed,
     untrusted_get_network_pubkey, untrusted_health_check, untrusted_init_bootstrap,
     untrusted_init_node, untrusted_key_gen, untrusted_migration_op, untrusted_rotate_store,
     untrusted_submit_validator_set_evidence, Checksum, CosmCache, Extern,
@@ -988,6 +988,30 @@ pub extern "C" fn onchain_approve_upgrade(msg: Buffer) -> bool {
         }
         Ok(_) => {
             clear_error();
+            true
+        }
+    }
+}
+
+#[no_mangle]
+#[allow(deprecated)]
+pub extern "C" fn onchain_approve_machine_id(machine_id: Buffer, proof: &mut Buffer) -> bool {
+    let machine_id_slice = match unsafe { machine_id.read() } {
+        None => {
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    match untrusted_approve_machine_id(&machine_id_slice) {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), None);
+            false
+        }
+        Ok(x) => {
+            clear_error();
+
+            *proof = Buffer::from_vec(x);
             true
         }
     }
