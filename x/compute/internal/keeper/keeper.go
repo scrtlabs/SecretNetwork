@@ -313,12 +313,39 @@ func (k *Keeper) SetCronKeeper(cronKeeper cronkeeper.Keeper) {
 	k.cronKeeper = cronKeeper
 }
 
-func (k Keeper) SetValidatorSetEvidence(ctx sdk.Context) error {
+func (k Keeper) SetEnclaveColdEvidences(ctx sdk.Context) error {
 	store := k.storeService.OpenKVStore(ctx)
+
+	// last validator set
 	validator_set_evidence, err := store.Get(types.ValidatorSetEvidencePrefix)
 	if err == nil {
 		_ = api.SubmitValidatorSetEvidence(validator_set_evidence)
 	}
+
+	// on-chain approved machines
+
+	prefixKey := types.MachineIDEvidencePrefix
+
+	iterator, _ := store.Iterator(prefixKey, nil)
+	defer iterator.Close()
+
+	for ; iterator.Valid(); iterator.Next() {
+		key := iterator.Key()
+		if !bytes.HasPrefix(key, prefixKey) {
+			break
+		}
+		value := iterator.Value()
+
+		if len(value) == 32 {
+			var proof [32]byte
+			copy(proof[:], value)
+
+			id := key[len(prefixKey):]
+
+			api.OnApproveMachineID(id, &proof, false)
+		}
+	}
+
 	return nil
 }
 

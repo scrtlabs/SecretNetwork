@@ -502,7 +502,7 @@ func (app *SecretNetworkApp) Initialize() {
 
 	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
 
-	_ = app.AppKeepers.ComputeKeeper.SetValidatorSetEvidence(ctx)
+	_ = app.AppKeepers.ComputeKeeper.SetEnclaveColdEvidences(ctx)
 	app.UpdateNetworkKeys()
 }
 
