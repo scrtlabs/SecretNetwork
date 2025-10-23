@@ -10,6 +10,7 @@ use enclave_crypto::consts::{
     FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS, FILE_MIGRATION_DATA,
     FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY,
 };
+use enclave_crypto::HASH_SIZE;
 #[cfg(feature = "random")]
 use enclave_crypto::{
     consts::SELF_REPORT_BODY, AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE,
@@ -705,16 +706,34 @@ pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
     sgx_types::sgx_status_t::SGX_SUCCESS
 }
 
+fn calculate_machine_id_evidence(machine_id: &[u8]) -> [u8; HASH_SIZE] {
+    let mut hasher = Sha256::new();
+
+    let magic = ['m' as u8, 'i' as u8, 'd' as u8, 0_u8];
+    hasher.update(&magic);
+
+    hasher.update(&SELF_REPORT_BODY.mr_enclave.m);
+    hasher.update(machine_id);
+
+    let mut ret = [0_u8; HASH_SIZE];
+    ret.copy_from_slice(&hasher.finalize());
+    ret
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
     p_id: *const u8,
     n_id: u32,
     p_proof: *mut u8,
+    is_on_chain: bool,
 ) -> sgx_types::sgx_status_t {
     validate_const_ptr!(p_id, n_id as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
     validate_mut_ptr!(p_proof, 32, sgx_status_t::SGX_ERROR_UNEXPECTED);
 
-    // TODO
+    // TODO: ensure message was in the signed block
+    let proof = calculate_machine_id_evidence(slice::from_raw_parts(p_id, n_id as usize));
+
+    slice::from_raw_parts_mut(p_proof, HASH_SIZE).copy_from_slice(&proof);
 
     sgx_types::sgx_status_t::SGX_SUCCESS
 }

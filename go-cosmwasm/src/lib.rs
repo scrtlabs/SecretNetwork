@@ -995,7 +995,11 @@ pub extern "C" fn onchain_approve_upgrade(msg: Buffer) -> bool {
 
 #[no_mangle]
 #[allow(deprecated)]
-pub extern "C" fn onchain_approve_machine_id(machine_id: Buffer, proof: &mut Buffer) -> bool {
+pub extern "C" fn onchain_approve_machine_id(
+    machine_id: Buffer,
+    proof: *mut u8,
+    is_on_chain: bool,
+) -> bool {
     let machine_id_slice = match unsafe { machine_id.read() } {
         None => {
             return false;
@@ -1003,15 +1007,13 @@ pub extern "C" fn onchain_approve_machine_id(machine_id: Buffer, proof: &mut Buf
         Some(r) => r,
     };
 
-    match untrusted_approve_machine_id(&machine_id_slice) {
+    match untrusted_approve_machine_id(&machine_id_slice, proof, is_on_chain) {
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), None);
             false
         }
-        Ok(x) => {
+        Ok(()) => {
             clear_error();
-
-            *proof = Buffer::from_vec(x);
             true
         }
     }

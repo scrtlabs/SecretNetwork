@@ -205,21 +205,19 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	return nil
 }
 
-func OnUpdateMachineID(machineID []byte) (error, []byte) {
+func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
 	msgBuf := sendSlice(machineID)
 	defer freeAfterSend(msgBuf)
 
-	proof := C.Buffer{}
-
-	ret, err := C.onchain_approve_machine_id(msgBuf, &proof)
+	ret, err := C.onchain_approve_machine_id(msgBuf, (*C.uint8_t)(unsafe.Pointer(proof)), C.bool(is_on_chain))
 	if err != nil {
-		return err, nil
+		return err
 	}
 	if !ret {
-		return errors.New("onchain_approve_machine_id failed"), nil
+		return errors.New("onchain_approve_machine_id failed")
 	}
 
-	return nil, receiveVector(proof)
+	return nil
 }
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {

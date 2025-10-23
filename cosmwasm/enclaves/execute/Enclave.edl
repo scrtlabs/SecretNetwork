@@ -56,7 +56,8 @@ enclave {
         public sgx_status_t ecall_onchain_approve_machine_id(
             [in, count=n_id] const uint8_t* p_id,
             uint32_t n_id,
-            [out, count=32] uint8_t* p_proof
+            [in, out, count=32] uint8_t* p_proof,
+            bool is_on_chain
         );
 
         public sgx_status_t ecall_get_attestation_report(

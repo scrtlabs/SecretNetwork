@@ -352,11 +352,13 @@ func (m msgServer) UpdateMachineWhitelist(goCtx context.Context, msg *types.MsgU
 	store := m.keeper.storeService.OpenKVStore(ctx)
 
 	for _, id := range msg.MachineIds {
-		if err, proof := api.OnUpdateMachineID(id); err != nil {
+
+		proof := [32]byte{}
+		if err := api.OnApproveMachineID(id, &proof, true); err != nil {
 			return nil, err
 
 			key := append(types.MachineIDEvidencePrefix, id...)
-			_ = store.Set(key, proof)
+			_ = store.Set(key, proof[:])
 
 		}
 	}
