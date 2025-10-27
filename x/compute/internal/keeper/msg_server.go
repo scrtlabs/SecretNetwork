@@ -328,7 +328,7 @@ func (m msgServer) UpdateMachineWhitelistProposal(goCtx context.Context, msg *ty
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeMachineWhitelistProposal,
-		sdk.NewAttribute("machine_count", fmt.Sprintf("%d", len(msg.MachineIds))),
+		sdk.NewAttribute("machine_id", fmt.Sprintf("%x", len(msg.MachineId))),
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
 	))
 
@@ -345,22 +345,21 @@ func (m msgServer) UpdateMachineWhitelist(goCtx context.Context, msg *types.MsgU
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeMachineWhitelistUpdate,
 		sdk.NewAttribute("proposal_id", fmt.Sprintf("%d", msg.ProposalId)),
-		sdk.NewAttribute("machine_count", fmt.Sprintf("%d", len(msg.MachineIds))),
+		sdk.NewAttribute("machine_id", fmt.Sprintf("%x", len(msg.MachineId))),
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
 	store := m.keeper.storeService.OpenKVStore(ctx)
 
-	for _, id := range msg.MachineIds {
-
+	id := msg.MachineId
+	{
 		proof := [32]byte{}
 		if err := api.OnApproveMachineID(id, &proof, true); err != nil {
 			return nil, err
-
-			key := append(types.MachineIDEvidencePrefix, id...)
-			_ = store.Set(key, proof[:])
-
 		}
+
+		key := append(types.MachineIDEvidencePrefix, id...)
+		_ = store.Set(key, proof[:])
 	}
 
 	return &types.MsgUpdateMachineWhitelistResponse{}, nil

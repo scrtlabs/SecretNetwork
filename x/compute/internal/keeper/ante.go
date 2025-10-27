@@ -147,15 +147,10 @@ func (a *CountTXDecorator) validateUpdateMachineWhitelist(ctx sdk.Context, msgUp
 		return err
 	}
 
-	if len(msgUpdateWhitelist.MachineIds) != len(updateMachineWhitelistProposalMsg.MachineIds) {
-		return sdkerrors.ErrInvalidRequest.Wrapf("machine ids count %d does not match the proposal %d", len(msgUpdateWhitelist.MachineIds), len(updateMachineWhitelistProposalMsg.MachineIds))
+	if !bytes.Equal(msgUpdateWhitelist.MachineId, updateMachineWhitelistProposalMsg.MachineId) {
+		return sdkerrors.ErrInvalidRequest.Wrapf("machine id %s does not match the proposal %s", msgUpdateWhitelist.MachineId, updateMachineWhitelistProposalMsg.MachineId)
 	}
-	// ensure the machine ids match the proposal exactly in order
-	for i, mid := range msgUpdateWhitelist.MachineIds {
-		if !bytes.Equal(mid, updateMachineWhitelistProposalMsg.MachineIds[i]) {
-			return sdkerrors.ErrInvalidRequest.Wrapf("machine id %s at position %d does not match the proposal", mid, i)
-		}
-	}
+
 	return nil
 }
 

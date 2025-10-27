@@ -332,15 +332,8 @@ func (msg MsgUpdateMachineWhitelistProposal) ValidateBasic() error {
 		return errorsmod.Wrap(err, "invalid authority")
 	}
 
-	if len(msg.MachineIds) == 0 {
-		return errorsmod.Wrap(ErrEmpty, "machine_ids cannot be empty")
-	}
-
-	for i, id := range msg.MachineIds {
-		if len(id) != 20 {
-			return errorsmod.Wrapf(ErrInvalid,
-				"machine_id at index %d must be 20 bytes, got %d", i, len(id))
-		}
+	if len(msg.MachineId) != 20 {
+		return errorsmod.Wrap(ErrInvalid, "machine_id must be 20 bytes")
 	}
 
 	return nil
@@ -375,15 +368,8 @@ func (msg MsgUpdateMachineWhitelist) ValidateBasic() error {
 		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "proposal ID cannot be zero")
 	}
 
-	if len(msg.MachineIds) == 0 {
-		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "machine IDs cannot be empty")
-	}
-
-	// Validate each machine ID is exactly 20 bytes
-	for i, id := range msg.MachineIds {
-		if len(id) != 20 {
-			return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "machine ID at index %d must be 20 bytes, got %d", i, len(id))
-		}
+	if len(msg.MachineId) != 20 {
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "machine ID must be 20 bytes")
 	}
 
 	return nil
