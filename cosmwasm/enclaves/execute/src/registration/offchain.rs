@@ -720,6 +720,54 @@ fn calculate_machine_id_evidence(machine_id: &[u8]) -> [u8; HASH_SIZE] {
     ret
 }
 
+fn is_msg_machine_id(msg_in_block: &[u8], machine_id: &[u8]) -> bool {
+    trace!("*** block msg: {:?}", hex::encode(msg_in_block));
+
+    // we expect a message of the form:
+    // 0a 2d (addr, len=45 bytes) 100f1a14 (machine_id 20 bytes)
+
+    if msg_in_block.len() != 71 {
+        trace!("len mismatch: {}", msg_in_block.len());
+        return false;
+    }
+
+    if &msg_in_block[0..2] != [0x0a, 0x2d].as_slice() {
+        trace!("wrong sub1");
+        return false;
+    }
+
+    if &msg_in_block[47..51] != [0x10, 0x0f, 0x1a, 0x14].as_slice() {
+        trace!("wrong sub2");
+        return false;
+    }
+
+    if &msg_in_block[51..71] != machine_id {
+        trace!("wrong mrenclave");
+        return false;
+    }
+
+    true
+}
+
+#[cfg(feature = "light-client-validation")]
+fn check_machine_id_in_block(msg_slice: &[u8]) -> bool {
+    let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+
+    while verified_msgs.remaining() > 0 {
+        if let Some(verified_msg) = verified_msgs.get_next() {
+            if is_msg_machine_id(&verified_msg, msg_slice) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+#[cfg(not(feature = "light-client-validation"))]
+fn check_machine_id_in_block(_msg_slice: &[u8]) -> bool {
+    true
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
     p_id: *const u8,
@@ -739,11 +787,17 @@ pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
     let proof = calculate_machine_id_evidence(machine_id);
 
     if is_on_chain {
+        if !check_machine_id_in_block(machine_id) {
+            error!("machine ID not approved");
+            return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+
         // TODO: ensure message was in the signed block
         slice::from_raw_parts_mut(p_proof, HASH_SIZE).copy_from_slice(&proof);
     } else {
         // compare
         if proof != slice::from_raw_parts(p_proof, HASH_SIZE) {
+            error!("machine ID not approved earlier");
             return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
     }
@@ -752,7 +806,13 @@ pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
         let mut set = crate::registration::attestation::PPID_WHITELIST
             .lock()
             .unwrap();
-        set.insert(machine_id.try_into().unwrap());
+
+        let arg: &[u8; 20] = machine_id.try_into().unwrap();
+
+        if !set.contains(arg) {
+            println!("Onchain added machine ID: {}", hex::encode(arg));
+            set.insert(*arg);
+        }
     }
 
     sgx_types::sgx_status_t::SGX_SUCCESS
