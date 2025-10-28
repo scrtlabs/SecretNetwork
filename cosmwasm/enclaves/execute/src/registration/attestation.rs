@@ -2,16 +2,16 @@ use core::{mem, slice};
 
 use base64ct::Encoding;
 use enclave_crypto::dcap::verify_quote_any;
+use log::*;
+use rsa::signature::Verifier;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::io::Write;
+use std::sync::SgxMutex;
 use std::untrusted::fs::File;
 use std::vec::Vec;
-
-use log::*;
-use rsa::signature::Verifier;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tse::rsgx_create_report;
@@ -142,7 +142,7 @@ lazy_static::lazy_static! {
         keys
     };
 
-    static ref PPID_WHITELIST: HashSet<[u8; 20]>  = {
+    pub static ref PPID_WHITELIST: SgxMutex<HashSet<[u8; 20]>>  = {
         let mut set: HashSet<[u8; 20]> = HashSet::new();
 
         set.insert([0x01,0x50,0x7c,0x95,0x77,0x89,0xb7,0xc1,0xaf,0xde,0x97,0x2d,0x67,0xf1,0xfd,0xd5,0x3a,0xf1,0xa8,0xda]);
@@ -257,7 +257,7 @@ lazy_static::lazy_static! {
         set.insert([0xfe,0xc9,0x34,0x2e,0x9e,0xe4,0x18,0x64,0x53,0xf8,0xa7,0xe0,0x27,0xfa,0xc8,0xc2,0x4e,0x7c,0x0c,0x60]);
 
 
-        set
+        SgxMutex::new(set)
     };
 
     static ref FMSPC_EOL: HashSet<&'static str> = HashSet::from([
@@ -661,7 +661,7 @@ pub fn verify_quote_sgx(
                 Some(ppid) => {
                     let ppid_addr = crate::registration::offchain::calculate_truncated_hash(&ppid);
 
-                    let wl = &PPID_WHITELIST;
+                    let wl = PPID_WHITELIST.lock().unwrap();
                     if wl.contains(&ppid_addr) {
                         true
                     } else {

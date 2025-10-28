@@ -730,10 +730,30 @@ pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
     validate_const_ptr!(p_id, n_id as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
     validate_mut_ptr!(p_proof, 32, sgx_status_t::SGX_ERROR_UNEXPECTED);
 
-    // TODO: ensure message was in the signed block
-    let proof = calculate_machine_id_evidence(slice::from_raw_parts(p_id, n_id as usize));
+    if n_id != 20 {
+        println!("machine_id wrong len");
+        return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
 
-    slice::from_raw_parts_mut(p_proof, HASH_SIZE).copy_from_slice(&proof);
+    let machine_id = slice::from_raw_parts(p_id, n_id as usize);
+    let proof = calculate_machine_id_evidence(machine_id);
+
+    if is_on_chain {
+        // TODO: ensure message was in the signed block
+        slice::from_raw_parts_mut(p_proof, HASH_SIZE).copy_from_slice(&proof);
+    } else {
+        // compare
+        if proof != slice::from_raw_parts(p_proof, HASH_SIZE) {
+            return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    }
+
+    {
+        let mut set = crate::registration::attestation::PPID_WHITELIST
+            .lock()
+            .unwrap();
+        set.insert(machine_id.try_into().unwrap());
+    }
 
     sgx_types::sgx_status_t::SGX_SUCCESS
 }
