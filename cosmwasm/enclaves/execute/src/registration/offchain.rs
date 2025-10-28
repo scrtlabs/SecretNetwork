@@ -724,9 +724,13 @@ fn is_msg_machine_id(msg_in_block: &[u8], machine_id: &[u8]) -> bool {
     trace!("*** block msg: {:?}", hex::encode(msg_in_block));
 
     // we expect a message of the form:
-    // 0a 2d (addr, len=45 bytes) 100f1a14 (machine_id 20 bytes)
+    // 0a 3d (addr, len=45 bytes)
+    // 10 (proposal-id, varible length)
+    // 1a 14 (machine_id 20 bytes)
 
-    if msg_in_block.len() != 71 {
+    let msg_len = msg_in_block.len();
+
+    if msg_len < 71 {
         trace!("len mismatch: {}", msg_in_block.len());
         return false;
     }
@@ -736,12 +740,19 @@ fn is_msg_machine_id(msg_in_block: &[u8], machine_id: &[u8]) -> bool {
         return false;
     }
 
-    if &msg_in_block[47..51] != [0x10, 0x0f, 0x1a, 0x14].as_slice() {
+    if &msg_in_block[47..48] != [0x10].as_slice() {
         trace!("wrong sub2");
         return false;
     }
 
-    if &msg_in_block[51..71] != machine_id {
+    let offs = msg_len - 22;
+
+    if &msg_in_block[offs..offs + 2] != [0x1a, 0x14].as_slice() {
+        trace!("wrong sub3");
+        return false;
+    }
+
+    if &msg_in_block[offs + 2..offs + 22] != machine_id {
         trace!("wrong mrenclave");
         return false;
     }
