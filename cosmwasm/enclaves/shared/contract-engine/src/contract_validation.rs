@@ -354,7 +354,7 @@ pub fn validate_admin_proof(
             contract_key,
         );
 
-        if proof == &expected_proof {
+        if proof == expected_proof {
             return Ok(());
         }
     }
