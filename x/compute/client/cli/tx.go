@@ -648,20 +648,10 @@ Examples:
 
 func UpdateMachineWhitelistCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update-machine-whitelist [proposal-id] [machine-ids-file]",
+		Use:   "update-machine-whitelist [proposal-id] [machine-id]",
 		Short: "Update machine whitelist after governance approval",
 		Long: `Execute machine whitelist update after governance proposal passes.
-Machine IDs must match the approved proposal exactly.
-
-Machine IDs file format (JSON):
-{
-  "machine_ids": [
-    "01507c9577896bc1afde972d67f1fd53af1a8da",
-    "a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6"
-  ]
-}
-
-Each machine ID must be exactly 20 bytes.`,
+Machine ID must match the approved proposal exactly.`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
@@ -674,11 +664,8 @@ Each machine ID must be exactly 20 bytes.`,
 				return fmt.Errorf("invalid proposal ID: %w", err)
 			}
 
-			// Read machine IDs from file
-			machineId, err := hex.DecodeString(args[1])
-			if err != nil {
-				return err
-			}
+			// Read machine ID
+			machineId := args[1]
 
 			msg := &types.MsgUpdateMachineWhitelist{
 				Sender:     clientCtx.GetFromAddress().String(),

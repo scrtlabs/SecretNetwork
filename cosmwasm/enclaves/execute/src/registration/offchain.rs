@@ -724,13 +724,13 @@ fn is_msg_machine_id(msg_in_block: &[u8], machine_id: &[u8]) -> bool {
     trace!("*** block msg: {:?}", hex::encode(msg_in_block));
 
     // we expect a message of the form:
-    // 0a 3d (addr, len=45 bytes)
+    // 0a 2d (addr, len=45 bytes)
     // 10 (proposal-id, varible length)
-    // 1a 14 (machine_id 20 bytes)
+    // 1a 28 (machine_id 40 bytes)
 
     let msg_len = msg_in_block.len();
 
-    if msg_len < 71 {
+    if msg_len < 91 {
         trace!("len mismatch: {}", msg_in_block.len());
         return false;
     }
@@ -745,14 +745,14 @@ fn is_msg_machine_id(msg_in_block: &[u8], machine_id: &[u8]) -> bool {
         return false;
     }
 
-    let offs = msg_len - 22;
+    let offs = msg_len - 42;
 
-    if &msg_in_block[offs..offs + 2] != [0x1a, 0x14].as_slice() {
+    if &msg_in_block[offs..offs + 2] != [0x1a, 0x28].as_slice() {
         trace!("wrong sub3");
         return false;
     }
 
-    if &msg_in_block[offs + 2..offs + 22] != machine_id {
+    if &msg_in_block[offs + 2..offs + 42] != machine_id {
         trace!("wrong mrenclave");
         return false;
     }
@@ -798,7 +798,9 @@ pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
     let proof = calculate_machine_id_evidence(machine_id);
 
     if is_on_chain {
-        if !check_machine_id_in_block(machine_id) {
+        let machine_id_str = hex::encode(machine_id);
+
+        if !check_machine_id_in_block(machine_id_str.as_bytes()) {
             error!("machine ID not approved");
             return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
         }

@@ -147,7 +147,7 @@ func (a *CountTXDecorator) validateUpdateMachineWhitelist(ctx sdk.Context, msgUp
 		return err
 	}
 
-	if !bytes.Equal(msgUpdateWhitelist.MachineId, updateMachineWhitelistProposalMsg.MachineId) {
+	if msgUpdateWhitelist.MachineId != updateMachineWhitelistProposalMsg.MachineId {
 		return sdkerrors.ErrInvalidRequest.Wrapf("machine id %s does not match the proposal %s", msgUpdateWhitelist.MachineId, updateMachineWhitelistProposalMsg.MachineId)
 	}
 

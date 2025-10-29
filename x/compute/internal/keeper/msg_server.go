@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	errorsmod "cosmossdk.io/errors"
@@ -351,7 +352,11 @@ func (m msgServer) UpdateMachineWhitelist(goCtx context.Context, msg *types.MsgU
 
 	store := m.keeper.storeService.OpenKVStore(ctx)
 
-	id := msg.MachineId
+	id, err := hex.DecodeString(msg.MachineId)
+	if err != nil {
+		return nil, err
+	}
+
 	{
 		proof := [32]byte{}
 		if err := api.OnApproveMachineID(id, &proof, true); err != nil {

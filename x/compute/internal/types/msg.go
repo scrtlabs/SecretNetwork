@@ -332,8 +332,8 @@ func (msg MsgUpdateMachineWhitelistProposal) ValidateBasic() error {
 		return errorsmod.Wrap(err, "invalid authority")
 	}
 
-	if len(msg.MachineId) != 20 {
-		return errorsmod.Wrap(ErrInvalid, "machine_id must be 20 bytes")
+	if len(msg.MachineId) != 40 {
+		return errorsmod.Wrap(ErrInvalid, "machine_id must be 40 characters")
 	}
 
 	return nil
@@ -368,8 +368,8 @@ func (msg MsgUpdateMachineWhitelist) ValidateBasic() error {
 		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "proposal ID cannot be zero")
 	}
 
-	if len(msg.MachineId) != 20 {
-		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "machine ID must be 20 bytes")
+	if len(msg.MachineId) != 40 {
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "machine ID must be 40 characters")
 	}
 
 	return nil
