@@ -342,7 +342,10 @@ func (k Keeper) SetEnclaveColdEvidences(ctx sdk.Context) error {
 
 			id := key[len(prefixKey):]
 
-			api.OnApproveMachineID(id, &proof, false)
+			err := api.OnApproveMachineID(id, &proof, false)
+			if err != nil {
+				fmt.Println("Couldn't approme machine-id ", id)
+			}
 		}
 	}
 
