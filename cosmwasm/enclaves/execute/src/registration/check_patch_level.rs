@@ -34,9 +34,9 @@ use crate::registration::report::AttestationReport;
 #[no_mangle]
 #[cfg(not(feature = "SGX_MODE_HW"))]
 pub unsafe extern "C" fn ecall_check_patch_level(
-    p_ppid: *mut u8,
-    n_ppid: u32,
-    p_ppid_size: *mut u32,
+    _p_ppid: *mut u8,
+    _n_ppid: u32,
+    _p_ppid_size: *mut u32,
 ) -> NodeAuthResult {
     panic!("unimplemented")
 }

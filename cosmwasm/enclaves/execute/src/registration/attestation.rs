@@ -16,7 +16,6 @@ use std::vec::Vec;
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tse::rsgx_create_report;
 
-#[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{
     sgx_ql_auth_data_t, sgx_ql_certification_data_t, sgx_ql_ecdsa_sig_data_t, sgx_ql_qv_result_t,
     sgx_quote_t, sgx_report_body_t, sgx_status_t,
@@ -42,7 +41,6 @@ use super::ocalls::{
     ocall_get_quote_ecdsa, ocall_get_quote_ecdsa_collateral, ocall_get_quote_ecdsa_params,
 };
 
-#[cfg(feature = "SGX_MODE_HW")]
 use ::hex as orig_hex;
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
