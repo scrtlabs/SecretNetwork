@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"os"
 	"path/filepath"
 
 	"cosmossdk.io/core/store"
@@ -94,32 +92,6 @@ func getLegacySeedParams(path string) ([]byte, []byte) {
 	}
 
 	return enc, pk
-}
-
-func createOldSecret(key []byte, seedFilePath string, enclave EnclaveInterface) error {
-	seed, err := enclave.GetEncryptedGenesisSeed(key)
-	if err != nil {
-		return err
-	}
-
-	println(seed)
-
-	cfg := types.LegacySeedConfig{
-		EncryptedKey: fmt.Sprintf("%02x", seed),
-		MasterCert:   types.LegacyIoMasterCertificate,
-	}
-
-	cfgBytes, err := json.Marshal(&cfg)
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
