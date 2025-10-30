@@ -1,6 +1,6 @@
 use sgx_types::*;
 
-use log::{debug, error, info, warn};
+use log::{debug, error, warn};
 
 use crate::enclave::ENCLAVE_DOORBELL;
 

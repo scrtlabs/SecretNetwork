@@ -1,4 +1,3 @@
-pub use attestation::create_attestation_certificate;
 pub use offchain::{ecall_get_attestation_report, ecall_init_bootstrap, ecall_init_node};
 pub use onchain::ecall_authenticate_new_node;
 
@@ -14,11 +13,7 @@ mod seed_exchange;
 #[cfg(feature = "SGX_MODE_HW")]
 mod ocalls;
 
-#[cfg(feature = "SGX_MODE_HW")]
-pub mod print_report;
-
 pub mod check_patch_level;
-pub mod seed_service;
 
 #[cfg(feature = "test")]
 pub mod tests {

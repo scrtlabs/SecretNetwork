@@ -53,9 +53,14 @@ enclave {
             uint32_t msg_len
         );
 
+        public sgx_status_t ecall_onchain_approve_machine_id(
+            [in, count=n_id] const uint8_t* p_id,
+            uint32_t n_id,
+            [in, out, count=32] uint8_t* p_proof,
+            bool is_on_chain
+        );
+
         public sgx_status_t ecall_get_attestation_report(
-            [in, count=api_key_len] const uint8_t* api_key,
-            uint32_t api_key_len,
             uint32_t flags
         );
 
@@ -68,8 +73,16 @@ enclave {
         );
 
         public NodeAuthResult ecall_check_patch_level(
-            [in, count=api_key_len] const uint8_t* api_key,
-            uint32_t api_key_len
+            [out, count=n_ppid] uint8_t* p_ppid,
+            uint32_t n_ppid,
+            [out] uint32_t* p_ppid_size
+        );
+
+        public sgx_status_t ecall_get_network_pubkey(
+            uint32_t i_seed,
+            [out, count=32] uint8_t* p_node,
+            [out, count=32] uint8_t* p_io,
+            [out] uint32_t* p_seeds
         );
 
         public sgx_status_t ecall_get_genesis_seed(
@@ -264,27 +277,6 @@ enclave {
             uintptr_t value_len
         );
 
-        sgx_status_t ocall_sgx_init_quote(
-            [out] sgx_target_info_t *ret_ti,
-            [out] sgx_epid_group_id_t *ret_gid
-        );
-
-        sgx_status_t ocall_get_ias_socket([out] int *ret_fd);
-        sgx_status_t ocall_get_sn_tss_socket([out] int *ret_fd);
-
-        sgx_status_t ocall_get_quote(
-            [in, size=sigrl_len] uint8_t * p_sigrl,
-            uint32_t sigrl_len,
-            [in] sgx_report_t *report,
-            sgx_quote_sign_type_t quote_type,
-            [in] sgx_spid_t *p_spid,
-            [in] sgx_quote_nonce_t *p_nonce,
-            [out] sgx_report_t *p_qe_report,
-            [out, size=maxlen] sgx_quote_t *p_quote,
-            uint32_t maxlen,
-            [out] uint32_t* p_quote_len
-        );
-
         sgx_status_t ocall_get_quote_ecdsa_params(
             [out] sgx_target_info_t* p_qe_info,
             [out] uint32_t* p_quote_size
@@ -318,12 +310,6 @@ enclave {
             [out] int64_t* p_time_s,
             [out] uint32_t* p_collateral_expiration_status,
             [out] sgx_ql_qv_result_t* p_qv_result
-        );
-
-        sgx_status_t ocall_get_update_info(
-            [in] sgx_platform_info_t * platformBlob,
-            int32_t enclaveTrusted,
-            [out] sgx_update_info_bit_t * update_info
         );
     };
 };

@@ -5,9 +5,7 @@ use std::string::ToString;
 
 use lazy_static::lazy_static;
 use log::*;
-use sgx_types::{sgx_quote_sign_type_t, sgx_report_body_t, sgx_self_report};
-
-pub const CERTEXPIRYDAYS: i64 = 3652i64;
+use sgx_types::{sgx_report_body_t, sgx_self_report};
 
 #[allow(dead_code)]
 #[derive(PartialEq, Eq, Debug)]
@@ -53,7 +51,6 @@ pub fn make_sgx_secret_path(file_name: &str) -> String {
         .into_owned()
 }
 
-pub const FILE_ATTESTATION_CERTIFICATE: &str = "attestation_cert.der";
 pub const FILE_CERT_COMBINED: &str = "attestation_combined.bin";
 pub const FILE_MIGRATION_CERT_LOCAL: &str = "migration_report_local.bin";
 pub const FILE_MIGRATION_CERT_REMOTE: &str = "migration_report_remote.bin";
@@ -64,7 +61,6 @@ pub const FILE_MIGRATION_CONSENSUS: &str = "migration_consensus.json";
 
 pub const SEED_EXCH_KEY_SAVE_PATH: &str = "node-master-key.txt";
 pub const IO_KEY_SAVE_PATH: &str = "io-master-key.txt";
-pub const SEED_UPDATE_SAVE_PATH: &str = "seed.txt";
 
 pub const SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS: &str = "consensus_seed.sealed";
 pub const SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT: &str = "consensus_seed_current.sealed";
@@ -73,12 +69,6 @@ pub const SEALED_FILE_REGISTRATION_KEY: &str = "new_node_seed_exchange_keypair.s
 pub const SEALED_FILE_REK: &str = "rek.sealed";
 pub const SEALED_FILE_IRS: &str = "irs.sealed";
 pub const SEALED_FILE_VALIDATOR_SET: &str = "validator_set.sealed";
-
-#[cfg(feature = "production")]
-pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_LINKABLE_SIGNATURE;
-
-#[cfg(not(feature = "production"))]
-pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
 #[cfg(feature = "production")]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;

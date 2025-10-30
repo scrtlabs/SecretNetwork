@@ -11,12 +11,14 @@ pub fn encrypt_seed(
     seed_to_share: &Seed,
     is_legacy: bool,
 ) -> SgxResult<Vec<u8>> {
-    let seed_xchg = KEY_MANAGER.seed_exchange_key().unwrap();
+    let kp0: enclave_crypto::KeyPair;
 
     let base_seed = if is_legacy {
-        &seed_xchg.arr[0]
+        let seed0 = KEY_MANAGER.get_consensus_seed().unwrap().arr[0];
+        kp0 = Keychain::generate_consensus_seed_exchange_keypair(&seed0);
+        &kp0
     } else {
-        seed_xchg.last()
+        KEY_MANAGER.seed_exchange_key().unwrap()
     };
 
     let shared_enc_key = base_seed.diffie_hellman(&new_node_pk);

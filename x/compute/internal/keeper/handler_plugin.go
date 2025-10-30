@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
@@ -42,12 +43,14 @@ type MessageHandlerChain struct {
 type SDKMessageHandler struct {
 	router   MessageRouter
 	encoders MessageEncoders
+	cdc      codec.Codec
 }
 
-func NewSDKMessageHandler(router MessageRouter /*legacyRouter sdk.Router,*/, encoders MessageEncoders) SDKMessageHandler {
+func NewSDKMessageHandler(router MessageRouter /*legacyRouter sdk.Router,*/, encoders MessageEncoders, cdc codec.Codec) SDKMessageHandler {
 	return SDKMessageHandler{
 		router:   router,
 		encoders: encoders,
+		cdc:      cdc,
 	}
 }
 
@@ -84,10 +87,11 @@ func NewMessageHandler(
 	capabilityKeeper capabilitykeeper.ScopedKeeper,
 	portSource types.ICS20TransferPortSource,
 	unpacker codectypes.AnyUnpacker,
+	cdc codec.Codec,
 ) Messenger {
 	encoders := DefaultEncoders(portSource, unpacker).Merge(customEncoders)
 	return NewMessageHandlerChain(
-		NewSDKMessageHandler(msgRouter, encoders),
+		NewSDKMessageHandler(msgRouter, encoders, cdc),
 		NewIBCRawPacketHandler(channelKeeper, ics4Wrapper, capabilityKeeper),
 	)
 }
@@ -552,7 +556,7 @@ func (h SDKMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddr
 		data   [][]byte
 	)
 	for _, sdkMsg := range sdkMsgs {
-		res, err := h.handleSdkMessage(ctx, sdkMsg)
+		res, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
 		if err != nil {
 			if res != nil {
 				data = append(data, res.Data)
@@ -573,7 +577,26 @@ func (h SDKMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddr
 	return events, data, nil
 }
 
-func (h SDKMessageHandler) handleSdkMessage(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
+func (h SDKMessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (*sdk.Result, error) {
+	// Perform message validation and authorization checks
+	if m, ok := msg.(sdk.HasValidateBasic); ok {
+		if err := m.ValidateBasic(); err != nil {
+			return nil, errorsmod.Wrapf(err, "failed basic validation for message type %T", msg)
+		}
+	}
+
+	// Verify contract address has proper authorization
+	signers, _, err := h.cdc.GetMsgV1Signers(msg)
+	if err != nil {
+		return nil, err
+	}
+	for _, acct := range signers {
+		if !contractAddr.Equals(sdk.AccAddress(acct)) {
+			return nil, errorsmod.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
+		}
+	}
+	// --- end block
+
 	// find the handler and execute it
 	if handler := h.router.Handler(msg); handler != nil {
 		// ADR 031 request type routing

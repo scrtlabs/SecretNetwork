@@ -354,7 +354,7 @@ pub fn validate_admin_proof(
             contract_key,
         );
 
-        if proof == &expected_proof {
+        if proof == expected_proof {
             return Ok(());
         }
     }
@@ -540,9 +540,9 @@ pub fn validate_basic_msg(
     })?;
 
     if decoded_hash != contract_hash {
-        warn!("Message contains mismatched contract hash, checking hardcoded contract hash...");
+        debug!("Message contains mismatched contract hash, checking hardcoded contract hash...");
         if is_code_hash_allowed(contract_address, &hex::encode(&decoded_hash)) {
-            warn!("Message contains mismatched contract hash, but it's allowed");
+            debug!("Message contains mismatched contract hash, but it's allowed");
         } else {
             warn!("Message contains mismatched contract hash, and it's not allowed");
             return Err(EnclaveError::ValidationFailure);

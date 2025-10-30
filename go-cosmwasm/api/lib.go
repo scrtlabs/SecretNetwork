@@ -134,6 +134,11 @@ func MigrationOp(op uint32) (bool, error) {
 	return true, nil
 }
 
+func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
+	res := C.get_network_pubkey(u32(i_seed))
+	return receiveVector(res.buf1), receiveVector(res.buf2)
+}
+
 func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
 	nodeDirBuf := sendSlice([]byte(nodeDir))
 	defer freeAfterSend(nodeDirBuf)
@@ -195,6 +200,21 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	}
 	if !ret {
 		return errors.New("onchain_approve_upgrade failed")
+	}
+
+	return nil
+}
+
+func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
+	msgBuf := sendSlice(machineID)
+	defer freeAfterSend(msgBuf)
+
+	ret, err := C.onchain_approve_machine_id(msgBuf, (*C.uint8_t)(unsafe.Pointer(proof)), C.bool(is_on_chain))
+	if err != nil {
+		return err
+	}
+	if !ret {
+		return errors.New("onchain_approve_machine_id failed")
 	}
 
 	return nil
@@ -496,10 +516,8 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
+func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
 	errmsg := C.Buffer{}
-	apiKeySlice := sendSlice(apiKey)
-	defer freeAfterSend(apiKeySlice)
 
 	flags := u32(0)
 	if no_epid {
@@ -512,7 +530,7 @@ func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool, is_migra
 		flags |= u32(0x10)
 	}
 
-	_, err := C.create_attestation_report(apiKeySlice, flags, &errmsg)
+	_, err := C.create_attestation_report(flags, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

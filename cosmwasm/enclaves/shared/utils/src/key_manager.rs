@@ -64,7 +64,7 @@ pub struct Keychain {
     consensus_seed_id: u16,
     consensus_seed: SeedsHolder<Seed>,
     consensus_state_ikm: SeedsHolder<AESKey>,
-    consensus_seed_exchange_keypair: SeedsHolder<KeyPair>,
+    consensus_seed_exchange_keypair: Option<KeyPair>,
     consensus_io_exchange_keypair: Option<KeyPair>,
     consensus_callback_secret: Option<AESKey>,
     pub random_encryption_key: Option<AESKey>,
@@ -274,7 +274,7 @@ impl Keychain {
             consensus_seed: SeedsHolder { arr: Vec::new() },
             registration_key: None,
             consensus_state_ikm: SeedsHolder { arr: Vec::new() },
-            consensus_seed_exchange_keypair: SeedsHolder { arr: Vec::new() },
+            consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
             consensus_callback_secret: None,
             //#[cfg(feature = "random")]
@@ -399,20 +399,22 @@ impl Keychain {
         }
     }
 
-    pub fn seed_exchange_key(&self) -> Result<&SeedsHolder<KeyPair>, CryptoError> {
-        if self.consensus_seed_exchange_keypair.arr.is_empty() {
+    pub fn seed_exchange_key(&self) -> Result<&KeyPair, CryptoError> {
+        if let Some(kp) = &self.consensus_seed_exchange_keypair {
+            Ok(kp)
+        } else {
             error!("Error accessing consensus_seed_exchange_keypair (does not exist, or was not initialized)");
             Err(CryptoError::ParsingError)
-        } else {
-            Ok(&self.consensus_seed_exchange_keypair)
         }
     }
 
-    pub fn get_consensus_io_exchange_keypair(&self) -> Result<KeyPair, CryptoError> {
-        self.consensus_io_exchange_keypair.ok_or_else(|| {
+    pub fn get_consensus_io_exchange_keypair(&self) -> Result<&KeyPair, CryptoError> {
+        if let Some(kp) = &self.consensus_io_exchange_keypair {
+            Ok(kp)
+        } else {
             error!("Error accessing consensus_io_exchange_keypair (does not exist, or was not initialized)");
-            CryptoError::ParsingError
-        })
+            Err(CryptoError::ParsingError)
+        }
     }
 
     pub fn get_consensus_callback_secret(&self) -> Result<AESKey, CryptoError> {
@@ -461,6 +463,18 @@ impl Keychain {
         seed.derive_key_from_this(&ADMIN_PROOF_SECRET_DERIVE_ORDER.to_be_bytes())
     }
 
+    pub fn generate_consensus_seed_exchange_keypair(seed: &Seed) -> KeyPair {
+        KeyPair::from(
+            seed.derive_key_from_this(&CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes()),
+        )
+    }
+
+    pub fn generate_consensus_io_exchange_keypair(seed: &Seed) -> KeyPair {
+        KeyPair::from(
+            seed.derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes()),
+        )
+    }
+
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
         if !self.is_consensus_seed_set() {
             trace!("Seed not initialized, skipping derivation of enclave keys");
@@ -468,39 +482,27 @@ impl Keychain {
         }
 
         for s in &self.consensus_seed.arr {
-            // consensus_seed_exchange_keypair
-            self.consensus_seed_exchange_keypair
-                .arr
-                .push(KeyPair::from(s.derive_key_from_this(
-                    &CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes(),
-                )));
-
             // consensus_state_ikm
             self.consensus_state_ikm
                 .arr
                 .push(Self::generate_consensus_ikm_key(s));
         }
 
-        let s_last = self.consensus_seed.last();
+        let last_seed = &self.consensus_seed.last();
 
-        // consensus_io_exchange_keypair
-        self.consensus_io_exchange_keypair = Some(KeyPair::from(
-            s_last.derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes()),
-        ));
+        self.consensus_seed_exchange_keypair =
+            Some(Self::generate_consensus_seed_exchange_keypair(last_seed));
+
+        self.consensus_io_exchange_keypair =
+            Some(Self::generate_consensus_io_exchange_keypair(last_seed));
 
         self.consensus_callback_secret = Some(
-            self.consensus_seed
-                .last()
-                .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes()),
+            last_seed.derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes()),
         );
 
-        {
-            self.random_encryption_key =
-                Some(Self::generate_random_key(self.consensus_seed.last()));
+        self.random_encryption_key = Some(Self::generate_random_key(last_seed));
 
-            self.initial_randomness_seed =
-                Some(Self::generate_randomness_seed(self.consensus_seed.last()));
-        }
+        self.initial_randomness_seed = Some(Self::generate_randomness_seed(last_seed));
 
         Ok(())
     }

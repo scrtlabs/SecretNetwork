@@ -1,4 +1,4 @@
-use enclave_ffi_types::HealthCheckResult;
+use enclave_ffi_types::{HealthCheckResult, PUBLIC_KEY_SIZE};
 use sgx_types::*;
 
 use log::info;
@@ -39,6 +39,15 @@ extern "C" {
         opcode: u32,
     ) -> sgx_status_t;
 
+    pub fn ecall_get_network_pubkey(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        i_seed: u32,
+        p_node: *mut u8,
+        p_io: *mut u8,
+        p_seeds: *mut u32,
+    ) -> sgx_status_t;
+
     pub fn ecall_rotate_store(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
@@ -51,6 +60,15 @@ extern "C" {
         retval: *mut sgx_status_t,
         msg: *const u8,
         msg_len: u32,
+    ) -> sgx_types::sgx_status_t;
+
+    pub fn ecall_onchain_approve_machine_id(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        p_id: *const u8,
+        n_id: u32,
+        p_proof: *mut u8,
+        is_on_chain: bool,
     ) -> sgx_types::sgx_status_t;
 
     /// Trigger a query method in a wasm contract
@@ -202,6 +220,44 @@ pub fn untrusted_migration_op(opcode: u32) -> SgxResult<()> {
     Ok(())
 }
 
+pub fn untrusted_get_network_pubkey(
+    i_seed: u32,
+) -> SgxResult<(u32, [u8; PUBLIC_KEY_SIZE], [u8; PUBLIC_KEY_SIZE])> {
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
+    let mut pk_node = [0u8; PUBLIC_KEY_SIZE];
+    let mut pk_io = [0u8; PUBLIC_KEY_SIZE];
+    let mut seeds: u32 = 0;
+
+    let eid = enclave.geteid();
+    let mut ret = sgx_status_t::SGX_SUCCESS;
+    let status = unsafe {
+        ecall_get_network_pubkey(
+            eid,
+            &mut ret,
+            i_seed,
+            pk_node.as_mut_ptr(),
+            pk_io.as_mut_ptr(),
+            &mut seeds,
+        )
+    };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if ret != sgx_status_t::SGX_SUCCESS {
+        return Err(ret);
+    }
+
+    Ok((seeds, pk_node, pk_io))
+}
+
 pub fn untrusted_approve_upgrade(msg_slice: &[u8]) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
@@ -216,6 +272,44 @@ pub fn untrusted_approve_upgrade(msg_slice: &[u8]) -> SgxResult<()> {
     let mut ret = sgx_status_t::SGX_SUCCESS;
     let status = unsafe {
         ecall_onchain_approve_upgrade(eid, &mut ret, msg_slice.as_ptr(), msg_slice.len() as u32)
+    };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if ret != sgx_status_t::SGX_SUCCESS {
+        return Err(ret);
+    }
+
+    Ok(())
+}
+
+pub fn untrusted_approve_machine_id(
+    machine_id: &[u8],
+    proof: *mut u8,
+    is_on_chain: bool,
+) -> SgxResult<()> {
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
+    //info!("Initialized enclave successfully!");
+
+    let eid = enclave.geteid();
+    let mut ret = sgx_status_t::SGX_SUCCESS;
+    let status = unsafe {
+        ecall_onchain_approve_machine_id(
+            eid,
+            &mut ret,
+            machine_id.as_ptr(),
+            machine_id.len() as u32,
+            proof,
+            is_on_chain,
+        )
     };
 
     if status != sgx_status_t::SGX_SUCCESS {

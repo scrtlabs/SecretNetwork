@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	errorsmod "cosmossdk.io/errors"
@@ -225,7 +226,7 @@ func (m msgServer) UpgradeProposalPassed(goCtx context.Context, msg *types.MsgUp
 	return &types.MsgUpgradeProposalPassedResponse{}, nil
 }
 
-func (m msgServer) MigrateContractProposal(goCtx context.Context, msg *types.MsgMigrateContractProposal) (*types.MsgMigrateContractProposalResponse, error) {
+func (m msgServer) ContractGovernanceProposal(goCtx context.Context, msg *types.MsgContractGovernanceProposal) (*types.MsgContractGovernanceProposalResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	if err := msg.ValidateBasic(); err != nil {
@@ -238,25 +239,35 @@ func (m msgServer) MigrateContractProposal(goCtx context.Context, msg *types.Msg
 	}
 
 	for _, contract := range msg.Contracts {
-		contractAddr, err := sdk.AccAddressFromBech32(contract.Address)
+		_, err := sdk.AccAddressFromBech32(contract.Address)
 		if err != nil {
 			return nil, errorsmod.Wrap(err, "contract")
 		}
 		// Store the authorized migration
 		m.keeper.SetAuthorizedMigration(ctx, contract.Address, contract.NewCodeId)
-		err = m.keeper.SetContractGovernanceRequirement(ctx, contractAddr)
-		if err != nil {
-			return nil, errorsmod.Wrap(err, "updating contract governance requirement")
-		}
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
-			types.EventTypeMigrateContractProposal,
+			types.EventTypeContractGovernanceProposal,
 			sdk.NewAttribute(types.AttributeKeyContractAddr, contract.Address),
 			sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", contract.NewCodeId)),
 			sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
 		))
 	}
 
-	return &types.MsgMigrateContractProposalResponse{}, nil
+	for _, adminUpdate := range msg.AdminUpdates {
+		_, err := sdk.AccAddressFromBech32(adminUpdate.Address)
+		if err != nil {
+			return nil, errorsmod.Wrap(err, "admin update contract")
+		}
+		m.keeper.SetAdminUpdate(ctx, adminUpdate.Address, adminUpdate.NewAdmin)
+		ctx.EventManager().EmitEvent(sdk.NewEvent(
+			types.EventTypeContractGovernanceProposal,
+			sdk.NewAttribute(types.AttributeKeyContractAddr, adminUpdate.Address),
+			sdk.NewAttribute("new_admin", adminUpdate.NewAdmin),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
+		))
+	}
+
+	return &types.MsgContractGovernanceProposalResponse{}, nil
 }
 
 func (m msgServer) SetContractGovernance(goCtx context.Context, msg *types.MsgSetContractGovernance) (*types.MsgSetContractGovernanceResponse, error) {
@@ -302,4 +313,59 @@ func (m msgServer) SetContractGovernance(goCtx context.Context, msg *types.MsgSe
 	))
 
 	return &types.MsgSetContractGovernanceResponse{}, nil
+}
+
+func (m msgServer) UpdateMachineWhitelistProposal(goCtx context.Context, msg *types.MsgUpdateMachineWhitelistProposal) (*types.MsgUpdateMachineWhitelistProposalResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	// Verify sender has authority (only governance module)
+	if m.keeper.authority != msg.Authority {
+		return nil, errorsmod.Wrapf(govtypes.ErrInvalidSigner, "invalid authority; expected %s, got %s", m.keeper.authority, msg.Authority)
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeMachineWhitelistProposal,
+		sdk.NewAttribute("machine_id", fmt.Sprintf("%x", len(msg.MachineId))),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
+	))
+
+	return &types.MsgUpdateMachineWhitelistProposalResponse{}, nil
+}
+
+func (m msgServer) UpdateMachineWhitelist(goCtx context.Context, msg *types.MsgUpdateMachineWhitelist) (*types.MsgUpdateMachineWhitelistResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeMachineWhitelistUpdate,
+		sdk.NewAttribute("proposal_id", fmt.Sprintf("%d", msg.ProposalId)),
+		sdk.NewAttribute("machine_id", fmt.Sprintf("%x", len(msg.MachineId))),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+	))
+
+	store := m.keeper.storeService.OpenKVStore(ctx)
+
+	id, err := hex.DecodeString(msg.MachineId)
+	if err != nil {
+		return nil, err
+	}
+
+	{
+		proof := [32]byte{}
+		if err := api.OnApproveMachineID(id, &proof, true); err != nil {
+			return nil, err
+		}
+
+		key := append(types.MachineIDEvidencePrefix, id...)
+		_ = store.Set(key, proof[:])
+	}
+
+	return &types.MsgUpdateMachineWhitelistResponse{}, nil
 }

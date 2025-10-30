@@ -246,15 +246,15 @@ func (msg MsgUpgradeProposalPassed) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{senderAddr}
 }
 
-func (msg MsgMigrateContractProposal) Route() string {
+func (msg MsgContractGovernanceProposal) Route() string {
 	return RouterKey
 }
 
-func (msg MsgMigrateContractProposal) Type() string {
+func (msg MsgContractGovernanceProposal) Type() string {
 	return "migrate-contract-proposal"
 }
 
-func (msg MsgMigrateContractProposal) ValidateBasic() error {
+func (msg MsgContractGovernanceProposal) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
 		return errorsmod.Wrap(err, "authority")
 	}
@@ -263,14 +263,25 @@ func (msg MsgMigrateContractProposal) ValidateBasic() error {
 			return errorsmod.Wrap(err, "contract")
 		}
 	}
+	for _, adminUpdate := range msg.AdminUpdates {
+		if _, err := sdk.AccAddressFromBech32(adminUpdate.Address); err != nil {
+			return errorsmod.Wrap(err, "contract")
+		}
+		if adminUpdate.NewAdmin == "" {
+			continue
+		}
+		if _, err := sdk.AccAddressFromBech32(adminUpdate.NewAdmin); err != nil {
+			return errorsmod.Wrap(err, "new admin")
+		}
+	}
 	return nil
 }
 
-func (msg MsgMigrateContractProposal) GetSignBytes() []byte {
+func (msg MsgContractGovernanceProposal) GetSignBytes() []byte {
 	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
-func (msg MsgMigrateContractProposal) GetSigners() []sdk.AccAddress {
+func (msg MsgContractGovernanceProposal) GetSigners() []sdk.AccAddress {
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Authority)
 	if err != nil { // should never happen as valid basic rejects invalid addresses
 		panic(err.Error())
@@ -306,4 +317,69 @@ func (msg MsgSetContractGovernance) GetSigners() []sdk.AccAddress {
 		panic(err.Error())
 	}
 	return []sdk.AccAddress{senderAddr}
+}
+
+func (msg MsgUpdateMachineWhitelistProposal) Route() string {
+	return RouterKey
+}
+
+func (msg MsgUpdateMachineWhitelistProposal) Type() string {
+	return "update-machine-whitelist-proposal"
+}
+
+func (msg MsgUpdateMachineWhitelistProposal) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
+		return errorsmod.Wrap(err, "invalid authority")
+	}
+
+	if len(msg.MachineId) != 40 {
+		return errorsmod.Wrap(ErrInvalid, "machine_id must be 40 characters")
+	}
+
+	return nil
+}
+
+func (msg MsgUpdateMachineWhitelistProposal) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgUpdateMachineWhitelistProposal) GetSigners() []sdk.AccAddress {
+	addr, err := sdk.AccAddressFromBech32(msg.Authority)
+	if err != nil {
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{addr}
+}
+
+func (msg MsgUpdateMachineWhitelist) Route() string {
+	return RouterKey
+}
+
+func (msg MsgUpdateMachineWhitelist) Type() string {
+	return "update-machine-whitelist"
+}
+
+func (msg MsgUpdateMachineWhitelist) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+		return errorsmod.Wrap(err, "invalid sender address")
+	}
+
+	if msg.ProposalId == 0 {
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "proposal ID cannot be zero")
+	}
+
+	if len(msg.MachineId) != 40 {
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "machine ID must be 40 characters")
+	}
+
+	return nil
+}
+
+func (msg MsgUpdateMachineWhitelist) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgUpdateMachineWhitelist) GetSigners() []sdk.AccAddress {
+	addr, _ := sdk.AccAddressFromBech32(msg.Sender)
+	return []sdk.AccAddress{addr}
 }

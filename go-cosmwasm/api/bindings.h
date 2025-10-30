@@ -77,6 +77,11 @@ typedef struct EnclaveRuntimeConfig {
   uint32_t module_cache_size;
 } EnclaveRuntimeConfig;
 
+typedef struct TwoBuffers {
+  Buffer buf1;
+  Buffer buf2;
+} TwoBuffers;
+
 /**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
  */
@@ -143,11 +148,6 @@ typedef struct GoQuerier {
   Querier_vtable vtable;
 } GoQuerier;
 
-typedef struct TwoBuffers {
-  Buffer buf1;
-  Buffer buf2;
-} TwoBuffers;
-
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 AnalysisReport analyze_code(cache_t *cache, Buffer checksum, Buffer *error_msg);
@@ -156,7 +156,7 @@ void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
-bool create_attestation_report(Buffer api_key, uint32_t flags, Buffer *err);
+bool create_attestation_report(uint32_t flags, Buffer *err);
 
 bool emergency_approve_upgrade(Buffer data_dir, Buffer msg);
 
@@ -169,6 +169,8 @@ Buffer get_encrypted_genesis_seed(Buffer pk, Buffer *err);
 Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 
 Buffer get_health_check(Buffer *err);
+
+TwoBuffers get_network_pubkey(uint32_t i_seed);
 
 Buffer handle(cache_t *cache,
               Buffer code_id,
@@ -219,6 +221,8 @@ Buffer migrate(cache_t *cache,
                Buffer admin_proof);
 
 bool migration_op(uint32_t opcode);
+
+bool onchain_approve_machine_id(Buffer machine_id, uint8_t *proof, bool is_on_chain);
 
 bool onchain_approve_upgrade(Buffer msg);
 

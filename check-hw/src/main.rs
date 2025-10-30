@@ -1,19 +1,32 @@
 mod enclave;
 mod enclave_api;
 mod types;
-
 use clap::App;
 use lazy_static::lazy_static;
-use sgx_types::{sgx_status_t, sgx_enclave_id_t};
+use sgx_types::{sgx_status_t, sgx_enclave_id_t, sgx_quote_t, sgx_ql_ecdsa_sig_data_t, sgx_ql_auth_data_t, sgx_ql_certification_data_t};
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::sync::Arc;
+use std::collections::HashSet;
+use std::error::Error;
+use std::net::SocketAddr;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::mem;
+use std::slice;
+use std::fs;
+use std::net::IpAddr;
+use std::io::Cursor;
 use hyper::service::{make_service_fn, service_fn};
+use hyper::server::conn::AddrStream; 
 use hyper::{Body, Request, Response};
 use hyper::server::Server;
+use hyper::Client;
+use hyper::header::{AUTHORIZATION, ACCEPT, USER_AGENT};
 use base64::{engine::general_purpose, Engine as _};
- 
+use sha2::{Sha256, Digest};
+use serde::Serialize;
+use crate::fs::OpenOptions;
 
 use crate::{
     enclave_api::ecall_check_patch_level, enclave_api::ecall_migration_op, types::EnclaveDoorbell,
@@ -24,6 +37,8 @@ use enclave_ffi_types::NodeAuthResult;
 const ENCLAVE_FILE_TESTNET: &str = "check_hw_enclave_testnet.so";
 const ENCLAVE_FILE_MAINNET: &str = "check_hw_enclave.so";
 const TCS_NUM: u8 = 1;
+
+type HttpsClient = Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>;
 
 pub fn get_sgx_secret_path(file_name: &str) -> String {
     std::path::Path::new("/opt/secret/.sgx_secrets/")
@@ -84,12 +99,58 @@ fn export_rot_seed(eid: sgx_enclave_id_t, remote_report: &[u8]) -> Option<Vec<u8
     Some(res.to_vec())
 }
 
-async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
+fn log_request(remote_addr: SocketAddr, whole_body: &[u8]) -> std::io::Result<()> {
+
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let filename = format!("request_log_{}_{}_from_{}.txt", now.as_secs(), now.subsec_micros(), remote_addr);
+
+    let mut file = File::create(filename)?;
+    file.write_all(whole_body)?;
+
+    Ok(())
+}
+
+async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, req: Request<Body>, remote_addr: SocketAddr, allow_list: &HashSet<[u8; 20]>) -> Result<Response<Body>, hyper::Error> {
     if req.method() == hyper::Method::POST {
+
         let whole_body = hyper::body::to_bytes(req.into_body()).await?;
+        let mut cursor = Cursor::new(&whole_body);
+
+        let ppid = match extract_cpu_cert_from_attestation_combined(&mut cursor) {
+            Ok(maybe_ppid) => {
+                match maybe_ppid {
+                    Some(val) => val,
+                    None => {
+                        return Ok(Response::builder()
+                            .status(500)
+                            .body("Couldn't fetch machine ID".into())
+                            .unwrap());
+
+                    }
+                }
+
+            },
+            Err(_) => {
+                return Ok(Response::builder()
+                    .status(500)
+                    .body("invalid attestation blob".into())
+                    .unwrap());
+            }
+        };
+
+        let machine_id = calculate_truncated_hash(&ppid);
+        if !allow_list.contains(&machine_id) {
+            return Ok(Response::builder()
+                .status(500)
+                .body("Unknown machine ID".into())
+                .unwrap());
+        }
 
         match export_rot_seed(eid, &whole_body) {
             Some(res) => {
+
+                let _res = log_request(remote_addr, &whole_body);
+
                 let b64_buf1 = general_purpose::STANDARD.encode(&**self_report);
                 let b64_buf2 = general_purpose::STANDARD.encode(res);
 
@@ -112,8 +173,119 @@ async fn handle_http_request(eid: sgx_enclave_id_t, self_report: &Arc<Vec<u8>>, 
     }
 }
 
+async fn get_allowed_hashes_async() -> Result<HashSet<[u8; 20]>, Box<dyn Error>> {
+
+
+    let url = "https://api.github.com/repos/scrtlabs/whitelist-test/contents/whitelist.txt?ref=master";
+    let token = "";
+
+    let https = hyper_rustls::HttpsConnectorBuilder::new()
+        .with_native_roots()
+        .https_only()
+        .enable_http1()
+        .build();
+    let client: HttpsClient = Client::builder().build(https);
+
+    // Build request with headers
+    let req = Request::get(url)
+        .header(AUTHORIZATION, format!("token {}", token))
+        .header(ACCEPT, "application/vnd.github.v3.raw")
+        .header(USER_AGENT, "my-rust-client")
+        .body(Body::empty())?; // GET request has empty body
+
+    let response = client.request(req).await?;
+
+    // Read the body
+    let bytes = hyper::body::to_bytes(response.into_body()).await?;
+    let text = String::from_utf8(bytes.to_vec())?;    
+
+    let mut set: HashSet<[u8; 20]> = HashSet::new();
+
+    for s in text.lines() {
+
+        let bytes = match hex::decode(s) {
+            Ok(b) => b,
+            Err(e) => {
+                println!("couldn't decore {} - {}", s, e);
+                continue;
+            }
+        };
+
+        if bytes.len() < 20 {
+            println!("too short {}", s);
+            continue;
+        }
+
+        let addr: [u8; 20] = bytes[..20].try_into().unwrap();
+        set.insert(addr);
+
+    }
+
+    Ok(set)
+}
+
+fn get_allowed_hashes() -> Result<HashSet<[u8; 20]>, Box<dyn Error>> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(get_allowed_hashes_async())
+}
+
+pub fn calculate_truncated_hash(input: &[u8]) -> [u8; 20] {
+    let mut res = [0u8; 20];
+
+    let mut hasher = Sha256::new();
+    hasher.update(input);
+
+    let res_full = hasher.finalize();
+    res.copy_from_slice(&res_full[..20]);
+
+    res
+}
+
+async fn send_machine_id_async(machine_id: &[u8; 20]) -> Result<(), Box<dyn std::error::Error>> {
+    #[derive(Serialize)]
+    struct MachineIdPayload<'a> {
+        machine_id: &'a str,
+    }
+
+    const SUBMISSION_URL: &str = "http://51.8.118.178:8765/";
+
+    let machine_id_hex = hex::encode(machine_id);
+
+    let payload = MachineIdPayload {
+        machine_id: &machine_id_hex,
+    };
+    let json_body = serde_json::to_string(&payload)?;
+
+    let https = hyper_rustls::HttpsConnectorBuilder::new()
+        .with_native_roots()
+        .https_or_http()
+        .enable_http1()
+        .build();
+    let client: HttpsClient = Client::builder().build(https);
+
+    let req = Request::post(SUBMISSION_URL)
+        .header(hyper::header::CONTENT_TYPE, "application/json")
+        .header(USER_AGENT, "my-rust-client")
+        .body(Body::from(json_body))?;
+
+    let response = client.request(req).await?;
+
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        let body_bytes = hyper::body::to_bytes(response.into_body()).await?;
+        let error_message = String::from_utf8_lossy(&body_bytes);
+        Err(format!("error: {}", error_message).into())
+    }
+}
+
+fn send_machine_id(machine_id: &[u8; 20]) -> Result<(), Box<dyn std::error::Error>> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(send_machine_id_async(machine_id))
+}
+
 #[tokio::main]
-async fn serve_rot_seed(eid: sgx_enclave_id_t) {
+async fn serve_rot_seed(eid: sgx_enclave_id_t, allow_list: HashSet<[u8; 20]>) {
 
     let mut retval = sgx_status_t::SGX_ERROR_BUSY;
     let _status = unsafe { ecall_migration_op(eid, &mut retval, 1) };
@@ -131,15 +303,19 @@ async fn serve_rot_seed(eid: sgx_enclave_id_t) {
 
         let make_svc = {
             let self_report = Arc::clone(&self_report); // clone it into the outer closure
+            let allow_list = allow_list.clone(); // clone it into the outer closure
 
-            make_service_fn(move |_conn| {
+            make_service_fn(move |conn: &AddrStream| {
                 let self_report = Arc::clone(&self_report); // clone again into inner closure
+                let remote_addr = conn.remote_addr();
+                let allow_list = allow_list.clone(); // clone it into the outer closure
 
                 async move {
                     Ok::<_, hyper::Error>(service_fn(move |req| {
                         let self_report = Arc::clone(&self_report); // clone per request
+                        let allow_list = allow_list.clone(); // clone per request
                         async move {
-                            handle_http_request(eid, &self_report, req).await
+                            handle_http_request(eid, &self_report, req, remote_addr, &allow_list).await
                         }
                     }))
                 }
@@ -155,6 +331,277 @@ async fn serve_rot_seed(eid: sgx_enclave_id_t) {
         println!("Couldn't create self migration report: {}", retval);
 
     }
+}
+
+fn extract_asn1_value(cert: &[u8], oid: &[u8]) -> Option<Vec<u8>> {
+    let mut offset = match cert.windows(oid.len()).position(|window| window == oid) {
+        Some(size) => size,
+        None => {
+            return None;
+        }
+    };
+
+    offset += 12; // 11 + TAG (0x04)
+
+    if offset + 2 >= cert.len() {
+        return None;
+    }
+
+    // Obtain Netscape Comment length
+    let mut len = cert[offset] as usize;
+    if len > 0x80 {
+        len = (cert[offset + 1] as usize) * 0x100 + (cert[offset + 2] as usize);
+        offset += 2;
+    }
+
+    // Obtain Netscape Comment
+    offset += 1;
+
+    if offset + len >= cert.len() {
+        return None;
+    }
+
+    let payload = cert[offset..offset + len].to_vec();
+
+    Some(payload)
+}
+
+fn extract_cpu_cert_from_cert(cert_data: &[u8]) -> Option<Vec<u8>> {
+    //println!("******** cert_data: {}", orig_hex::encode(cert_data));
+
+    let pem_text = match std::str::from_utf8(cert_data) {
+        Ok(x) => x,
+        Err(_) => {
+            return None;
+        }
+    };
+
+    //println!("******** pem: {}", pem_text);
+
+    // Find the first PEM block
+    let begin_marker = "-----BEGIN CERTIFICATE-----";
+    let end_marker = "-----END CERTIFICATE-----";
+    let start = match pem_text.find(begin_marker) {
+        Some(x) => x + begin_marker.len(),
+        None => {
+            println!("no begin");
+            return None;
+        }
+    };
+
+    let end = match pem_text.find(end_marker) {
+        Some(x) => x,
+        None => {
+            println!("no end");
+            return None;
+        }
+    };
+    let b64 = &pem_text[start..end];
+
+    // Remove whitespace and line breaks
+    let b64_clean: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
+
+    // Decode Base64 into DER
+    let der_bytes = match base64::decode(b64_clean) {
+        Ok(x) => x,
+        Err(_) => {
+            return None;
+        }
+    };
+
+    //println!("Leaf certificate: {}", orig_hex::encode(&der_bytes));
+
+    let ppid_oid = &[
+        0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x01, 0x0D, 0x01,
+    ];
+
+    let res = match extract_asn1_value(&der_bytes, ppid_oid) {
+        Some(x) => x,
+        None => {
+            return None;
+        }
+    };
+
+    Some(res)
+}
+
+unsafe fn extract_cpu_cert_from_quote(vec_quote: &[u8]) -> Option<Vec<u8>> {
+    let my_p_quote = vec_quote.as_ptr() as *const sgx_quote_t;
+
+    let sig_len = (*my_p_quote).signature_len as usize;
+    let whole_len = sig_len.wrapping_add(mem::size_of::<sgx_quote_t>());
+    if (whole_len > sig_len)
+        && (whole_len <= vec_quote.len())
+        && (sig_len >= mem::size_of::<sgx_ql_ecdsa_sig_data_t>())
+    {
+        let p_ecdsa_sig = (*my_p_quote).signature.as_ptr() as *const sgx_ql_ecdsa_sig_data_t;
+
+        let auth_size_brutto = sig_len - mem::size_of::<sgx_ql_ecdsa_sig_data_t>();
+        if auth_size_brutto >= mem::size_of::<sgx_ql_auth_data_t>() {
+            let auth_size_max = auth_size_brutto - mem::size_of::<sgx_ql_auth_data_t>();
+
+            let auth_data_wrapper =
+                (*p_ecdsa_sig).auth_certification_data.as_ptr() as *const sgx_ql_auth_data_t;
+
+            let auth_hdr_size = (*auth_data_wrapper).size as usize;
+            if auth_hdr_size <= auth_size_max {
+                let auth_size = auth_size_max - auth_hdr_size;
+
+                if auth_size > mem::size_of::<sgx_ql_certification_data_t>() {
+                    let cert_data = (*auth_data_wrapper)
+                        .auth_data
+                        .as_ptr()
+                        .add(auth_hdr_size)
+                        as *const sgx_ql_certification_data_t;
+
+                    let cert_size_max = auth_size - mem::size_of::<sgx_ql_certification_data_t>();
+                    let cert_size = (*cert_data).size as usize;
+                    if (cert_size <= cert_size_max) && ((*cert_data).cert_key_type == 5) {
+                        let cert_data = slice::from_raw_parts(
+                            (*cert_data).certification_data.as_ptr(),
+                            cert_size,
+                        );
+
+                        return extract_cpu_cert_from_cert(cert_data);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn extract_cpu_cert_from_attestation_combined<R: Read>(reader: &mut R) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error>> {
+    let mut buf = [0u8; 4];
+    reader.read_exact(&mut buf)?;
+    let size_epid = u32::from_le_bytes(buf);
+
+    reader.read_exact(&mut buf)?;
+    let size_dcap_q = u32::from_le_bytes(buf);
+
+    reader.read_exact(&mut buf)?;
+    let size_dcap_c = u32::from_le_bytes(buf);
+
+    let mut buf = Vec::new();
+    buf.resize(size_epid as usize, 0);
+    reader.read_exact(buf.as_mut_slice())?;
+
+    buf.resize(size_dcap_q as usize, 0);
+    reader.read_exact(buf.as_mut_slice())?;
+
+    let ppid = unsafe { extract_cpu_cert_from_quote(buf.as_slice()) };
+
+    buf.resize(size_dcap_c as usize, 0);
+    reader.read_exact(buf.as_mut_slice())?;
+
+    Ok(ppid)
+}
+
+
+fn print_request_details(file_path: &std::path::Path, ip: IpAddr) {
+
+    let mut f_in = File::open(file_path).unwrap();
+
+    let mut buf = [0u8; 4];
+    f_in.read_exact(&mut buf).unwrap();
+    let size_epid = u32::from_le_bytes(buf);
+
+    f_in.read_exact(&mut buf).unwrap();
+    let size_dcap_q = u32::from_le_bytes(buf);
+
+    f_in.read_exact(&mut buf).unwrap();
+    let size_dcap_c = u32::from_le_bytes(buf);
+
+    let mut buf = Vec::new();
+    buf.resize(size_epid as usize, 0);
+    f_in.read_exact(buf.as_mut_slice()).unwrap();
+
+    buf.resize(size_dcap_q as usize, 0);
+    f_in.read_exact(buf.as_mut_slice()).unwrap();
+
+    let ppid = unsafe { extract_cpu_cert_from_quote(buf.as_slice()) };
+
+    buf.resize(size_dcap_c as usize, 0);
+    f_in.read_exact(buf.as_mut_slice()).unwrap();
+
+    buf.clear();
+    f_in.read_to_end(&mut buf).unwrap();
+
+    println!("IP: {}", ip);
+
+    let data = base64::decode(&buf).unwrap();
+    let s = String::from_utf8(data).unwrap();
+    println!("Metadata: {}", &s);
+
+    if let Some(ppid_val) = ppid {
+        println!("ppid: {}", hex::encode(ppid_val));
+    }
+}
+
+fn print_request_details2(file_path: &std::path::Path) -> bool {
+    if let Some(name) = file_path.file_name().and_then(|n| n.to_str()) {
+        if name.starts_with("request_log_") {
+            // Example: request_log_1757752506_456332_from_23.81.165.91:40186.txt
+            if let Some(from_idx) = name.find("_from_") {
+                let after = &name[from_idx + "_from_".len()..];
+                if let Some(colon_idx) = after.find(':') {
+                    let ip_str = &after[..colon_idx];
+                    if let Ok(ip) = ip_str.parse::<IpAddr>() {
+                        print_request_details(file_path, ip);
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+fn print_request_details_dir(directory_path: &str) {
+    for entry in fs::read_dir(directory_path).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+
+        if path.is_file() {
+            if !print_request_details2(&path) {
+                println!("Skipped: {}", path.display());
+            }
+        }
+    }
+}
+
+fn add_cpu_info()
+{
+    // append self CPU info
+    let cpuinfo = match fs::read_to_string("/proc/cpuinfo") {
+        Ok(x) => x,
+        Err(_) => {
+            return;
+        }
+    };
+
+    // path to the sgx file
+    let sgx_path = if let Ok(env_var) = std::env::var("SCRT_SGX_STORAGE") {
+        env_var
+    } else {
+        "/opt/secret/.sgx_secrets/".to_string()
+    };
+
+    let file_path = std::path::Path::new(&sgx_path)
+        .join("migration_report_remote.bin")
+        .to_string_lossy()
+        .into_owned();
+
+    let mut file = match OpenOptions::new().append(true).open(file_path) {
+        Ok(f) => f,
+        Err(_) => {
+            return;
+        }
+    };
+
+    let cpuinfo_encoded = base64::encode(cpuinfo);
+    let _ = file.write_all(cpuinfo_encoded.as_bytes());
 }
 
 fn main() {
@@ -178,9 +625,16 @@ fn main() {
                 .long("server_seed")
                 .help("Serve the generated seed"),
         )
+        .arg(
+            clap::Arg::with_name("parse_req")
+                .long("parse_req")
+                .value_name("path")
+                .help("path to the request file")
+                .takes_value(true), // Indicates this flag takes a value
+        )
         .get_matches();
 
-    let is_testnet = matches.is_present("testnet");
+    //let is_testnet = matches.is_present("testnet");
 
     println!("Creating enclave instance..");
 
@@ -203,13 +657,6 @@ fn main() {
         return;
     }
 
-    #[allow(clippy::if_same_then_else)]
-    let api_key_bytes = if is_testnet {
-        include_bytes!("../../ias_keys/develop/api_key.txt")
-    } else {
-        include_bytes!("../../ias_keys/production/api_key.txt")
-    };
-
     let eid = enclave.unwrap().geteid();
 
     if let Some(migrate_op) = matches.value_of("migrate_op") {
@@ -219,16 +666,46 @@ fn main() {
         let status = unsafe { ecall_migration_op(eid, &mut retval, op) };
 
         println!("Migration op reval: {}, {}", status, retval);
+
+        if retval != sgx_status_t::SGX_SUCCESS {
+            std::process::exit(retval as i32);
+        }
+
+        if status != sgx_status_t::SGX_SUCCESS {
+            std::process::exit(retval as i32);
+        }
+
+        if op == 1 {
+            add_cpu_info();
+        }
+
     } else if matches.is_present("server_seed") {
-        serve_rot_seed(eid);
+
+        let allow_list = match get_allowed_hashes() {
+            Ok(x) => x,
+            Err(e) => {
+                println!("couldn't get allow list: {}", e);
+                return;
+            }
+        };
+
+        serve_rot_seed(eid, allow_list);
+    } else if let Some(req_path) = matches.value_of("parse_req") {
+        let dir = req_path.parse::<String>().unwrap();
+        print_request_details_dir(&dir);
     } else {
         let mut retval = NodeAuthResult::Success;
+
+        let mut ppid_buf = vec![0u8; 1024]; // initial buffer capacity
+        let mut ppid_required_size: u32 = 0;
+
         let status = unsafe {
             ecall_check_patch_level(
                 eid,
                 &mut retval,
-                api_key_bytes.as_ptr(),
-                api_key_bytes.len() as u32,
+                ppid_buf.as_mut_ptr(),
+                ppid_buf.len() as u32,
+                &mut ppid_required_size,
             )
         };
 
@@ -248,6 +725,31 @@ fn main() {
             println!(
                 "Platform verification successful! You are able to run a mainnet Secret node"
             )
+        }
+
+        if (ppid_required_size > 0) && (ppid_required_size as usize <= ppid_buf.len()) {
+            ppid_buf.truncate(ppid_required_size as usize);
+
+//            println!("Your PPID: {}", hex::encode(&ppid_buf));
+            let machine_id = calculate_truncated_hash(&ppid_buf);
+            println!("Your machine ID: {}", hex::encode(machine_id));
+
+            let _res = send_machine_id(&machine_id);
+
+            match get_allowed_hashes() {
+                Ok(allowlist) => {
+
+                    if allowlist.contains(&machine_id) {
+                        println!("✅ This machine ID is known");
+                    } else {
+                        println!("🚫 This machine is not known, please contact the dev team");
+                    }
+                }
+                Err(e) => {
+                    println!("❌ Failed to verify: {}", e);
+                }
+            }
+
         }
     }
 }

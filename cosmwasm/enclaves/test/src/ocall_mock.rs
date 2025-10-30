@@ -16,60 +16,11 @@ use sgx_types::{
 //     pub fn ecall_get_attestation_report(
 //         eid: sgx_enclave_id_t,
 //         retval: *mut sgx_status_t,
-//         api_key: *const u8,
-//         api_key_len: u32,
 //         dry_run: u8,
 //     ) -> sgx_status_t;
 // }
 
 // ocalls
-
-#[no_mangle]
-pub extern "C" fn ocall_get_update_info(
-    platform_blob: *const sgx_platform_info_t,
-    enclave_trusted: i32,
-    update_info: *mut sgx_update_info_bit_t,
-) -> sgx_status_t {
-    unimplemented!()
-}
-
-#[no_mangle]
-pub extern "C" fn ocall_get_quote(
-    p_sigrl: *const u8,
-    sigrl_len: u32,
-    p_report: *const sgx_report_t,
-    quote_type: sgx_quote_sign_type_t,
-    p_spid: *const sgx_spid_t,
-    p_nonce: *const sgx_quote_nonce_t,
-    p_qe_report: *mut sgx_report_t,
-    p_quote: *mut u8,
-    _maxlen: u32,
-    p_quote_len: *mut u32,
-) -> sgx_status_t {
-    unimplemented!()
-}
-
-#[no_mangle]
-pub extern "C" fn ocall_get_sn_tss_socket(_ret_fd: *mut c_int) -> sgx_status_t {
-    unimplemented!()
-}
-
-#[no_mangle]
-pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
-    unimplemented!()
-}
-
-pub fn lookup_ipv4(host: &str, port: u16) -> SocketAddr {
-    unimplemented!()
-}
-
-#[no_mangle]
-pub extern "C" fn ocall_sgx_init_quote(
-    ret_ti: *mut sgx_target_info_t,
-    ret_gid: *mut sgx_epid_group_id_t,
-) -> sgx_status_t {
-    unimplemented!()
-}
 
 #[no_mangle]
 pub extern "C" fn ocall_write_db(

@@ -94,6 +94,9 @@ sha2 = "0.10"
 tendermint = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.6", default-features = false, features = ["rust-crypto"] }
 tendermint-proto = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.6", default-features = false }
 tendermint-light-client-verifier = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.6", default-features = false, features = ["rust-crypto"] }
+rsa = { version = "0.9", default-features = false, features = ["sha2"] }
+base64ct = { version = "1.6", default-features = false, features = ["alloc"] }
+
 
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"

@@ -95,16 +95,11 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
-			apiKeyFile, err := reg.GetApiKey()
-			if err != nil {
-				return fmt.Errorf("failed to initialize enclave: %w", err)
-			}
-
 			no_epid, _ := cmd.Flags().GetBool(flag_no_epid)
 			no_dcap, _ := cmd.Flags().GetBool(flag_no_dcap)
 			is_migration_report, _ := cmd.Flags().GetBool(flag_is_migration_report)
 
-			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap, is_migration_report)
+			_, err = api.CreateAttestationReport(no_epid, no_dcap, is_migration_report)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
@@ -507,15 +502,10 @@ Please report any issues with this command
 				}
 			}
 
-			apiKeyFile, err := reg.GetApiKey()
-			if err != nil {
-				return fmt.Errorf("failed to initialize enclave: %w", err)
-			}
-
 			no_epid, _ := cmd.Flags().GetBool(flag_no_epid)
 			no_dcap, _ := cmd.Flags().GetBool(flag_no_dcap)
 
-			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap, false)
+			_, err = api.CreateAttestationReport(no_epid, no_dcap, false)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}

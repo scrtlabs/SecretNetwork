@@ -52,6 +52,7 @@ func GetTxCmd() *cobra.Command {
 		UpdateContractAdminCmd(),
 		ClearContractAdminCmd(),
 		UpgradeProposalPassedCmd(),
+		UpdateMachineWhitelistCmd(),
 		SetContractGovernanceCmd(),
 	)
 	return txCmd
@@ -635,6 +636,41 @@ Examples:
 			msg := &types.MsgSetContractGovernance{
 				Sender:          clientCtx.GetFromAddress().String(),
 				ContractAddress: contractAddr,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+func UpdateMachineWhitelistCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "update-machine-whitelist [proposal-id] [machine-id]",
+		Short: "Update machine whitelist after governance approval",
+		Long: `Execute machine whitelist update after governance proposal passes.
+Machine ID must match the approved proposal exactly.`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			proposalID, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid proposal ID: %w", err)
+			}
+
+			// Read machine ID
+			machineId := args[1]
+
+			msg := &types.MsgUpdateMachineWhitelist{
+				Sender:     clientCtx.GetFromAddress().String(),
+				ProposalId: proposalID,
+				MachineId:  machineId,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)

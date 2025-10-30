@@ -241,6 +241,38 @@ func (q GrpcQuerier) AuthorizedMigration(c context.Context, req *types.QueryAuth
 	response := &types.QueryAuthorizedMigrationResponse{}
 	if hasAuth {
 		response.NewCodeID = codeID
+	} else {
+		return nil, status.Error(codes.NotFound, "no authorized migration found for the given contract address")
+	}
+
+	return response, nil
+}
+
+// AuthorizedAdminUpdate returns the authorized admin update info for a contract
+func (q GrpcQuerier) AuthorizedAdminUpdate(c context.Context, req *types.QueryAuthorizedAdminUpdateRequest) (*types.QueryAuthorizedAdminUpdateResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.ContractAddress == "" {
+		return nil, status.Error(codes.InvalidArgument, "contract address cannot be empty")
+	}
+
+	ctx := sdk.UnwrapSDKContext(c)
+
+	// Validate contract address
+	if _, err := sdk.AccAddressFromBech32(req.ContractAddress); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid contract address")
+	}
+
+	// Check for authorized admin update
+	newAdmin, hasAuth := q.keeper.GetNewAdmin(ctx, req.ContractAddress)
+
+	response := &types.QueryAuthorizedAdminUpdateResponse{}
+	if hasAuth {
+		response.NewAdmin = newAdmin
+	} else {
+		return nil, status.Error(codes.NotFound, "no authorized admin update found for the given contract address")
 	}
 
 	return response, nil

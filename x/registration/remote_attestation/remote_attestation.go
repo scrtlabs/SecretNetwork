@@ -27,8 +27,48 @@ type DcapQuote struct {
 	M_SigLen  uint32
 }
 
+func VerifyCertDCAP(blob []byte, pos0 uintptr, pos1 uintptr) ([]byte, error) {
+	var quote DcapQuote
+
+	buf := bytes.NewReader(blob[pos0:pos1])
+	err := binary.Read(buf, binary.LittleEndian, &quote)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("DCAP quote Extracted pk: ", hex.EncodeToString(quote.M_PubKey[:]))
+	return quote.M_PubKey[:], nil
+}
+
 func VerifyCombinedCert(blob []byte) ([]byte, error) {
 	var hdr CombinedHdr
+
+	if (len(blob) > 0) && (blob[0] != 0) {
+		// try the newer format
+		pos := 0
+
+		for pos+5 < len(blob) {
+
+			block_tag := blob[pos]
+			pos += 1
+
+			block_size := binary.LittleEndian.Uint32(blob[pos : pos+4])
+			pos += 4
+
+			if block_size > uint32(len(blob)-pos) {
+				break
+			}
+
+			pos1 := pos + int(block_size)
+
+			if (block_tag == 2) && (block_size > 0) {
+				return VerifyCertDCAP(blob, uintptr(pos), uintptr(pos1))
+			}
+
+			pos = pos1
+		}
+
+	}
 
 	if uintptr(len(blob)) < unsafe.Sizeof(hdr) {
 		return nil, errors.New("Combined hdr too small")
@@ -60,16 +100,7 @@ func VerifyCombinedCert(blob []byte) ([]byte, error) {
 	}
 
 	if idx2 > idx1 {
-		var quote DcapQuote
-
-		buf := bytes.NewReader(blob[idx1:idx2])
-		err := binary.Read(buf, binary.LittleEndian, &quote)
-		if err != nil {
-			return nil, err
-		}
-
-		fmt.Println("DCAP quote Extracted pk: ", hex.EncodeToString(quote.M_PubKey[:]))
-		return quote.M_PubKey[:], nil
+		return VerifyCertDCAP(blob, idx1, idx2)
 	}
 
 	return nil, errors.New("No valid attestatoin found")
