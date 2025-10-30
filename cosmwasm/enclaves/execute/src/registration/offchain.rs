@@ -709,10 +709,10 @@ pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
 fn calculate_machine_id_evidence(machine_id: &[u8]) -> [u8; HASH_SIZE] {
     let mut hasher = Sha256::new();
 
-    let magic = ['m' as u8, 'i' as u8, 'd' as u8, 0_u8];
-    hasher.update(&magic);
+    let magic = [b'm', b'i', b'd'];
+    hasher.update(magic);
 
-    hasher.update(&SELF_REPORT_BODY.mr_enclave.m);
+    hasher.update(SELF_REPORT_BODY.mr_enclave.m);
     hasher.update(machine_id);
 
     let mut ret = [0_u8; HASH_SIZE];
@@ -1230,7 +1230,7 @@ fn print_key_config_ex(seed: &enclave_crypto::Seed) {
     let node_pk = Keychain::generate_consensus_seed_exchange_keypair(seed).get_pubkey();
     let io_pk = Keychain::generate_consensus_io_exchange_keypair(seed).get_pubkey();
 
-    println!("{},{}", base64::encode(&node_pk), base64::encode(&io_pk));
+    println!("{},{}", base64::encode(node_pk), base64::encode(io_pk));
 }
 
 fn print_key_config() -> sgx_status_t {
@@ -1245,7 +1245,7 @@ fn print_key_config() -> sgx_status_t {
 
 fn print_key_config_rot(seed: &enclave_crypto::Seed) {
     println!("rot_seed pubkey");
-    print_key_config_ex(&seed);
+    print_key_config_ex(seed);
 }
 
 fn export_local_migration_report() -> sgx_status_t {

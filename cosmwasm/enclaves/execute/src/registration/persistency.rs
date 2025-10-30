@@ -13,7 +13,7 @@ pub fn write_master_pub_keys(key_manager: &Keychain) -> SgxResult<()> {
     write_public_key(kp, SEED_EXCH_KEY_SAVE_PATH)?;
 
     let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
-    write_public_key(&kp, IO_KEY_SAVE_PATH)?;
+    write_public_key(kp, IO_KEY_SAVE_PATH)?;
 
     Ok(())
 }

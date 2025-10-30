@@ -92,7 +92,7 @@ impl KnownJwtKeys {
     fn add_key(&mut self, kid_b64: &str, n_b64: &str) -> Result<(), Box<dyn std::error::Error>> {
         let kid_bytes = base64::decode(kid_b64)?;
         let n_bytes = my_decode_base64(n_b64)?;
-        let e_bytes = [01_u8, 00_u8, 01_u8];
+        let e_bytes = [1_u8, 00_u8, 1_u8];
 
         // 2️⃣ Construct RSA public key
         let n = rsa::BigUint::from_bytes_be(&n_bytes);
@@ -326,20 +326,18 @@ impl AttestationCombined {
             // try to deserialize in a newer format
             let mut pos = 0;
             while pos + mem::size_of::<u32>() < blob_len {
-                let key = unsafe { *(blob_ptr.offset(pos as isize)) };
+                let key = unsafe { *(blob_ptr.add(pos)) };
                 pos += 1;
 
                 let value_size =
-                    u32::from_le(unsafe { *(blob_ptr.offset(pos as isize) as *const u32) })
-                        as usize;
+                    u32::from_le(unsafe { *(blob_ptr.add(pos) as *const u32) }) as usize;
                 pos += mem::size_of::<u32>();
 
                 if pos + value_size > blob_len {
                     break;
                 }
 
-                let value =
-                    unsafe { slice::from_raw_parts(blob_ptr.offset(pos as isize), value_size) };
+                let value = unsafe { slice::from_raw_parts(blob_ptr.add(pos), value_size) };
                 pos += value_size;
 
                 match key {
@@ -431,10 +429,7 @@ impl AttestationCombined {
                     let auth_size = auth_size_max - auth_hdr_size;
 
                     if auth_size > mem::size_of::<sgx_ql_certification_data_t>() {
-                        let cert_data = (*auth_data_wrapper)
-                            .auth_data
-                            .as_ptr()
-                            .offset(auth_hdr_size as isize)
+                        let cert_data = (*auth_data_wrapper).auth_data.as_ptr().add(auth_hdr_size)
                             as *const sgx_ql_certification_data_t;
 
                         let cert_size_max =
@@ -488,7 +483,7 @@ impl AttestationCombined {
         let b64_clean: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
 
         // Decode Base64 into DER
-        let der_bytes = match base64::decode(&b64_clean) {
+        let der_bytes = match base64::decode(b64_clean) {
             Ok(x) => x,
             Err(_) => {
                 return None;
@@ -620,7 +615,7 @@ impl AttestationCombined {
             println!(
                 "quotehash masmatch. in-token: {}, actual: {}",
                 quotehash_str,
-                hex::encode(&quote_hash_actual)
+                hex::encode(quote_hash_actual)
             );
             return false;
         }
@@ -663,7 +658,7 @@ pub fn verify_quote_sgx(
                     if wl.contains(&ppid_addr) {
                         true
                     } else {
-                        println!("Unknown Machine ID: {}", orig_hex::encode(&ppid_addr));
+                        println!("Unknown Machine ID: {}", orig_hex::encode(ppid_addr));
                         false
                     }
                 }

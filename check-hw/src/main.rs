@@ -24,7 +24,6 @@ use hyper::server::Server;
 use hyper::Client;
 use hyper::header::{AUTHORIZATION, ACCEPT, USER_AGENT};
 use base64::{engine::general_purpose, Engine as _};
-use hex;
 use sha2::{Sha256, Digest};
 use serde::Serialize;
 use crate::fs::OpenOptions;
@@ -105,7 +104,7 @@ fn log_request(remote_addr: SocketAddr, whole_body: &[u8]) -> std::io::Result<()
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let filename = format!("request_log_{}_{}_from_{}.txt", now.as_secs(), now.subsec_micros(), remote_addr);
 
-    let mut file = File::create(&filename)?;
+    let mut file = File::create(filename)?;
     file.write_all(whole_body)?;
 
     Ok(())
@@ -403,7 +402,7 @@ fn extract_cpu_cert_from_cert(cert_data: &[u8]) -> Option<Vec<u8>> {
     let b64_clean: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
 
     // Decode Base64 into DER
-    let der_bytes = match base64::decode(&b64_clean) {
+    let der_bytes = match base64::decode(b64_clean) {
         Ok(x) => x,
         Err(_) => {
             return None;
@@ -452,7 +451,7 @@ unsafe fn extract_cpu_cert_from_quote(vec_quote: &[u8]) -> Option<Vec<u8>> {
                     let cert_data = (*auth_data_wrapper)
                         .auth_data
                         .as_ptr()
-                        .offset(auth_hdr_size as isize)
+                        .add(auth_hdr_size)
                         as *const sgx_ql_certification_data_t;
 
                     let cert_size_max = auth_size - mem::size_of::<sgx_ql_certification_data_t>();
@@ -491,7 +490,7 @@ fn extract_cpu_cert_from_attestation_combined<R: Read>(reader: &mut R) -> Result
     buf.resize(size_dcap_q as usize, 0);
     reader.read_exact(buf.as_mut_slice())?;
 
-    let ppid = unsafe { extract_cpu_cert_from_quote(&buf.as_slice()) };
+    let ppid = unsafe { extract_cpu_cert_from_quote(buf.as_slice()) };
 
     buf.resize(size_dcap_c as usize, 0);
     reader.read_exact(buf.as_mut_slice())?;
@@ -521,12 +520,12 @@ fn print_request_details(file_path: &std::path::Path, ip: IpAddr) {
     buf.resize(size_dcap_q as usize, 0);
     f_in.read_exact(buf.as_mut_slice()).unwrap();
 
-    let ppid = unsafe { extract_cpu_cert_from_quote(&buf.as_slice()) };
+    let ppid = unsafe { extract_cpu_cert_from_quote(buf.as_slice()) };
 
     buf.resize(size_dcap_c as usize, 0);
     f_in.read_exact(buf.as_mut_slice()).unwrap();
 
-    buf.resize(0, 0);
+    buf.clear();
     f_in.read_to_end(&mut buf).unwrap();
 
     println!("IP: {}", ip);
@@ -536,7 +535,7 @@ fn print_request_details(file_path: &std::path::Path, ip: IpAddr) {
     println!("Metadata: {}", &s);
 
     if let Some(ppid_val) = ppid {
-        println!("ppid: {}", hex::encode(&ppid_val));
+        println!("ppid: {}", hex::encode(ppid_val));
     }
 }
 
