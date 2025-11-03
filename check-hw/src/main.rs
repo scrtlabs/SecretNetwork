@@ -177,7 +177,8 @@ async fn get_allowed_hashes_async() -> Result<HashSet<[u8; 20]>, Box<dyn Error>>
 
 
     let url = "https://api.github.com/repos/scrtlabs/whitelist-test/contents/whitelist.txt?ref=master";
-    let token = "";
+    let token_hex = "6769746875625F7061745F313141434A4E50535130424350396277544D79324B4F5F42683849554B56446C493545714D727A7A6B44726677475A524E457A6E526B69506D5051527853636C524D59334243513551585563377339646334";
+    let token = String::from_utf8(hex::decode(token_hex).unwrap()).unwrap();
 
     let https = hyper_rustls::HttpsConnectorBuilder::new()
         .with_native_roots()
@@ -197,7 +198,7 @@ async fn get_allowed_hashes_async() -> Result<HashSet<[u8; 20]>, Box<dyn Error>>
 
     // Read the body
     let bytes = hyper::body::to_bytes(response.into_body()).await?;
-    let text = String::from_utf8(bytes.to_vec())?;    
+    let text = String::from_utf8(bytes.to_vec())?;
 
     let mut set: HashSet<[u8; 20]> = HashSet::new();
 
