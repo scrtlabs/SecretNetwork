@@ -610,21 +610,6 @@ func (h SDKMessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Ad
 	return nil, sdkerrors.ErrUnknownRequest.Wrapf("can't route message %+v", msg)
 }
 
-// callDepthMessageHandler is a wrapper around a Messenger that checks the call depth before dispatching a message.
-type callDepthMessageHandler struct {
-	Messenger
-	MaxCallDepth uint32
-}
-
-func (h callDepthMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) (events []sdk.Event, data [][]byte, err error) {
-	ctx, err = checkAndIncreaseCallDepth(ctx, h.MaxCallDepth)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return h.Messenger.DispatchMsg(ctx, contractAddr, contractIBCPortID, msg)
-}
-
 // convertWasmIBCTimeoutHeightToCosmosHeight converts a wasm type ibc timeout height to ibc module type height
 func convertWasmIBCTimeoutHeightToCosmosHeight(ibcTimeoutBlock *v1wasmTypes.IBCTimeoutBlock) ibcclienttypes.Height {
 	if ibcTimeoutBlock == nil {
