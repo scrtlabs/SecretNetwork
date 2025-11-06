@@ -165,8 +165,6 @@ func NewKeeper(
 		LastMsgManager: lastMsgManager,
 		authority:      authority,
 	}
-	// always wrap the messenger, even if it was replaced by an option
-	keeper.messenger = callDepthMessageHandler{keeper.messenger, keeper.maxCallDepth}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
@@ -1476,6 +1474,11 @@ func (k *Keeper) handleContractResponse(
 	}
 
 	responseHandler := NewContractResponseHandler(NewMessageDispatcher(k.messenger, k))
+	// keep track of call depth
+	ctx, err := checkAndIncreaseCallDepth(ctx, k.maxCallDepth)
+	if err != nil {
+		return nil, err
+	}
 	return responseHandler.Handle(ctx, contractAddr, ibcPort, msgs, data, ogTx, ogSigInfo)
 }
 
