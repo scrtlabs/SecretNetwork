@@ -1027,6 +1027,7 @@ func (m *MsgContractGovernanceProposalResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgContractGovernanceProposalResponse proto.InternalMessageInfo
 
+// for backward compatibility
 type MsgMigrateContractProposal struct {
 	Authority   string                 `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
 	Title       string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
