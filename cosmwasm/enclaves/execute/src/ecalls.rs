@@ -17,8 +17,6 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
     in_encrypted_random_len: u32,
     decrypted_random: &mut [u8; 32],
     next_validator_set_evidence: &mut [u8; 32],
-    in_cron_msgs: *const u8,
-    in_cron_msgs_len: u32,
 ) -> sgx_status_t {
     #[cfg(feature = "light-client-validation")]
     {
@@ -33,8 +31,6 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
             in_encrypted_random_len,
             decrypted_random,
             next_validator_set_evidence,
-            in_cron_msgs,
-            in_cron_msgs_len,
         )
     }
 

@@ -47,7 +47,7 @@ func HealthCheck() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte, cronMsgs []byte /* valSet []byte, nextValSet []byte */) ([]byte, []byte, error) {
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte /* valSet []byte, nextValSet []byte */) ([]byte, []byte, error) {
 	errmsg := C.Buffer{}
 	spidSlice := sendSlice(header)
 	defer freeAfterSend(spidSlice)
@@ -57,10 +57,8 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 	defer freeAfterSend(encRandomSlice)
 	txsSlice := sendSlice(txs)
 	defer freeAfterSend(txsSlice)
-	cronMsgsSlice := sendSlice(cronMsgs)
-	defer freeAfterSend(cronMsgsSlice)
 
-	res, err := C.submit_block_signatures(spidSlice, apiKeySlice, txsSlice, encRandomSlice, cronMsgsSlice /* valSetSlice, nextValSetSlice,*/, &errmsg)
+	res, err := C.submit_block_signatures(spidSlice, apiKeySlice, txsSlice, encRandomSlice /* valSetSlice, nextValSetSlice,*/, &errmsg)
 	if err != nil {
 		return nil, nil, errorWithMessage(err, errmsg)
 	}
