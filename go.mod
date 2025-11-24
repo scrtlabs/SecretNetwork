@@ -9,7 +9,7 @@ replace (
 	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v1.1.1-secret.1
 	cosmossdk.io/x/tx => github.com/scrtlabs/cosmos-sdk-x-tx v0.13.7-secret.0
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.19-secret.1
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.14-secret.5
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.14-secret.7
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.2.2-secret.0
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 
@@ -76,7 +76,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/hashicorp/go-metrics v0.5.3
-	github.com/scrtlabs/tm-secret-enclave v1.13.0
+	github.com/scrtlabs/tm-secret-enclave v1.13.1
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028
 	gopkg.in/yaml.v2 v2.4.0
 )
