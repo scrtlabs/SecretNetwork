@@ -56,9 +56,11 @@ func (k Keeper) Logger(ctx context.Context) log.Logger {
 
 // GetMinter returns the minter
 func (k Keeper) GetMinter(ctx context.Context) (minter types.Minter, err error) {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	store := sdkCtx.KVStore(k.storeService.OpenKVStore(ctx))
-	b := store.Get([]byte(types.MinterKey))
+	store := k.storeService.OpenKVStore(ctx)
+	b, err := store.Get([]byte(types.MinterKey))
+	if err != nil {
+		return minter, err
+	}
 	if b == nil {
 		return minter, nil
 	}
@@ -69,11 +71,9 @@ func (k Keeper) GetMinter(ctx context.Context) (minter types.Minter, err error) 
 
 // SetMinter sets the minter
 func (k Keeper) SetMinter(ctx context.Context, minter types.Minter) error {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	store := sdkCtx.KVStore(k.storeService.OpenKVStore(ctx))
+	store := k.storeService.OpenKVStore(ctx)
 	b := k.cdc.MustMarshal(&minter)
-	store.Set([]byte(types.MinterKey), b)
-	return nil
+	return store.Set([]byte(types.MinterKey), b)
 }
 
 // GetParams returns the total set of minting parameters.
