@@ -268,7 +268,13 @@ jobs:
   Build-LocalSecret:
     runs-on: ubuntu-22.04
     steps:
-      - name: Check disk space BEFORE cleanup
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo docker system prune -af
+          df -h    
+      - name: Check disk space after cleanup
         run: |
             df -h
             echo "=== Checking large directories ==="
