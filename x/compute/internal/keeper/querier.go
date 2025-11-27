@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sort"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -13,6 +14,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
@@ -276,6 +278,297 @@ func (q GrpcQuerier) AuthorizedAdminUpdate(c context.Context, req *types.QueryAu
 	}
 
 	return response, nil
+}
+
+// EcallRecord returns the ecall record for a specific block height
+// This is used by non-SGX nodes to sync with the network
+// SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)
+func (q GrpcQuerier) EcallRecord(c context.Context, req *types.QueryEcallRecordRequest) (*types.QueryEcallRecordResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.Height <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "height must be positive")
+	}
+
+	// SECURITY: Enforce height restriction - only allow querying heights < current height
+	// This prevents non-SGX nodes from getting data for the current block and participating in consensus
+	ctx := sdk.UnwrapSDKContext(c)
+	currentHeight := ctx.BlockHeight()
+	if req.Height >= currentHeight {
+		return nil, status.Errorf(codes.FailedPrecondition, "cannot query ecall record for height %d: must be less than current height %d", req.Height, currentHeight)
+	}
+
+	recorder := api.GetRecorder()
+	random, evidence, found := recorder.ReplaySubmitBlockSignatures(req.Height)
+	if !found {
+		return nil, status.Error(codes.NotFound, "no ecall record found for the given height")
+	}
+
+	return &types.QueryEcallRecordResponse{
+		Height:               req.Height,
+		RandomSeed:           random,
+		ValidatorSetEvidence: evidence,
+	}, nil
+}
+
+// EcallRecords returns ecall records for a range of block heights
+// This is used by non-SGX nodes to batch sync with the network
+// SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)
+func (q GrpcQuerier) EcallRecords(c context.Context, req *types.QueryEcallRecordsRequest) (*types.QueryEcallRecordsResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.StartHeight <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "start_height must be positive")
+	}
+
+	if req.EndHeight < req.StartHeight {
+		return nil, status.Error(codes.InvalidArgument, "end_height must be >= start_height")
+	}
+
+	// Limit the range to prevent abuse (max 1000 blocks per request)
+	maxRange := int64(1000)
+	if req.EndHeight-req.StartHeight > maxRange {
+		return nil, status.Errorf(codes.InvalidArgument, "range too large, max %d blocks per request", maxRange)
+	}
+
+	// SECURITY: Enforce height restriction - only allow querying heights < current height
+	// This prevents non-SGX nodes from getting data for the current block and participating in consensus
+	ctx := sdk.UnwrapSDKContext(c)
+	currentHeight := ctx.BlockHeight()
+	if req.EndHeight >= currentHeight {
+		// Clamp end height to currentHeight - 1
+		req.EndHeight = currentHeight - 1
+	}
+	if req.StartHeight >= currentHeight {
+		return nil, status.Errorf(codes.FailedPrecondition, "cannot query ecall records for height %d: must be less than current height %d", req.StartHeight, currentHeight)
+	}
+
+	recorder := api.GetRecorder()
+	var records []types.QueryEcallRecordResponse
+
+	for height := req.StartHeight; height <= req.EndHeight; height++ {
+		random, evidence, found := recorder.ReplaySubmitBlockSignatures(height)
+		if found {
+			records = append(records, types.QueryEcallRecordResponse{
+				Height:               height,
+				RandomSeed:           random,
+				ValidatorSetEvidence: evidence,
+			})
+		}
+	}
+
+	return &types.QueryEcallRecordsResponse{
+		Records: records,
+	}, nil
+}
+
+// EncryptedSeed returns the encrypted seed for a specific certificate hash
+// This is used by non-SGX nodes to sync with the network
+func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedSeedRequest) (*types.QueryEncryptedSeedResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.CertHash == "" {
+		return nil, status.Error(codes.InvalidArgument, "cert_hash is required")
+	}
+
+	fmt.Printf("[INFO] gRPC EncryptedSeed query: certHash=%s height=%d\n", req.CertHash, req.Height)
+
+	// Decode hex string to bytes
+	certHash, err := hex.DecodeString(req.CertHash)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid cert_hash: must be hex encoded")
+	}
+
+	recorder := api.GetRecorder()
+	encryptedSeed, errMsg, found := recorder.ReplayGetEncryptedSeed(req.Height, certHash)
+	if !found {
+		fmt.Printf("[INFO] gRPC EncryptedSeed: NOT FOUND in DB for certHash=%s height=%d\n", req.CertHash, req.Height)
+		return nil, status.Error(codes.NotFound, "no encrypted seed found for the given certificate hash")
+	}
+	if errMsg != "" {
+		fmt.Printf("[INFO] gRPC EncryptedSeed: found recorded ERROR for certHash=%s height=%d: %s\n", req.CertHash, req.Height, errMsg)
+		// Return the recorded error message so non-SGX nodes can replay the exact same error
+		return nil, status.Error(codes.FailedPrecondition, errMsg)
+	}
+
+	fmt.Printf("[INFO] gRPC EncryptedSeed: found SUCCESS for certHash=%s height=%d seedLen=%d\n", req.CertHash, req.Height, len(encryptedSeed))
+
+	return &types.QueryEncryptedSeedResponse{
+		EncryptedSeed: encryptedSeed,
+	}, nil
+}
+
+// MachineIDProof returns the recorded proof bytes for a specific machine ID at a given height
+// This is used by non-SGX nodes to replay machine ID approval ecalls
+func (q GrpcQuerier) MachineIDProof(c context.Context, req *types.QueryMachineIDProofRequest) (*types.QueryMachineIDProofResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.Height <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "height must be positive")
+	}
+
+	if req.MachineId == "" {
+		return nil, status.Error(codes.InvalidArgument, "machine_id is required")
+	}
+
+	// Decode hex string to bytes
+	machineID, err := hex.DecodeString(req.MachineId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid machine_id: must be hex encoded")
+	}
+
+	recorder := api.GetRecorder()
+	proof, found := recorder.ReplayMachineIDProof(req.Height, machineID)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "no machine ID proof found for height %d", req.Height)
+	}
+
+	return &types.QueryMachineIDProofResponse{
+		Proof: proof,
+	}, nil
+}
+
+// BlockTraces returns all execution traces for a specific block height
+// This is used by non-SGX nodes to batch fetch all traces for a block
+// SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)
+func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesRequest) (*types.QueryBlockTracesResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.Height <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "height must be positive")
+	}
+
+	// SECURITY: Enforce height restriction - only allow querying heights < current height
+	// This prevents non-SGX nodes from getting data for the current block and participating in consensus
+	ctx := sdk.UnwrapSDKContext(c)
+	currentHeight := ctx.BlockHeight()
+	if req.Height >= currentHeight {
+		return nil, status.Errorf(codes.FailedPrecondition, "cannot query block traces for height %d: must be less than current height %d", req.Height, currentHeight)
+	}
+
+	ctx.Logger().Debug("BlockTraces query received", "height", req.Height)
+	recorder := api.GetRecorder()
+	traces, err := recorder.GetAllTracesForBlock(req.Height)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get traces: %v", err)
+	}
+
+	ctx.Logger().Debug("Retrieved traces from database", "count", len(traces))
+
+	// Convert api.ExecutionTrace to types.ExecutionTraceData
+	protoTraces := make([]types.ExecutionTraceData, len(traces))
+	for i, trace := range traces {
+		ctx.Logger().Debug("Converting trace", "index", trace.Index, "callbackGas", trace.CallbackGas)
+		ops := make([]types.StorageOp, len(trace.Ops))
+		for j, op := range trace.Ops {
+			ops[j] = types.StorageOp{
+				IsDelete: op.IsDelete,
+				Key:      op.Key,
+				Value:    op.Value,
+			}
+		}
+		crossOps := make([]types.CrossModuleOp, len(trace.CrossOps))
+		for j, cop := range trace.CrossOps {
+			crossOps[j] = types.CrossModuleOp{
+				StoreKey: cop.StoreKey,
+				Key:      cop.Key,
+				Value:    cop.Value,
+				IsDelete: cop.IsDelete,
+			}
+		}
+		protoTraces[i] = types.ExecutionTraceData{
+			Index:       trace.Index,
+			Ops:         ops,
+			Result:      trace.Result,
+			GasUsed:     trace.GasUsed,
+			CallbackGas: trace.CallbackGas,
+			HasError:    trace.HasError,
+			ErrorMsg:    trace.ErrorMsg,
+			CrossOps:    crossOps,
+		}
+		ctx.Logger().Debug("Proto trace converted", "callbackGas", protoTraces[i].CallbackGas)
+	}
+
+	firstTraceCallbackGas := uint64(0)
+	if len(protoTraces) > 0 {
+		firstTraceCallbackGas = protoTraces[0].CallbackGas
+	}
+	ctx.Logger().Debug("Returning traces", "count", len(protoTraces), "firstTraceCallbackGas", firstTraceCallbackGas)
+
+	return &types.QueryBlockTracesResponse{
+		Traces: protoTraces,
+	}, nil
+}
+
+// AnalyzeCode returns the static analysis of a contract's code
+// This is used by non-SGX nodes to determine IBC entry points and required features
+func (q GrpcQuerier) AnalyzeCode(c context.Context, req *types.QueryAnalyzeCodeRequest) (*types.QueryAnalyzeCodeResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if len(req.CodeHash) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "code hash is required")
+	}
+
+	report, err := q.keeper.wasmer.AnalyzeCode(req.CodeHash)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to analyze code: %v", err)
+	}
+
+	return &types.QueryAnalyzeCodeResponse{
+		HasIbcEntryPoints: report.HasIBCEntryPoints,
+		RequiredFeatures:  report.RequiredFeatures,
+	}, nil
+}
+
+// BlockCreateResults returns all Create (MsgStoreCode) results for a block
+// This is used by non-SGX nodes to fetch Create outcomes during sync
+func (q GrpcQuerier) BlockCreateResults(c context.Context, req *types.QueryBlockCreateResultsRequest) (*types.QueryBlockCreateResultsResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.Height <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "height must be positive")
+	}
+
+	// SECURITY: Enforce height restriction - only allow querying heights < current height
+	ctx := sdk.UnwrapSDKContext(c)
+	currentHeight := ctx.BlockHeight()
+	if req.Height >= currentHeight {
+		return nil, status.Errorf(codes.FailedPrecondition, "cannot query block create results for height %d: must be less than current height %d", req.Height, currentHeight)
+	}
+
+	recorder := api.GetRecorder()
+	results, wasmHashes, err := recorder.GetAllCreateResultsForBlock(req.Height)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get create results: %v", err)
+	}
+
+	protoResults := make([]types.CreateResultData, len(results))
+	for i, r := range results {
+		protoResults[i] = types.CreateResultData{
+			WasmHash: wasmHashes[i],
+			CodeHash: r.CodeHash,
+			HasError: r.HasError,
+			ErrorMsg: r.ErrorMsg,
+		}
+	}
+
+	return &types.QueryBlockCreateResultsResponse{
+		Results: protoResults,
+	}, nil
 }
 
 func queryContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, keeper Keeper) (*types.ContractInfoWithAddress, error) {

@@ -48,7 +48,7 @@ COPY cosmwasm cosmwasm/
 
 COPY rust-toolchain rust-toolchain
 RUN rustup component add rust-src
-RUN cargo install xargo --version 0.3.25
+RUN cargo install xargo --version 0.3.25 --locked
 
 
 WORKDIR /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm
@@ -78,7 +78,7 @@ RUN git submodule init
 RUN git submodule update --remote
 
 RUN rustup component add rust-src
-RUN cargo install xargo --version 0.3.25
+RUN cargo install xargo --version 0.3.25 --locked
 
 RUN . /opt/sgxsdk/environment && env && LD_LIBRARY_PATH=/opt/sgxsdk/lib64 FEATURES="$(echo ${FEATURES} | perl -pe 's/go-tests|debug-print//g')" MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U="$(echo \"${FEATURES_U}\" | perl -pe 's/go-tests|debug-print//g')" make build
 
