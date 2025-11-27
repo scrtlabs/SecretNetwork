@@ -536,14 +536,39 @@ func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report boo
 }
 
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
+	recorder := GetRecorder()
+
+	// In replay mode, try to get from recorded data
+	if recorder.IsReplayMode() {
+		if output, err, found := ReplayGetEncryptedSeed(cert); found {
+			fmt.Printf("[GetEncryptedSeed] Replay mode: returning recorded result\n")
+			return output, err
+		}
+		return nil, fmt.Errorf("GetEncryptedSeed: no recorded data found for input (replay mode)")
+	}
+
+	// SGX mode: call the actual enclave
 	errmsg := C.Buffer{}
 	certSlice := sendSlice(cert)
 	defer freeAfterSend(certSlice)
 	res, err := C.get_encrypted_seed(certSlice, &errmsg)
+
+	var output []byte
+	var callErr error
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		callErr = errorWithMessage(err, errmsg)
+	} else {
+		output = receiveVector(res)
 	}
-	return receiveVector(res), nil
+
+	// Record the result for non-SGX nodes
+	if recordErr := RecordGetEncryptedSeed(cert, output, callErr); recordErr != nil {
+		fmt.Printf("[GetEncryptedSeed] Warning: failed to record ecall: %v\n", recordErr)
+	} else {
+		fmt.Printf("[GetEncryptedSeed] SGX mode: recorded ecall result\n")
+	}
+
+	return output, callErr
 }
 
 func GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {
