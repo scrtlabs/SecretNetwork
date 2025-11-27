@@ -3,6 +3,7 @@ package compute
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
@@ -157,44 +158,82 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	// Note: as of tendermint v0.38.0 block begin request info is no longer available
 	ctx := c.(sdk.Context)
 	block_header := ctx.BlockHeader()
-
-	header, err := block_header.Marshal()
-	if err != nil {
-		ctx.Logger().Error("Failed to marshal block header")
-		return err
-	}
-
-	commit := ctx.Commit()
-	b_commit, err := commit.Marshal()
-	if err != nil {
-		ctx.Logger().Error("Failed to marshal commit")
-		return err
-	}
+	height := ctx.BlockHeight()
 
 	x2_data := scrt.UnFlatten(ctx.TxBytes())
-	tm_data := tm_type.Data{Txs: x2_data}
-	data, err := tm_data.Marshal()
-	if err != nil {
-		ctx.Logger().Error("Failed to marshal tx data")
-		return err
-	}
+
 	if block_header.EncryptedRandom != nil {
-		randomAndProof := append(block_header.EncryptedRandom.Random, block_header.EncryptedRandom.Proof...)
-		random, validator_set_evidence, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof)
-		if err != nil {
-			ctx.Logger().Error("Failed to submit block signatures")
-			return err
+		var random, validator_set_evidence []byte
+
+		recorder := api.GetRecorder()
+		if recorder.IsReplayMode() {
+			// REPLAY MODE: Try to get from local DB first, then fetch from remote SGX node
+			var found bool
+			random, validator_set_evidence, found = recorder.ReplaySubmitBlockSignatures(height)
+			if !found {
+				// Try to fetch from remote SGX node
+				client := api.GetEcallClient()
+				record, err := client.FetchEcallRecord(height)
+				if err != nil {
+					ctx.Logger().Error("Failed to fetch ecall record from remote", "height", height, "error", err)
+					return fmt.Errorf("no ecall record found for height %d: %w", height, err)
+				}
+				random = record.RandomSeed
+				validator_set_evidence = record.ValidatorSetEvidence
+
+				// Cache locally for future use
+				if cacheErr := recorder.RecordSubmitBlockSignatures(height, random, validator_set_evidence); cacheErr != nil {
+					ctx.Logger().Debug("Failed to cache ecall record locally", "error", cacheErr)
+				}
+			}
+		} else {
+			// SGX MODE: Call enclave and record the result
+			header, err := block_header.Marshal()
+			if err != nil {
+				ctx.Logger().Error("Failed to marshal block header")
+				return err
+			}
+
+			commit := ctx.Commit()
+			b_commit, err := commit.Marshal()
+			if err != nil {
+				ctx.Logger().Error("Failed to marshal commit")
+				return err
+			}
+
+			tm_data := tm_type.Data{Txs: x2_data}
+			data, err := tm_data.Marshal()
+			if err != nil {
+				ctx.Logger().Error("Failed to marshal tx data")
+				return err
+			}
+
+			randomAndProof := append(block_header.EncryptedRandom.Random, block_header.EncryptedRandom.Proof...)
+			random, validator_set_evidence, err = api.SubmitBlockSignatures(header, b_commit, data, randomAndProof)
+			if err != nil {
+				ctx.Logger().Error("Failed to submit block signatures")
+				return err
+			}
+
+			// Record the result for non-SGX nodes
+			if err := recorder.RecordSubmitBlockSignatures(height, random, validator_set_evidence); err != nil {
+				ctx.Logger().Error("Failed to record SubmitBlockSignatures", "error", err)
+				// Don't fail the block for recording errors
+			}
 		}
 
 		am.keeper.SetRandomSeed(ctx, random, validator_set_evidence)
 	} else {
-		ctx.Logger().Debug("Non-encrypted block", "Block_hash", block_header.LastBlockId.Hash, "Height", ctx.BlockHeight(), "Txs", len(x2_data))
+		ctx.Logger().Debug("Non-encrypted block", "Block_hash", block_header.LastBlockId.Hash, "Height", height, "Txs", len(x2_data))
 	}
 	return nil
 }
 
 // EndBlock returns the end blocker for the compute module.
 func (am AppModule) EndBlock(c context.Context) error {
+	if api.GetRecorder().IsReplayMode() {
+		return nil
+	}
 	ctx := c.(sdk.Context)
 
 	bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx)
@@ -215,6 +254,10 @@ func (am AppModule) EndBlock(c context.Context) error {
 		ctx.Logger().Error("Failed to set scheduled txs %+v", err)
 		// return err
 	}
+
+	// Prune old ecall records periodically
+	api.GetRecorder().PruneOldRecords(ctx.BlockHeight())
+
 	return nil
 }
 

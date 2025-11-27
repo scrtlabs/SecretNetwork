@@ -8,6 +8,8 @@ package api
 import "C"
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"runtime"
@@ -536,6 +538,31 @@ func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report boo
 }
 
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
+	recorder := GetRecorder()
+	certHash := sha256.Sum256(cert)
+	certHashHex := hex.EncodeToString(certHash[:])
+
+	if recorder.IsReplayMode() {
+		// Try local DB first
+		if output, found := recorder.ReplayGetEncryptedSeed(certHash[:]); found {
+			return output, nil
+		}
+
+		// Fetch from remote SGX node
+		client := GetEcallClient()
+		output, err := client.FetchEncryptedSeed(certHashHex)
+		if err != nil {
+			return nil, fmt.Errorf("GetEncryptedSeed replay failed: %w", err)
+		}
+
+		// Cache locally
+		if cacheErr := recorder.RecordGetEncryptedSeed(certHash[:], output); cacheErr != nil {
+			fmt.Printf("[GetEncryptedSeed] Failed to cache: %v\n", cacheErr)
+		}
+		return output, nil
+	}
+
+	// SGX mode: call enclave and record result
 	errmsg := C.Buffer{}
 	certSlice := sendSlice(cert)
 	defer freeAfterSend(certSlice)
@@ -543,7 +570,12 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), nil
+
+	output := receiveVector(res)
+	if err := recorder.RecordGetEncryptedSeed(certHash[:], output); err != nil {
+		fmt.Printf("[GetEncryptedSeed] Failed to record: %v\n", err)
+	}
+	return output, nil
 }
 
 func GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {
