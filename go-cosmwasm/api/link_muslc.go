@@ -1,5 +1,5 @@
-//go:build linux && muslc
-// +build linux,muslc
+//go:build linux && muslc && !nosgx
+// +build linux,muslc,!nosgx
 
 package api
 
