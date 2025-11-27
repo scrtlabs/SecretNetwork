@@ -550,6 +550,17 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	ak.ComputeKeeper = &computeKeeper
+
+	// Provide registered StoreKey instances so ApplyCrossModuleOps
+	// resolves names to the exact pointers CacheMultiStore expects.
+	{
+		sk := make(map[string]storetypes.StoreKey, len(ak.keys))
+		for name, key := range ak.keys {
+			sk[name] = key
+		}
+		ak.ComputeKeeper.SetStoreKeys(sk)
+	}
+
 	wasmHooks.ContractKeeper = ak.ComputeKeeper
 
 	// Compute receive: Switch -> Fee -> Packet Forward -> WASM Hooks
