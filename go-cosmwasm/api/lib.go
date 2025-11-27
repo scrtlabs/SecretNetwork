@@ -1,5 +1,5 @@
-//go:build !secretcli
-// +build !secretcli
+//go:build !secretcli && !nosgx
+// +build !secretcli,!nosgx
 
 package api
 
@@ -8,6 +8,8 @@ package api
 import "C"
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"runtime"
@@ -38,6 +40,10 @@ type Cache struct {
 }
 
 func HealthCheck() ([]byte, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		return []byte("replay"), nil
+	}
 	errmsg := C.Buffer{}
 
 	res, err := C.get_health_check(&errmsg)
@@ -47,7 +53,11 @@ func HealthCheck() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte /* valSet []byte, nextValSet []byte */) ([]byte, []byte, error) {
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte, cronMsgs []byte /* valSet []byte, nextValSet []byte */) ([]byte, []byte, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		return nil, nil, errors.New("submit block signatures not supported on non-SGX node")
+	}
 	errmsg := C.Buffer{}
 	spidSlice := sendSlice(header)
 	defer freeAfterSend(spidSlice)
@@ -66,6 +76,11 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 }
 
 func SubmitValidatorSetEvidence(evidence []byte) error {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		logInfo("SubmitValidatorSetEvidence", "Skipped in replay mode")
+		return nil
+	}
 	errmsg := C.Buffer{}
 	evidenceSlice := sendSlice(evidence)
 	defer freeAfterSend(evidenceSlice)
@@ -74,6 +89,14 @@ func SubmitValidatorSetEvidence(evidence []byte) error {
 }
 
 func InitBootstrap() ([]byte, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, return a dummy 32-byte public key
+		// This function is only called during bootstrap which doesn't happen in replay
+		logInfo("InitBootstrap", "Skipped in replay mode")
+		return make([]byte, 32), nil
+	}
+
 	errmsg := C.Buffer{}
 	res, err := C.init_bootstrap(&errmsg)
 	if err != nil {
@@ -83,6 +106,13 @@ func InitBootstrap() ([]byte, error) {
 }
 
 func LoadSeedToEnclave(masterKey []byte, seed []byte) (bool, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, skip loading seed to enclave (no enclave)
+		logInfo("LoadSeedToEnclave", "Skipped in replay mode")
+		return true, nil
+	}
+
 	pkSlice := sendSlice(masterKey)
 	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
@@ -97,6 +127,11 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte) (bool, error) {
 }
 
 func RotateStore(kvs []byte) (bool, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		logInfo("RotateStore", "Skipped in replay mode")
+		return false, errors.New("rotate store not supported on non-SGX node")
+	}
 	// avoid buffer copy. We need modification in-place
 	kvSlice := C.Buffer{
 		ptr: (*C.uint8_t)(unsafe.Pointer(&kvs[0])),
@@ -115,6 +150,11 @@ func RotateStore(kvs []byte) (bool, error) {
 }
 
 func MigrationOp(op uint32) (bool, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		logInfo("MigrationOp", "Skipped in replay mode")
+		return true, nil // no-op success so upgrade handlers don't fail
+	}
 	ret, err := C.migration_op(u32(op))
 	if err != nil {
 		return false, err
@@ -125,12 +165,11 @@ func MigrationOp(op uint32) (bool, error) {
 	return true, nil
 }
 
-func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
-	res := C.get_network_pubkey(u32(i_seed))
-	return receiveVector(res.buf1), receiveVector(res.buf2)
-}
-
 func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		return false, errors.New("emergency approve upgrade not supported on non-SGX node")
+	}
 	nodeDirBuf := sendSlice([]byte(nodeDir))
 	defer freeAfterSend(nodeDirBuf)
 
@@ -168,6 +207,13 @@ func ReleaseCache(cache Cache) {
 }
 
 func InitEnclaveRuntime(moduleCacheSize uint16) error {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, skip enclave runtime initialization (no enclave)
+		logInfo("InitEnclaveRuntime", "Skipped in replay mode")
+		return nil
+	}
+
 	errmsg := C.Buffer{}
 
 	config := C.EnclaveRuntimeConfig{
@@ -182,6 +228,11 @@ func InitEnclaveRuntime(moduleCacheSize uint16) error {
 }
 
 func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		logInfo("OnUpgradeProposalPassed", "Skipped in replay mode")
+		return nil
+	}
 	msgBuf := sendSlice(mrEnclaveHash)
 	defer freeAfterSend(msgBuf)
 
@@ -233,10 +284,27 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	defer freeAfterSend(code)
 	errmsg := C.Buffer{}
 	id, err := C.create(cache.ptr, code, &errmsg)
+
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		createErr := errorWithMessage(err, errmsg)
+		// Record the failure so non-SGX nodes can replay it
+		wasmHash := sha256.Sum256(wasm)
+		if recErr := recorder.RecordCreateResult(height, wasmHash[:], nil, createErr.Error()); recErr != nil {
+			logError("Create", "Failed to record Create error: %v", recErr)
+		}
+		return nil, createErr
 	}
-	return receiveVector(id), nil
+
+	codeHash := receiveVector(id)
+	// Record the success
+	wasmHash := sha256.Sum256(wasm)
+	if recErr := recorder.RecordCreateResult(height, wasmHash[:], codeHash, ""); recErr != nil {
+		logError("Create", "Failed to record Create result: %v", recErr)
+	}
+	return codeHash, nil
 }
 
 func GetCode(cache Cache, code_id []byte) ([]byte, error) {
@@ -264,6 +332,25 @@ func Migrate(
 	admin []byte,
 	adminProof []byte,
 ) ([]byte, uint64, error) {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	execIndex := recorder.NextExecutionIndex()
+
+	if recorder.IsReplayMode() {
+		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
+			return result, gas, err
+		}
+		return nil, 0, fmt.Errorf("Migrate replay failed: trace not found for height %d index %d", height, execIndex)
+	}
+
+	recording := recorder.IsSGXMode()
+	var recordingStore *RecordingKVStore
+	var storeForDB KVStore = store
+	if recording {
+		recordingStore = NewRecordingKVStore(store)
+		storeForDB = recordingStore
+	}
+
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -275,7 +362,7 @@ func Migrate(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(storeForDB, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -291,17 +378,62 @@ func Migrate(
 	adminProofBuffer := sendSlice(adminProof)
 	defer freeAfterSend(adminProofBuffer)
 
-	//// This is done in order to ensure that goroutines don't
-	//// swap threads between recursive calls to the enclave.
-	//runtime.LockOSThread()
-	//defer runtime.UnlockOSThread()
+	// Capture gas before execution to measure callback gas
+	var gasBefore uint64
+	if recording && gasMeter != nil {
+		gasBefore = (*gasMeter).GasConsumed()
+	}
 
 	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer, adminProofBuffer)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+
+	if !recording {
+		if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+			return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		}
+		return receiveVector(res), uint64(gasUsed), nil
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+
+	// Calculate callback gas consumed during execution
+	var callbackGas uint64
+	if gasMeter != nil {
+		gasAfter := (*gasMeter).GasConsumed()
+		callbackGas = gasAfter - gasBefore
+	}
+
+	// Record the execution trace
+	trace := &ExecutionTrace{
+		Index:       execIndex,
+		Ops:         recordingStore.GetOps(),
+		CrossOps:    recorder.GetAndClearPendingCrossModuleOps(),
+		GasUsed:     uint64(gasUsed),
+		CallbackGas: callbackGas,
+	}
+
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		trace.HasError = true
+		errorMsgBytes := receiveVector(errmsg)
+		trace.ErrorMsg = string(errorMsgBytes)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			trace.IsOutOfGas = true
+		}
+		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+			logError("Migrate", "Failed to record trace: %v", recordErr)
+		}
+		if trace.IsOutOfGas {
+			return nil, uint64(gasUsed), types.OutOfGasError{}
+		}
+		if errorMsgBytes == nil {
+			return nil, uint64(gasUsed), err
+		}
+		return nil, uint64(gasUsed), fmt.Errorf("%s", string(errorMsgBytes))
+	}
+
+	trace.Result = receiveVector(res)
+	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+		logError("Migrate", "Failed to record trace: %v", recordErr)
+	}
+
+	return trace.Result, uint64(gasUsed), nil
 }
 
 func UpdateAdmin(
@@ -318,16 +450,34 @@ func UpdateAdmin(
 	currentAdminProof []byte,
 	newAdmin []byte,
 ) ([]byte, error) {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	execIndex := recorder.NextExecutionIndex()
+
+	if recorder.IsReplayMode() {
+		if result, _, err, found := replayExecution(store, gasMeter, execIndex); found {
+			return result, err
+		}
+		return nil, fmt.Errorf("UpdateAdmin replay failed: trace not found for height %d index %d", height, execIndex)
+	}
+
+	recording := recorder.IsSGXMode()
+	var recordingStore *RecordingKVStore
+	var storeForDB KVStore = store
+	if recording {
+		recordingStore = NewRecordingKVStore(store)
+		storeForDB = recordingStore
+	}
+
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
 	defer freeAfterSend(p)
 
-	// set up a new stack frame to handle iterators
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(storeForDB, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -345,16 +495,61 @@ func UpdateAdmin(
 	newAdminBuffer := sendSlice(newAdmin)
 	defer freeAfterSend(newAdminBuffer)
 
-	//// This is done in order to ensure that goroutines don't
-	//// swap threads between recursive calls to the enclave.
-	//runtime.LockOSThread()
-	//defer runtime.UnlockOSThread()
+	var gasBefore uint64
+	if recording && gasMeter != nil {
+		gasBefore = (*gasMeter).GasConsumed()
+	}
 
 	res, err := C.update_admin(cache.ptr, id, p, db, a, q, u64(gasLimit), &errmsg, s, currentAdminBuffer, currentAdminProofBuffer, newAdminBuffer)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		return nil, errorWithMessage(err, errmsg)
+
+	if !recording {
+		if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+			return nil, errorWithMessage(err, errmsg)
+		}
+		return receiveVector(res), nil
 	}
-	return receiveVector(res), nil
+
+	// Calculate callback gas consumed during execution
+	var callbackGas uint64
+	if gasMeter != nil {
+		gasAfter := (*gasMeter).GasConsumed()
+		callbackGas = gasAfter - gasBefore
+	}
+
+	// Record the execution trace
+	trace := &ExecutionTrace{
+		Index:       execIndex,
+		Ops:         recordingStore.GetOps(),
+		CrossOps:    recorder.GetAndClearPendingCrossModuleOps(),
+		GasUsed:     0, // UpdateAdmin doesn't return gas used
+		CallbackGas: callbackGas,
+	}
+
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		trace.HasError = true
+		errorMsgBytes := receiveVector(errmsg)
+		trace.ErrorMsg = string(errorMsgBytes)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			trace.IsOutOfGas = true
+		}
+		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+			logError("UpdateAdmin", "Failed to record trace: %v", recordErr)
+		}
+		if trace.IsOutOfGas {
+			return nil, types.OutOfGasError{}
+		}
+		if errorMsgBytes == nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%s", string(errorMsgBytes))
+	}
+
+	trace.Result = receiveVector(res)
+	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+		logError("UpdateAdmin", "Failed to record trace: %v", recordErr)
+	}
+
+	return trace.Result, nil
 }
 
 func Instantiate(
@@ -370,6 +565,28 @@ func Instantiate(
 	sigInfo []byte,
 	admin []byte,
 ) ([]byte, uint64, error) {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	execIndex := recorder.NextExecutionIndex()
+
+	if recorder.IsReplayMode() {
+		logDebug("Instantiate", "REPLAY mode: height=%d execIndex=%d", height, execIndex)
+		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
+			logDebug("Instantiate", "REPLAY success: resultLen=%d gas=%d err=%v", len(result), gas, err)
+			return result, gas, err
+		}
+		logWarn("Instantiate", "REPLAY FAILED: trace not found!")
+		return nil, 0, fmt.Errorf("Instantiate replay failed: trace not found for height %d index %d", height, execIndex)
+	}
+
+	recording := recorder.IsSGXMode()
+	var recordingStore *RecordingKVStore
+	var storeForDB KVStore = store
+	if recording {
+		recordingStore = NewRecordingKVStore(store)
+		storeForDB = recordingStore
+	}
+
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -381,7 +598,7 @@ func Instantiate(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(storeForDB, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -394,17 +611,71 @@ func Instantiate(
 	adminBuffer := sendSlice(admin)
 	defer freeAfterSend(adminBuffer)
 
-	//// This is done in order to ensure that goroutines don't
-	//// swap threads between recursive calls to the enclave.
-	//runtime.LockOSThread()
-	//defer runtime.UnlockOSThread()
+	// Capture gas before execution to measure callback gas
+	var gasBefore uint64
+	if recording && gasMeter != nil {
+		gasBefore = (*gasMeter).GasConsumed()
+		logDebug("Instantiate", "SGX gasBefore=%d", gasBefore)
+	}
 
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+
+	if !recording {
+		if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+			return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		}
+		return receiveVector(res), uint64(gasUsed), nil
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+
+	// Calculate callback gas consumed during execution
+	var callbackGas uint64
+	if gasMeter != nil {
+		gasAfter := (*gasMeter).GasConsumed()
+		callbackGas = gasAfter - gasBefore
+		logDebug("Instantiate", "SGX gasAfter=%d callbackGas=%d (gasAfter - gasBefore)", gasAfter, callbackGas)
+	} else {
+		logWarn("Instantiate", "SGX WARNING: gasMeter is nil, cannot measure callbackGas")
+	}
+
+	logDebug("Instantiate", "SGX C.instantiate returned: gasUsed=%d callbackGas=%d", gasUsed, callbackGas)
+
+	// Record the execution trace
+	trace := &ExecutionTrace{
+		Index:       execIndex,
+		Ops:         recordingStore.GetOps(),
+		CrossOps:    recorder.GetAndClearPendingCrossModuleOps(),
+		GasUsed:     uint64(gasUsed),
+		CallbackGas: callbackGas,
+	}
+
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		trace.HasError = true
+		errorMsgBytes := receiveVector(errmsg)
+		trace.ErrorMsg = string(errorMsgBytes)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			trace.IsOutOfGas = true
+		}
+		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+			logError("Instantiate", "Failed to record trace: %v", recordErr)
+		}
+		if trace.IsOutOfGas {
+			return nil, uint64(gasUsed), types.OutOfGasError{}
+		}
+		if errorMsgBytes == nil {
+			return nil, uint64(gasUsed), err
+		}
+		return nil, uint64(gasUsed), fmt.Errorf("%s", string(errorMsgBytes))
+	}
+
+	trace.Result = receiveVector(res)
+	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+		logError("Instantiate", "Failed to record trace: %v", recordErr)
+	} else {
+		logDebug("Instantiate", "SGX recorded trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d",
+			height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas)
+	}
+
+	return trace.Result, uint64(gasUsed), nil
 }
 
 func Handle(
@@ -420,6 +691,28 @@ func Handle(
 	sigInfo []byte,
 	handleType types.HandleType,
 ) ([]byte, uint64, error) {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	execIndex := recorder.NextExecutionIndex()
+
+	if recorder.IsReplayMode() {
+		logDebug("Handle", "REPLAY mode: height=%d execIndex=%d", height, execIndex)
+		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
+			logDebug("Handle", "REPLAY success: resultLen=%d gas=%d err=%v", len(result), gas, err)
+			return result, gas, err
+		}
+		logWarn("Handle", "REPLAY FAILED: trace not found!")
+		return nil, 0, fmt.Errorf("Handle replay failed: trace not found for height %d index %d", height, execIndex)
+	}
+
+	recording := recorder.IsSGXMode()
+	var recordingStore *RecordingKVStore
+	var storeForDB KVStore = store
+	if recording {
+		recordingStore = NewRecordingKVStore(store)
+		storeForDB = recordingStore
+	}
+
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -431,7 +724,7 @@ func Handle(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(storeForDB, counter)
 	db := buildDB(&dbState, gasMeter)
 	s := sendSlice(sigInfo)
 	defer freeAfterSend(s)
@@ -440,17 +733,71 @@ func Handle(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	//// This is done in order to ensure that goroutines don't
-	//// swap threads between recursive calls to the enclave.
-	//runtime.LockOSThread()
-	//defer runtime.UnlockOSThread()
+	// Capture gas before execution to measure callback gas
+	var gasBefore uint64
+	if recording && gasMeter != nil {
+		gasBefore = (*gasMeter).GasConsumed()
+		logDebug("Handle", "SGX gasBefore=%d", gasBefore)
+	}
 
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, u8(handleType))
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+
+	if !recording {
+		if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+			return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		}
+		return receiveVector(res), uint64(gasUsed), nil
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+
+	// Calculate callback gas consumed during execution
+	var callbackGas uint64
+	if gasMeter != nil {
+		gasAfter := (*gasMeter).GasConsumed()
+		callbackGas = gasAfter - gasBefore
+		logDebug("Handle", "SGX gasAfter=%d callbackGas=%d (gasAfter - gasBefore)", gasAfter, callbackGas)
+	} else {
+		logWarn("Handle", "SGX WARNING: gasMeter is nil, cannot measure callbackGas")
+	}
+
+	logDebug("Handle", "SGX C.handle returned: gasUsed=%d callbackGas=%d", gasUsed, callbackGas)
+
+	// Record the execution trace
+	trace := &ExecutionTrace{
+		Index:       execIndex,
+		Ops:         recordingStore.GetOps(),
+		CrossOps:    recorder.GetAndClearPendingCrossModuleOps(),
+		GasUsed:     uint64(gasUsed),
+		CallbackGas: callbackGas,
+	}
+
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		trace.HasError = true
+		errorMsgBytes := receiveVector(errmsg)
+		trace.ErrorMsg = string(errorMsgBytes)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			trace.IsOutOfGas = true
+		}
+		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+			logError("Handle", "Failed to record trace: %v", recordErr)
+		}
+		if trace.IsOutOfGas {
+			return nil, uint64(gasUsed), types.OutOfGasError{}
+		}
+		if errorMsgBytes == nil {
+			return nil, uint64(gasUsed), err
+		}
+		return nil, uint64(gasUsed), fmt.Errorf("%s", string(errorMsgBytes))
+	}
+
+	trace.Result = receiveVector(res)
+	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+		logError("Handle", "Failed to record trace: %v", recordErr)
+	} else {
+		logDebug("Handle", "SGX recorded trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d",
+			height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas)
+	}
+
+	return trace.Result, uint64(gasUsed), nil
 }
 
 func Query(
@@ -464,6 +811,10 @@ func Query(
 	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		return nil, 0, errors.New("secret contract query not supported on non-SGX node")
+	}
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -515,6 +866,14 @@ func AnalyzeCode(
 
 // KeyGen Send KeyGen request to enclave
 func KeyGen() ([]byte, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, return a dummy 32-byte public key
+		// Key generation is only needed for node registration which doesn't happen in replay
+		logInfo("KeyGen", "Skipped in replay mode, returning dummy key")
+		return make([]byte, 32), nil
+	}
+
 	errmsg := C.Buffer{}
 	res, err := C.key_gen(&errmsg)
 	if err != nil {
@@ -523,8 +882,16 @@ func KeyGen() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-// CreateAttestationReport Send request to enclave
 func CreateAttestationReport(ext_sk []byte, is_migration_report bool) (bool, error) {
+// CreateAttestationReport Send CreateAttestationReport request to enclave
+func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, skip attestation report creation (no SGX)
+		logInfo("CreateAttestationReport", "Skipped in replay mode")
+		return true, nil
+	}
+
 	errmsg := C.Buffer{}
 
 	flags := u32(0)
@@ -543,6 +910,39 @@ func CreateAttestationReport(ext_sk []byte, is_migration_report bool) (bool, err
 }
 
 func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, error) {
+	recorder := GetRecorder()
+	certHash := sha256.Sum256(cert)
+	certHashHex := hex.EncodeToString(certHash[:])
+
+	logInfo("GetEncryptedSeed", "SGX called: certHashHex=%s certLen=%d replayMode=%v",
+		certHashHex, len(cert), recorder.IsReplayMode())
+
+	if recorder.IsReplayMode() {
+		// Try local DB first
+		height := recorder.GetCurrentBlockHeight()
+		if output, errMsg, found := recorder.ReplayGetEncryptedSeed(height, certHash[:]); found {
+			if errMsg != "" {
+				// Replay the exact same error the SGX enclave produced
+				return nil, fmt.Errorf("%s", errMsg)
+			}
+			return output, nil
+		}
+
+		// Fetch from remote SGX node
+		client := GetEcallClient()
+		output, err := client.FetchEncryptedSeed(height, certHashHex)
+		if err != nil {
+			return nil, fmt.Errorf("GetEncryptedSeed replay failed: %w", err)
+		}
+
+		// Cache locally
+		if cacheErr := recorder.RecordGetEncryptedSeed(height, certHash[:], output); cacheErr != nil {
+			logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
+		}
+		return output, nil
+	}
+
+	// SGX mode: call enclave and record result
 	errmsg := C.Buffer{}
 	certSlice := sendSlice(cert)
 	defer freeAfterSend(certSlice)
@@ -550,12 +950,34 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 	defer freeAfterSend(replace_machine_slice)
 	res, err := C.get_encrypted_seed(certSlice, replace_machine_slice, &errmsg)
 	if err != nil {
-		return nil, nil, errorWithMessage(err, errmsg)
+		enclaveErr := errorWithMessage(err, errmsg)
+		logInfo("GetEncryptedSeed", "SGX enclave FAILED for %s: %v", certHashHex, enclaveErr)
+		// Record the error so non-SGX nodes can replay the exact same message
+		height := recorder.GetCurrentBlockHeight()
+		if recErr := recorder.RecordGetEncryptedSeedError(height, certHash[:], enclaveErr.Error()); recErr != nil {
+			logError("GetEncryptedSeed", "Failed to record error: %v", recErr)
+		}
+		return nil, enclaveErr
 	}
-	return receiveVector(res.buf1), receiveVector(res.buf2), nil
+
+	output := receiveVector(res)
+	height := recorder.GetCurrentBlockHeight()
+	logInfo("GetEncryptedSeed", "SGX enclave SUCCESS for %s (%d bytes), recording at height %d...", certHashHex, len(output), height)
+	if err := recorder.RecordGetEncryptedSeed(height, certHash[:], output); err != nil {
+		logError("GetEncryptedSeed", "Failed to record: %v", err)
+	} else {
+		logInfo("GetEncryptedSeed", "Recorded GetEncryptedSeed for %s OK", certHashHex)
+	}
+	return output, nil
 }
 
 func GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {
+	// Genesis seed is only used during bootstrap of a new network.
+	// Non-SGX replay nodes don't need this - they sync from existing networks.
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		return nil, errors.New("get encrypted genesis seed not supported on non-SGX node")
+	}
 	errmsg := C.Buffer{}
 	pkSlice := sendSlice(pk)
 	defer freeAfterSend(pkSlice)

@@ -81,7 +81,7 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 	}, err
 }
 
-func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
+func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (res *types.MsgExecuteContractResponse, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(

@@ -45,7 +45,11 @@ func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64, modul
 	if err != nil {
 		return nil, err
 	}
-	if initEnclave {
+
+	// Skip enclave runtime initialization in replay mode
+	// Cache is still needed for storing WASM code
+	recorder := api.GetRecorder()
+	if initEnclave && !recorder.IsReplayMode() {
 		err = api.InitEnclaveRuntime(moduleCacheSize)
 		if err != nil {
 			return nil, err
