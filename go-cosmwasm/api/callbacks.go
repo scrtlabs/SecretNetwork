@@ -84,6 +84,14 @@ type Gas = uint64
 // https://github.com/cosmos/cosmos-sdk/blob/18890a225b46260a9adc587be6fa1cc2aff101cd/store/types/gas.go#L34
 type GasMeter interface {
 	GasConsumed() Gas
+	ConsumeGas(amount Gas, descriptor string)
+}
+
+// OriginalGasMeter is an interface for gas meters that wrap another meter
+// This allows us to access the underlying meter for accurate callback gas measurement
+type OriginalGasMeter interface {
+	GasMeter
+	OriginalMeter() GasMeter
 }
 
 /****** DB ********/
