@@ -157,6 +157,10 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // BeginBlock returns the begin blocker for the compute module.
 func (am AppModule) BeginBlock(c context.Context) error {
+	if api.GetRecorder().IsReplayMode() {
+		return nil
+	}
+
 	// Note: as of tendermint v0.38.0 block begin request info is no longer available
 	ctx := c.(sdk.Context)
 	block_header := ctx.BlockHeader()
@@ -217,6 +221,9 @@ func (am AppModule) BeginBlock(c context.Context) error {
 
 // EndBlock returns the end blocker for the compute module.
 func (am AppModule) EndBlock(c context.Context) error {
+	if api.GetRecorder().IsReplayMode() {
+		return nil
+	}
 	ctx := c.(sdk.Context)
 
 	_, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_END_BLOCKER)

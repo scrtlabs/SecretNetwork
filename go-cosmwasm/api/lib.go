@@ -175,6 +175,12 @@ func ReleaseCache(cache Cache) {
 }
 
 func InitEnclaveRuntime(moduleCacheSize uint16) error {
+	// Skip in non-SGX replay mode - there's no enclave
+	if GetRecorder().IsReplayMode() {
+		fmt.Println("[InitEnclaveRuntime] Non-SGX replay mode: skipping (no enclave)")
+		return nil
+	}
+
 	errmsg := C.Buffer{}
 
 	config := C.EnclaveRuntimeConfig{
@@ -540,7 +546,7 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 
 	// In replay mode, try to get from recorded data
 	if recorder.IsReplayMode() {
-		if output, err, found := ReplayGetEncryptedSeed(cert); found {
+		if output, err, found := recorder.Replay("GetEncryptedSeed", cert); found {
 			fmt.Printf("[GetEncryptedSeed] Replay mode: returning recorded result\n")
 			return output, err
 		}
@@ -562,7 +568,7 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	}
 
 	// Record the result for non-SGX nodes
-	if recordErr := RecordGetEncryptedSeed(cert, output, callErr); recordErr != nil {
+	if recordErr := recorder.Record("GetEncryptedSeed", cert, output, callErr); recordErr != nil {
 		fmt.Printf("[GetEncryptedSeed] Warning: failed to record ecall: %v\n", recordErr)
 	} else {
 		fmt.Printf("[GetEncryptedSeed] SGX mode: recorded ecall result\n")
