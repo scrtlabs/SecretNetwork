@@ -176,10 +176,10 @@ func ReleaseCache(cache Cache) {
 
 func InitEnclaveRuntime(moduleCacheSize uint16) error {
 	// Skip in non-SGX replay mode - there's no enclave
-	if GetRecorder().IsReplayMode() {
-		fmt.Println("[InitEnclaveRuntime] Non-SGX replay mode: skipping (no enclave)")
-		return nil
-	}
+	// if GetRecorder().IsReplayMode() {
+	// 	fmt.Println("[InitEnclaveRuntime] Non-SGX replay mode: skipping (no enclave)")
+	// 	return nil
+	// }
 
 	errmsg := C.Buffer{}
 
