@@ -37,8 +37,6 @@ pub unsafe fn submit_block_signatures_impl(
     in_encrypted_random_len: u32,
     decrypted_random: &mut [u8; 32],
     next_validator_set_evidence: &mut [u8; 32],
-    in_cron_msgs: *const u8,
-    in_cron_msgs_len: u32,
 ) -> sgx_status_t {
     if let Err(e) = validate_inputs(
         in_header,
@@ -60,12 +58,6 @@ pub unsafe fn submit_block_signatures_impl(
     // todo: from_raw_parts caused a crash when txs was empty. Investigate and see if this still happens
     let txs_slice = if in_txs_len != 0 && !in_txs.is_null() {
         slice::from_raw_parts(in_txs, in_txs_len as usize)
-    } else {
-        &[]
-    };
-
-    let cron_msgs_slice = if in_cron_msgs_len != 0 && !in_cron_msgs.is_null() {
-        slice::from_raw_parts(in_cron_msgs, in_cron_msgs_len as usize)
     } else {
         &[]
     };
@@ -94,53 +86,11 @@ pub unsafe fn submit_block_signatures_impl(
 
     let txs = unwrap_or_return!(crate::verify::txs::validate_txs(txs_slice, &header));
 
-    let cron_msgs = if !cron_msgs_slice.is_empty() {
-        let msgs = crate::txs::txs_from_bytes(cron_msgs_slice).map_err(|e| {
-            error!("Error parsing cron msgs from proto: {:?}", e);
-            sgx_status_t::SGX_ERROR_INVALID_PARAMETER
-        });
-        if msgs.is_err() {
-            error!("Error parsing cron msgs from proto: {:?}", msgs);
-            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-        }
-        Some(msgs.unwrap())
-    } else {
-        None
-    };
-
     let mut message_verifier = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
 
     if message_verifier.remaining() != 0 {
         // new block, clear messages
         message_verifier.clear();
-    }
-
-    if let Some(implicit_hash_val) = header.header.implicit_hash {
-        let mut hasher = Sha256::new();
-        hasher.update(cron_msgs_slice);
-        let hash_result = hasher.finalize();
-        let hash_result: [u8; 32] = hash_result.into();
-
-        let implicit_hash = tendermint::Hash::Sha256(hash_result);
-
-        if implicit_hash != implicit_hash_val {
-            error!("Implicit hash does not match header implicit hash");
-            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-        }
-    } else if !cron_msgs_slice.is_empty() {
-        error!("Implicit hash not specified, yet implicit msgs provided");
-        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-    }
-
-    if let Some(cron_msgs) = cron_msgs {
-        for msg in cron_msgs {
-            let parsed_cron_msg = unwrap_or_return!(tx_from_bytes(msg.as_slice()).map_err(|_| {
-                error!("Unable to parse tx bytes from proto");
-                sgx_status_t::SGX_ERROR_INVALID_PARAMETER
-            }));
-
-            message_verifier.append_msg_from_tx(parsed_cron_msg);
-        }
     }
 
     for tx in txs.iter() {

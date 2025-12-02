@@ -44,7 +44,6 @@ pub fn validate_block_header(
         signed_header: &signed_header,
         validators: validator_set,
         next_validators: None,
-        implicit_hash: signed_header.header.implicit_hash,
     };
 
     let result = verify_block(&untrusted_block);
