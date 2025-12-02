@@ -48,6 +48,31 @@ func HealthCheck() ([]byte, error) {
 }
 
 func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte /* valSet []byte, nextValSet []byte */) ([]byte, []byte, error) {
+	recorder := GetRecorder()
+
+	// Create combined input for recording/replay
+	input := make([]byte, 0, len(header)+len(commit)+len(txs)+len(encRandom))
+	input = append(input, header...)
+	input = append(input, commit...)
+	input = append(input, txs...)
+	input = append(input, encRandom...)
+
+	// In replay mode, return recorded data
+	if recorder.IsReplayMode() {
+		if output, err, found := recorder.Replay("SubmitBlockSignatures", input); found {
+			if err != nil {
+				return nil, nil, err
+			}
+			// Output is 64 bytes: [32 bytes random][32 bytes validator_set_evidence]
+			if len(output) == 64 {
+				return output[:32], output[32:], nil
+			}
+			return nil, nil, fmt.Errorf("SubmitBlockSignatures: invalid recorded data (expected 64 bytes, got %d)", len(output))
+		}
+		return nil, nil, fmt.Errorf("SubmitBlockSignatures: no recorded data found (replay mode)")
+	}
+
+	// SGX mode: call the actual enclave
 	errmsg := C.Buffer{}
 	spidSlice := sendSlice(header)
 	defer freeAfterSend(spidSlice)
@@ -62,7 +87,19 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 	if err != nil {
 		return nil, nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res.buf1), receiveVector(res.buf2), nil
+
+	buf1 := receiveVector(res.buf1)
+	buf2 := receiveVector(res.buf2)
+
+	// Record the result - 64 bytes: [32 bytes buf1][32 bytes buf2]
+	output := make([]byte, 64)
+	copy(output[:32], buf1)
+	copy(output[32:], buf2)
+	if recordErr := recorder.Record("SubmitBlockSignatures", input, output, nil); recordErr != nil {
+		fmt.Printf("[SubmitBlockSignatures] Warning: failed to record: %v\n", recordErr)
+	}
+
+	return buf1, buf2, nil
 }
 
 func SubmitValidatorSetEvidence(evidence []byte) error {
