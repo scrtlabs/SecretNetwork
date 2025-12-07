@@ -9,7 +9,9 @@ import (
 	"cosmossdk.io/math"
 	store "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	oldminttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	minttypes "github.com/scrtlabs/SecretNetwork/x/mint/types"
@@ -42,11 +44,23 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		// Migrate mint module parameters from percentage-based to fixed block rewards
 		logger.Info("Migrating mint module to fixed block rewards...")
 
+		// Read existing BlocksPerYear from legacy mint params
+		// This value is governance-adjustable and should be preserved
+		sdkCtx := sdk.UnwrapSDKContext(ctx)
+		mintSubspace := keepers.GetSubspace(oldminttypes.ModuleName)
+		if !mintSubspace.HasKeyTable() {
+			mintSubspace.WithKeyTable(oldminttypes.ParamKeyTable())
+		}
+		var oldBlocksPerYear uint64
+		mintSubspace.Get(sdkCtx, oldminttypes.KeyBlocksPerYear, &oldBlocksPerYear)
+		logger.Info(fmt.Sprintf("   - Existing blocks per year from chain state: %d", oldBlocksPerYear))
+
 		// Set new mint parameters with fixed block reward of 4 SCRT (4,000,000 uscrt)
+		// Preserve BlocksPerYear from existing chain state (governance-adjustable target)
 		newParams := minttypes.NewParams(
-			"uscrt",                      // MintDenom
-			math.NewInt(4_000_000),       // FixedBlockReward: 4 SCRT = 4,000,000 uscrt
-			uint64(60*60*24*365/6.3),     // BlocksPerYear: ~5,005,714 blocks/year
+			"uscrt",                // MintDenom
+			math.NewInt(4_000_000), // FixedBlockReward: 4 SCRT = 4,000,000 uscrt
+			oldBlocksPerYear,       // BlocksPerYear: preserve existing governance-managed value
 		)
 
 		if err := keepers.MintKeeper.SetParams(ctx, newParams); err != nil {

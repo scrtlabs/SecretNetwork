@@ -40,12 +40,13 @@ func NewParams(mintDenom string, fixedBlockReward math.Int, blocksPerYear uint64
 
 // DefaultParams returns default minting module parameters
 // 4 SCRT per block = 4,000,000 uscrt per block
-// With 6.3 second blocks: ~5,000,000 blocks/year = ~21M SCRT/year
+// BlocksPerYear is a governance-adjustable target (not derived from block time assumptions)
+// This default is only used for genesis/tests; upgrades preserve the existing chain value
 func DefaultParams() Params {
 	return Params{
 		MintDenom:        "uscrt",
 		FixedBlockReward: math.NewInt(4_000_000), // 4 SCRT = 4,000,000 uscrt
-		BlocksPerYear:    uint64(60 * 60 * 24 * 365 / 6.3), // ~5,005,714 blocks/year with 6.3s blocks
+		BlocksPerYear:    6_311_520,              // Standard cosmos-sdk default (governance-adjustable target)
 	}
 }
 
