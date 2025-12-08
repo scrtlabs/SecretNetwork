@@ -515,17 +515,11 @@ func KeyGen() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-// CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
+// CreateAttestationReport Send request to enclave
+func CreateAttestationReport(is_migration_report bool) (bool, error) {
 	errmsg := C.Buffer{}
 
 	flags := u32(0)
-	if no_epid {
-		flags |= u32(1)
-	}
-	if no_dcap {
-		flags |= u32(2)
-	}
 	if is_migration_report {
 		flags |= u32(0x10)
 	}

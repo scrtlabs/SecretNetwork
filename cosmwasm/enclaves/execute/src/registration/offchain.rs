@@ -391,19 +391,14 @@ pub unsafe extern "C" fn ecall_get_attestation_report(flags: u32) -> sgx_status_
         }
     };
 
-    let attestation = match 2 & flags {
-        0 => {
-            report_data[0..32].copy_from_slice(&kp.get_pubkey());
+    let attestation = {
+        report_data[0..32].copy_from_slice(&kp.get_pubkey());
 
-            match get_attestation_report_dcap(&report_data) {
-                Ok(x) => x,
-                Err(e) => {
-                    return e;
-                }
+        match get_attestation_report_dcap(&report_data) {
+            Ok(x) => x,
+            Err(e) => {
+                return e;
             }
-        }
-        _ => {
-            return sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED;
         }
     };
 
@@ -582,7 +577,7 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
             println!("Create self migration report");
 
             export_local_migration_report();
-            ecall_get_attestation_report(0x11) // migration, no-epid
+            ecall_get_attestation_report(0x10) // migration
         }
         2 => {
             println!("Export encrypted data to the next aurhorized enclave");
