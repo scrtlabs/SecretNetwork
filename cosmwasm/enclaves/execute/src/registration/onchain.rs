@@ -7,7 +7,6 @@ use std::panic;
 use enclave_ffi_types::NodeAuthResult;
 
 use crate::registration::attestation::{verify_quote_sgx, AttestationCombined};
-use crate::registration::cert::verify_ra_report;
 
 use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
@@ -16,7 +15,7 @@ use enclave_utils::{
 
 use sgx_types::sgx_ql_qv_result_t;
 
-use enclave_crypto::consts::SigningMethod;
+use enclave_crypto::consts::SELF_REPORT_BODY;
 
 use super::seed_exchange::encrypt_seed;
 use std::slice;
@@ -46,7 +45,6 @@ fn verify_attestation_dcap(
     let tm_s = get_current_block_time_s();
     trace!("Current block time: {}", tm_s);
 
-    // test self
     let report_body = match verify_quote_sgx(attestation, tm_s, true) {
         Ok(r) => {
             trace!("Remote quote verified ok");
@@ -61,13 +59,13 @@ fn verify_attestation_dcap(
         }
     };
 
-    let veritication_res = verify_ra_report(
-        &report_body.mr_signer.m,
-        &report_body.mr_enclave.m,
-        Some(SigningMethod::MRSIGNER),
-    );
-    if NodeAuthResult::Success != veritication_res {
-        return veritication_res;
+    if (report_body.mr_enclave.m) != SELF_REPORT_BODY.mr_enclave.m {
+        error!(
+            "mrenclave expected={}, actual={}",
+            hex::encode(SELF_REPORT_BODY.mr_enclave.m),
+            hex::encode(report_body.mr_enclave.m)
+        );
+        return NodeAuthResult::MrEnclaveMismatch;
     }
 
     pub_key.copy_from_slice(&report_body.report_data.d[..32]);

@@ -985,12 +985,7 @@ fn is_export_approved_offchain(f_in: File, report: &sgx_report_body_t) -> bool {
 }
 
 fn is_export_approved(report: &sgx_report_body_t) -> bool {
-    // Current policy: we demand the same mr_signer
-
-    if report.mr_signer.m != SELF_REPORT_BODY.mr_signer.m {
-        println!("Migration target uses different signer");
-        return false;
-    }
+    // Current policy: we only check mr_enclave, mr_signer can be anything
 
     {
         let extra = KEY_MANAGER.extra_data.lock().unwrap();
