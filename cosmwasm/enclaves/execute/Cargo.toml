@@ -10,7 +10,7 @@ name = "secret_enclave"
 crate-type = ["staticlib"]
 
 [features]
-default = ["SGX_MODE_SW", "random", "epid_whitelist_disabled"]
+default = ["SGX_MODE_SW", "random"]
 SGX_MODE_SW = []
 SGX_MODE_HW = []
 production = [
@@ -31,7 +31,6 @@ test = [
   "block-verifier/test"
 ]
 use_seed_service_on_bootstrap = []
-epid_whitelist_disabled = []
 light-client-validation = [
   "enclave_contract_engine/light-client-validation",
   "block-verifier"

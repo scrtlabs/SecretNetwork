@@ -40,11 +40,6 @@ pub mod tests {
             panic!("{}: {} tests failed", file!(), failures);
         }
 
-        #[cfg(not(feature = "epid_whitelist_disabled"))]
-        count_failures!(failures, {
-            cert::tests::test_epid_whitelist();
-        });
-
         // The test doesn't work for some reason
         // #[cfg(feature = "SGX_MODE_HW")]
         // count_failures!(failures, {
