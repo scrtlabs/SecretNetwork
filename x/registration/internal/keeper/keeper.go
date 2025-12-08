@@ -23,21 +23,10 @@ type Keeper struct {
 	router       baseapp.MessageRouter
 }
 
-// // isNonSGXReplayMode returns true if running in non-SGX replay mode
-// func isNonSGXReplayMode() bool {
-// 	return os.Getenv("SECRET_NODE_MODE") == "replay"
-// }
-
 // NewKeeper creates a new contract Keeper instance
 func NewKeeper(cdc codec.Codec, storeService store.KVStoreService, router baseapp.MessageRouter, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
 	if !bootstrap {
 		InitializeNode(homeDir, enclave)
-		// Skip seed initialization in non-SGX replay mode - there's no enclave to load seeds into
-		// if GetRecorder().IsReplayMode() {
-		// 	fmt.Println("[Registration] Non-SGX replay mode: skipping seed initialization (no enclave)")
-		// InitializeNode(homeDir, enclave)
-		// } else {
-		// }
 	}
 
 	return Keeper{

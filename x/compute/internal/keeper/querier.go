@@ -13,6 +13,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
@@ -276,6 +277,98 @@ func (q GrpcQuerier) AuthorizedAdminUpdate(c context.Context, req *types.QueryAu
 	}
 
 	return response, nil
+}
+
+// EcallRecord returns the ecall record for a specific block height
+// This is used by non-SGX nodes to sync with the network
+func (q GrpcQuerier) EcallRecord(c context.Context, req *types.QueryEcallRecordRequest) (*types.QueryEcallRecordResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.Height <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "height must be positive")
+	}
+
+	recorder := api.GetRecorder()
+	random, evidence, found := recorder.ReplaySubmitBlockSignatures(req.Height)
+	if !found {
+		return nil, status.Error(codes.NotFound, "no ecall record found for the given height")
+	}
+
+	return &types.QueryEcallRecordResponse{
+		Height:               req.Height,
+		RandomSeed:           random,
+		ValidatorSetEvidence: evidence,
+	}, nil
+}
+
+// EcallRecords returns ecall records for a range of block heights
+// This is used by non-SGX nodes to batch sync with the network
+func (q GrpcQuerier) EcallRecords(c context.Context, req *types.QueryEcallRecordsRequest) (*types.QueryEcallRecordsResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.StartHeight <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "start_height must be positive")
+	}
+
+	if req.EndHeight < req.StartHeight {
+		return nil, status.Error(codes.InvalidArgument, "end_height must be >= start_height")
+	}
+
+	// Limit the range to prevent abuse (max 1000 blocks per request)
+	maxRange := int64(1000)
+	if req.EndHeight-req.StartHeight > maxRange {
+		return nil, status.Errorf(codes.InvalidArgument, "range too large, max %d blocks per request", maxRange)
+	}
+
+	recorder := api.GetRecorder()
+	var records []types.QueryEcallRecordResponse
+
+	for height := req.StartHeight; height <= req.EndHeight; height++ {
+		random, evidence, found := recorder.ReplaySubmitBlockSignatures(height)
+		if found {
+			records = append(records, types.QueryEcallRecordResponse{
+				Height:               height,
+				RandomSeed:           random,
+				ValidatorSetEvidence: evidence,
+			})
+		}
+	}
+
+	return &types.QueryEcallRecordsResponse{
+		Records: records,
+	}, nil
+}
+
+// EncryptedSeed returns the encrypted seed for a specific certificate hash
+// This is used by non-SGX nodes to sync with the network
+func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedSeedRequest) (*types.QueryEncryptedSeedResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.CertHash == "" {
+		return nil, status.Error(codes.InvalidArgument, "cert_hash is required")
+	}
+
+	// Decode hex string to bytes
+	certHash, err := hex.DecodeString(req.CertHash)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid cert_hash: must be hex encoded")
+	}
+
+	recorder := api.GetRecorder()
+	encryptedSeed, found := recorder.ReplayGetEncryptedSeed(certHash)
+	if !found {
+		return nil, status.Error(codes.NotFound, "no encrypted seed found for the given certificate hash")
+	}
+
+	return &types.QueryEncryptedSeedResponse{
+		EncryptedSeed: encryptedSeed,
+	}, nil
 }
 
 func queryContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, keeper Keeper) (*types.ContractInfoWithAddress, error) {

@@ -8,6 +8,8 @@ package api
 import "C"
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"runtime"
@@ -48,31 +50,6 @@ func HealthCheck() ([]byte, error) {
 }
 
 func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte /* valSet []byte, nextValSet []byte */) ([]byte, []byte, error) {
-	recorder := GetRecorder()
-
-	// Create combined input for recording/replay
-	input := make([]byte, 0, len(header)+len(commit)+len(txs)+len(encRandom))
-	input = append(input, header...)
-	input = append(input, commit...)
-	input = append(input, txs...)
-	input = append(input, encRandom...)
-
-	// In replay mode, return recorded data
-	if recorder.IsReplayMode() {
-		if output, err, found := recorder.Replay("SubmitBlockSignatures", input); found {
-			if err != nil {
-				return nil, nil, err
-			}
-			// Output is 64 bytes: [32 bytes random][32 bytes validator_set_evidence]
-			if len(output) == 64 {
-				return output[:32], output[32:], nil
-			}
-			return nil, nil, fmt.Errorf("SubmitBlockSignatures: invalid recorded data (expected 64 bytes, got %d)", len(output))
-		}
-		return nil, nil, fmt.Errorf("SubmitBlockSignatures: no recorded data found (replay mode)")
-	}
-
-	// SGX mode: call the actual enclave
 	errmsg := C.Buffer{}
 	spidSlice := sendSlice(header)
 	defer freeAfterSend(spidSlice)
@@ -87,19 +64,7 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 	if err != nil {
 		return nil, nil, errorWithMessage(err, errmsg)
 	}
-
-	buf1 := receiveVector(res.buf1)
-	buf2 := receiveVector(res.buf2)
-
-	// Record the result - 64 bytes: [32 bytes buf1][32 bytes buf2]
-	output := make([]byte, 64)
-	copy(output[:32], buf1)
-	copy(output[32:], buf2)
-	if recordErr := recorder.Record("SubmitBlockSignatures", input, output, nil); recordErr != nil {
-		fmt.Printf("[SubmitBlockSignatures] Warning: failed to record: %v\n", recordErr)
-	}
-
-	return buf1, buf2, nil
+	return receiveVector(res.buf1), receiveVector(res.buf2), nil
 }
 
 func SubmitValidatorSetEvidence(evidence []byte) error {
@@ -212,12 +177,6 @@ func ReleaseCache(cache Cache) {
 }
 
 func InitEnclaveRuntime(moduleCacheSize uint16) error {
-	// Skip in non-SGX replay mode - there's no enclave
-	// if GetRecorder().IsReplayMode() {
-	// 	fmt.Println("[InitEnclaveRuntime] Non-SGX replay mode: skipping (no enclave)")
-	// 	return nil
-	// }
-
 	errmsg := C.Buffer{}
 
 	config := C.EnclaveRuntimeConfig{
@@ -580,38 +539,43 @@ func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report boo
 
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	recorder := GetRecorder()
+	certHash := sha256.Sum256(cert)
+	certHashHex := hex.EncodeToString(certHash[:])
 
-	// In replay mode, try to get from recorded data
 	if recorder.IsReplayMode() {
-		if output, err, found := recorder.Replay("GetEncryptedSeed", cert); found {
-			fmt.Printf("[GetEncryptedSeed] Replay mode: returning recorded result\n")
-			return output, err
+		// Try local DB first
+		if output, found := recorder.ReplayGetEncryptedSeed(certHash[:]); found {
+			return output, nil
 		}
-		return nil, fmt.Errorf("GetEncryptedSeed: no recorded data found for input (replay mode)")
+
+		// Fetch from remote SGX node
+		client := GetEcallClient()
+		output, err := client.FetchEncryptedSeed(certHashHex)
+		if err != nil {
+			return nil, fmt.Errorf("GetEncryptedSeed replay failed: %w", err)
+		}
+
+		// Cache locally
+		if cacheErr := recorder.RecordGetEncryptedSeed(certHash[:], output); cacheErr != nil {
+			fmt.Printf("[GetEncryptedSeed] Failed to cache: %v\n", cacheErr)
+		}
+		return output, nil
 	}
 
-	// SGX mode: call the actual enclave
+	// SGX mode: call enclave and record result
 	errmsg := C.Buffer{}
 	certSlice := sendSlice(cert)
 	defer freeAfterSend(certSlice)
 	res, err := C.get_encrypted_seed(certSlice, &errmsg)
-
-	var output []byte
-	var callErr error
 	if err != nil {
-		callErr = errorWithMessage(err, errmsg)
-	} else {
-		output = receiveVector(res)
+		return nil, errorWithMessage(err, errmsg)
 	}
 
-	// Record the result for non-SGX nodes
-	if recordErr := recorder.Record("GetEncryptedSeed", cert, output, callErr); recordErr != nil {
-		fmt.Printf("[GetEncryptedSeed] Warning: failed to record ecall: %v\n", recordErr)
-	} else {
-		fmt.Printf("[GetEncryptedSeed] SGX mode: recorded ecall result\n")
+	output := receiveVector(res)
+	if err := recorder.RecordGetEncryptedSeed(certHash[:], output); err != nil {
+		fmt.Printf("[GetEncryptedSeed] Failed to record: %v\n", err)
 	}
-
-	return output, callErr
+	return output, nil
 }
 
 func GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {
