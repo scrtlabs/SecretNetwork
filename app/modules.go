@@ -43,6 +43,7 @@ import (
 	crontypes "github.com/scrtlabs/SecretNetwork/x/cron/types"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
+	tssmodule "github.com/scrtlabs/SecretNetwork/x/tss/module"
 )
 
 var ModuleAccountPermissions = map[string][]string{
@@ -92,5 +93,6 @@ func Modules(
 		ibcfee.NewAppModule(app.AppKeepers.IbcFeeKeeper),
 		ibcswitch.NewAppModule(app.AppKeepers.IbcSwitchKeeper, app.AppKeepers.GetSubspace(ibcswitch.ModuleName)),
 		cron.NewAppModule(app.appCodec, *app.AppKeepers.CronKeeper),
+		tssmodule.NewAppModule(appCodec, *app.AppKeepers.TssKeeper, app.AppKeepers.AccountKeeper, app.AppKeepers.BankKeeper),
 	}
 }
