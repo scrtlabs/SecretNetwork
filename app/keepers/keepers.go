@@ -60,6 +60,9 @@ import (
 
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 
+	tsskeeper "github.com/scrtlabs/SecretNetwork/x/tss/keeper"
+	tsstypes "github.com/scrtlabs/SecretNetwork/x/tss/types"
+
 	ibcpacketforwardkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/keeper"
 	ibcpacketforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/types"
 
@@ -118,6 +121,9 @@ type SecretAppKeepers struct {
 	ScopedComputeKeeper capabilitykeeper.ScopedKeeper
 
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
+
+	// TSS (Threshold Signature Scheme) keeper for distributed key generation and signing
+	TssKeeper *tsskeeper.Keeper
 
 	// keys to access the substores
 	keys    map[string]*storetypes.KVStoreKey
@@ -249,6 +255,16 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		authtypes.NewModuleAddress(crontypes.ModuleName).String(),
 	)
 	ak.CronKeeper = cronKeeper
+
+	// Initialize TSS (Threshold Signature Scheme) keeper
+	tssKeeper := tsskeeper.NewKeeper(
+		runtime.NewKVStoreService(ak.keys[tsstypes.StoreKey]),
+		appCodec,
+		authcodec.NewBech32Codec(scrt.Bech32PrefixAccAddr),
+		authtypes.NewModuleAddress(govtypes.ModuleName),
+		ak.StakingKeeper,
+	)
+	ak.TssKeeper = &tssKeeper
 
 	feegrantKeeper := feegrantkeeper.NewKeeper(
 		appCodec,
@@ -605,6 +621,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 		ibchookstypes.StoreKey,
 		circuittypes.StoreKey,
 		crontypes.StoreKey,
+		tsstypes.StoreKey,
 	)
 
 	ak.tKeys = storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)

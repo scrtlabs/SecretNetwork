@@ -96,6 +96,8 @@ import (
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	crontypes "github.com/scrtlabs/SecretNetwork/x/cron/types"
+	tssabci "github.com/scrtlabs/SecretNetwork/x/tss/abci"
+	tsstypes "github.com/scrtlabs/SecretNetwork/x/tss/types"
 
 	"cosmossdk.io/log"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
@@ -347,6 +349,23 @@ func NewSecretNetworkApp(
 	app.AppKeepers.CronKeeper.SetTxConfig(txConfig)
 
 	app.AppKeepers.InitCustomKeepers(appCodec, legacyAmino, bApp, bootstrap, homePath, computeConfig)
+
+	// Set up TSS module integrations
+	// 1. Connect TSS keeper to compute keeper for contract callbacks
+	app.AppKeepers.TssKeeper.SetWasmKeeper(app.AppKeepers.ComputeKeeper)
+
+	// 2. Set up TSS vote extension handlers for validator participation in DKG/signing
+	tssVoteExtHandler := tssabci.NewVoteExtensionHandler(app.AppKeepers.TssKeeper, logger)
+	tssProposalHandler := tssabci.NewProposalHandler(app.AppKeepers.TssKeeper, logger)
+
+	bApp.SetExtendVoteHandler(tssVoteExtHandler.ExtendVote)
+	bApp.SetVerifyVoteExtensionHandler(tssVoteExtHandler.VerifyVoteExtension)
+	bApp.SetPrepareProposal(tssProposalHandler.PrepareProposal)
+	bApp.SetProcessProposal(tssProposalHandler.ProcessProposal)
+
+	// 3. Load validator identity from priv_validator_key.json for TSS participation
+	app.loadValidatorIdentity(homePath)
+
 	app.setupUpgradeStoreLoaders()
 
 	// NOTE: Any module instantiated in the module manager that is later modified
@@ -673,6 +692,7 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		ibcswitchtypes.ModuleName,
 		crontypes.ModuleName,
 		circuittypes.ModuleName,
+		tsstypes.ModuleName, // TSS processes pending data from vote extensions
 	)
 }
 
@@ -707,6 +727,7 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 		feegrant.ModuleName,
 		crontypes.ModuleName,
 		circuittypes.ModuleName,
+		tsstypes.ModuleName,
 	)
 }
 
@@ -733,9 +754,59 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		ibcfeetypes.ModuleName,
 		packetforwardtypes.ModuleName,
 		compute.ModuleName,
+		tsstypes.ModuleName, // TSS EndBlocker MUST come after compute for contract callbacks
 		reg.ModuleName,
 		ibcswitchtypes.ModuleName,
 		crontypes.ModuleName,
 		circuittypes.ModuleName,
 	)
+}
+
+// loadValidatorIdentity reads the validator's private key from priv_validator_key.json
+// and sets it on the TSS keeper for participation in threshold signing
+func (app *SecretNetworkApp) loadValidatorIdentity(homePath string) {
+	privValKeyFile := filepath.Join(homePath, "config", "priv_validator_key.json")
+
+	// Check if file exists
+	if _, err := os.Stat(privValKeyFile); os.IsNotExist(err) {
+		// Not a validator node, skip
+		return
+	}
+
+	// Read the file
+	keyFileBytes, err := os.ReadFile(privValKeyFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to read priv_validator_key.json for TSS: %v\n", err)
+		return
+	}
+
+	// Parse the JSON
+	var keyData struct {
+		Address string `json:"address"`
+		PubKey  struct {
+			Type  string `json:"type"`
+			Value string `json:"value"`
+		} `json:"pub_key"`
+		PrivKey struct {
+			Type  string `json:"type"`
+			Value string `json:"value"`
+		} `json:"priv_key"`
+	}
+
+	if err := tmjson.Unmarshal(keyFileBytes, &keyData); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to parse priv_validator_key.json for TSS: %v\n", err)
+		return
+	}
+
+	// Decode the private key (base64 encoded)
+	privKeyBytes, err := base64.StdEncoding.DecodeString(keyData.PrivKey.Value)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to decode validator private key for TSS: %v\n", err)
+		return
+	}
+
+	// Set validator identity on TSS keeper
+	// Address is already in hex format
+	app.AppKeepers.TssKeeper.SetValidatorConsensusAddress(keyData.Address)
+	app.AppKeepers.TssKeeper.SetValidatorPrivateKey(privKeyBytes)
 }
