@@ -200,10 +200,7 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-          mkdir -p ias_keys/develop
           mkdir -p /opt/secret/.sgx_secrets/
-          echo "not_a_key" > ias_keys/develop/spid.txt
-          echo "not_a_key" > ias_keys/develop/api_key.txt
           LOG_LEVEL=ERROR go test -v -tags "test" ./x/compute/client/...
           LOG_LEVEL=ERROR SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
       - name: Test x/cron
@@ -260,8 +257,6 @@ jobs:
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          mkdir -p ias_keys/production
-          cp ias_keys/develop/api_key.txt ias_keys/production/api_key.txt
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
@@ -282,9 +277,6 @@ jobs:
           context: .
           load: true
           tags: ghcr.io/scrtlabs/localsecret:v0.0.0
-          secrets: |
-            API_KEY=00000000000000000000000000000000
-            SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1

@@ -25,16 +25,7 @@ COPY go.sum .
 COPY cmd cmd
 RUN true
 COPY client client
-COPY ias_keys ias_keys
 COPY eip191 eip191
-
-COPY spid.txt ias_keys/develop/spid.txt
-COPY spid.txt ias_keys/sw_dummy/spid.txt
-COPY spid.txt ias_keys/production/spid.txt
-
-COPY api_key.txt ias_keys/develop/api_key.txt
-COPY api_key.txt ias_keys/sw_dummy/api_key.txt
-COPY api_key.txt ias_keys/production/api_key.txt
 
 COPY deployment/ci/go-tests.sh .
 COPY deployment/ci/go-tests-bench.sh .
