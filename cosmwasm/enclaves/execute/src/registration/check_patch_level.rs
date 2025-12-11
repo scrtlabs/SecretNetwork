@@ -69,7 +69,6 @@ unsafe fn check_patch_level_dcap(pub_k: &[u8; 32]) -> (NodeAuthResult, Option<Ve
 }
 
 /// # Safety
-/// Don't forget to check the input length of api_key_len
 #[no_mangle]
 #[cfg(feature = "SGX_MODE_HW")]
 

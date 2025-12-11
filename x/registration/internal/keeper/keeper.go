@@ -95,11 +95,6 @@ func getLegacySeedParams(path string) ([]byte, []byte) {
 }
 
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
-	apiKey, err := types.GetApiKey()
-	if err != nil {
-		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
-
 	var (
 		encSeed []byte
 		pk      []byte
@@ -123,7 +118,7 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 	// On upgrade LoadSeed will write the new seed to "SeedPath -- seed.txt" which then will be parsed by the upgrade handler to create new_seed.json
 	// On registration both seed.jsםn and new_seed.json will be created by 'secretd q register secret-network-params' on manual flow or by auto-registration flow"
-	_, err = enclave.LoadSeed(pk, sizedEndSeed, apiKey)
+	_, err := enclave.LoadSeed(pk, sizedEndSeed)
 	if err != nil {
 		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}

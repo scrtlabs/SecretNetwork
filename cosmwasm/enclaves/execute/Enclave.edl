@@ -23,11 +23,7 @@ enclave {
         );
 
         public sgx_status_t ecall_init_bootstrap(
-            [out, count=32] uint8_t* public_key,
-            [in, count=spid_len] const uint8_t* spid,
-            uint32_t spid_len,
-            [in, count=api_key_len] const uint8_t* api_key,
-            uint32_t api_key_len
+            [out, count=32] uint8_t* public_key
         );
 
         public sgx_status_t ecall_key_gen(
@@ -95,9 +91,7 @@ enclave {
             [in, count=master_key_len] const uint8_t* master_key,
             uintptr_t master_key_len,
             [in, count=encrypted_seed_len] const uint8_t* encrypted_seed,
-            uintptr_t encrypted_seed_len,
-            [in, count=api_key_len] const uint8_t* api_key,
-            uint32_t api_key_len
+            uintptr_t encrypted_seed_len
         );
 
         public sgx_status_t ecall_configure_runtime(

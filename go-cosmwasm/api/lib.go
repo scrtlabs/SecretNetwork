@@ -75,30 +75,23 @@ func SubmitValidatorSetEvidence(evidence []byte) error {
 	return nil
 }
 
-func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
+func InitBootstrap() ([]byte, error) {
 	errmsg := C.Buffer{}
-	spidSlice := sendSlice(spid)
-	defer freeAfterSend(spidSlice)
-	apiKeySlice := sendSlice(apiKey)
-	defer freeAfterSend(apiKeySlice)
-
-	res, err := C.init_bootstrap(spidSlice, apiKeySlice, &errmsg)
+	res, err := C.init_bootstrap(&errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), nil
 }
 
-func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
+func LoadSeedToEnclave(masterKey []byte, seed []byte) (bool, error) {
 	pkSlice := sendSlice(masterKey)
 	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
 	defer freeAfterSend(seedSlice)
-	apiKeySlice := sendSlice(apiKey)
-	defer freeAfterSend(apiKeySlice)
 	errmsg := C.Buffer{}
 
-	_, err := C.init_node(pkSlice, seedSlice, apiKeySlice, &errmsg)
+	_, err := C.init_node(pkSlice, seedSlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

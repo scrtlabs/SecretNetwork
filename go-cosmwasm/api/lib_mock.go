@@ -35,7 +35,7 @@ func HealthCheck() ([]byte, error) {
 	return nil, nil
 }
 
-func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
+func InitBootstrap() ([]byte, error) {
 	return nil, nil
 }
 
@@ -47,7 +47,7 @@ func SubmitValidatorSetEvidence(evidence []byte) error {
 	return nil
 }
 
-func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
+func LoadSeedToEnclave(masterKey []byte, seed []byte) (bool, error) {
 	return true, nil
 }
 

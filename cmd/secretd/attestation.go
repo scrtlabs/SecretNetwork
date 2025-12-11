@@ -136,18 +136,8 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			regGenState := reg.GetGenesisStateFromAppState(cdc, appState)
 
-			spidFile, err := reg.GetSpid()
-			if err != nil {
-				return fmt.Errorf("failed to initialize enclave: %w", err)
-			}
-
-			apiKeyFile, err := reg.GetApiKey()
-			if err != nil {
-				return fmt.Errorf("failed to initialize enclave: %w", err)
-			}
-
 			// the master key of the generated certificate is returned here
-			masterKey, err := api.InitBootstrap(spidFile, apiKeyFile)
+			masterKey, err := api.InitBootstrap()
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}

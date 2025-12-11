@@ -58,22 +58,10 @@ use block_verifier::VERIFIED_BLOCK_MESSAGES;
 #[no_mangle]
 pub unsafe extern "C" fn ecall_init_bootstrap(
     public_key: &mut [u8; PUBLIC_KEY_SIZE],
-    spid: *const u8,
-    spid_len: u32,
-    api_key: *const u8,
-    api_key_len: u32,
 ) -> sgx_status_t {
     validate_mut_ptr!(
         public_key.as_mut_ptr(),
         public_key.len(),
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
-    );
-
-    validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-
-    validate_const_ptr!(
-        api_key,
-        api_key_len as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
 
@@ -159,18 +147,8 @@ pub unsafe extern "C" fn ecall_init_node(
     master_key_len: u32,
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
-    api_key: *const u8,
-    api_key_len: u32,
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
 ) -> sgx_status_t {
-    validate_const_ptr!(
-        api_key,
-        api_key_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
-    );
-
-    let _api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
-
     #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
     {
         let temp_key_result = KeyPair::new();

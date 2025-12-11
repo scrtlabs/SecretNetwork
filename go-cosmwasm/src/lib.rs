@@ -121,30 +121,10 @@ pub extern "C" fn get_encrypted_genesis_seed(pk: Buffer, err: Option<&mut Buffer
 }
 
 #[no_mangle]
-pub extern "C" fn init_bootstrap(
-    spid: Buffer,
-    api_key: Buffer,
-    err: Option<&mut Buffer>,
-) -> Buffer {
+pub extern "C" fn init_bootstrap(err: Option<&mut Buffer>) -> Buffer {
     trace!("Hello from right before init_bootstrap");
 
-    let spid_slice = match unsafe { spid.read() } {
-        None => {
-            set_error(Error::empty_arg("spid"), err);
-            return Buffer::default();
-        }
-        Some(r) => r,
-    };
-
-    let api_key_slice = match unsafe { api_key.read() } {
-        None => {
-            set_error(Error::empty_arg("api_key"), err);
-            return Buffer::default();
-        }
-        Some(r) => r,
-    };
-
-    match untrusted_init_bootstrap(spid_slice, api_key_slice) {
+    match untrusted_init_bootstrap() {
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), err);
             Buffer::default()
@@ -160,7 +140,6 @@ pub extern "C" fn init_bootstrap(
 pub extern "C" fn init_node(
     master_key: Buffer,
     encrypted_seed: Buffer,
-    api_key: Buffer,
     err: Option<&mut Buffer>,
 ) -> bool {
     let pk_slice = match unsafe { master_key.read() } {
@@ -171,12 +150,8 @@ pub extern "C" fn init_node(
         None => &[],
         Some(r) => r,
     };
-    let api_key_slice = match unsafe { api_key.read() } {
-        None => &[],
-        Some(r) => r,
-    };
 
-    match untrusted_init_node(pk_slice, encrypted_seed_slice, api_key_slice) {
+    match untrusted_init_node(pk_slice, encrypted_seed_slice) {
         Ok(()) => {
             clear_error();
             true
@@ -264,7 +239,7 @@ pub extern "C" fn submit_block_signatures(
 
     let commit_slice = match unsafe { commit.read() } {
         None => {
-            set_error(Error::empty_arg("api_key"), err);
+            set_error(Error::empty_arg("commit"), err);
             return TwoBuffers::default();
         }
         Some(r) => r,
@@ -292,7 +267,7 @@ pub extern "C" fn submit_block_signatures(
     };
     // let val_set_slice = match unsafe { val_set.read() } {
     //     None => {
-    //         set_error(Error::empty_arg("api_key"), err);
+    //         set_error(Error::empty_arg("val_set"), err);
     //         return TwoBuffers::default();
     //     }
     //     Some(r) => r,
@@ -300,7 +275,7 @@ pub extern "C" fn submit_block_signatures(
     //
     // let next_val_set_slice = match unsafe { next_val_set.read() } {
     //     None => {
-    //         set_error(Error::empty_arg("api_key"), err);
+    //         set_error(Error::empty_arg("next_val_set"), err);
     //         return TwoBuffers::default();
     //     }
     //     Some(r) => r,
