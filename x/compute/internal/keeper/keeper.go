@@ -1611,6 +1611,11 @@ func (m MultipiedGasMeter) GasConsumed() storetypes.Gas {
 	return m.originalMeter.GasConsumed() * types.GasMultiplier
 }
 
+func (m MultipiedGasMeter) ConsumeGas(amount storetypes.Gas, descriptor string) {
+	// Divide by GasMultiplier since GasConsumed() multiplies by it
+	m.originalMeter.ConsumeGas(amount/types.GasMultiplier, descriptor)
+}
+
 func gasMeter(ctx sdk.Context) MultipiedGasMeter {
 	return MultipiedGasMeter{
 		originalMeter: ctx.GasMeter(),

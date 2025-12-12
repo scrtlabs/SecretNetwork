@@ -39,6 +39,70 @@ type Cache struct {
 	ptr *C.cache_t
 }
 
+// replayExecution handles replay of a recorded execution trace.
+// It applies storage ops to the store and consumes the correct amount of gas.
+// Returns (result, gasUsed, error, found). If found is false, trace was not available.
+func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte, uint64, error, bool) {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	trace, found := recorder.GetTraceFromMemory(execIndex)
+	if !found {
+		fmt.Printf("[replayExecution] TRACE NOT FOUND: height=%d index=%d\n", height, execIndex)
+		return nil, 0, nil, false
+	}
+
+	fmt.Printf("[replayExecution] Found trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d hasError=%v\n",
+		height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas, trace.HasError)
+
+	// Snapshot gas before applying ops
+	var gasBefore uint64
+	if gasMeter != nil {
+		gasBefore = (*gasMeter).GasConsumed()
+	}
+
+	// Apply recorded storage ops to the store
+	replayer := NewReplayingKVStore(store)
+	replayer.ApplyOps(trace.Ops)
+
+	// Calculate and consume remaining gas to match SGX callback gas
+	if gasMeter != nil {
+		gasAfter := (*gasMeter).GasConsumed()
+		localGasConsumed := gasAfter - gasBefore
+
+		if trace.CallbackGas > localGasConsumed {
+			remaining := trace.CallbackGas - localGasConsumed
+			(*gasMeter).ConsumeGas(remaining, "enclave callback gas replay")
+			fmt.Printf("[replayExecution] Consumed remaining callback gas: callbackGas=%d localConsumed=%d remaining=%d\n",
+				trace.CallbackGas, localGasConsumed, remaining)
+		} else if trace.CallbackGas < localGasConsumed {
+			fmt.Printf("[replayExecution] WARNING: local gas (%d) > recorded callbackGas (%d)\n",
+				localGasConsumed, trace.CallbackGas)
+		}
+
+		// CRITICAL: Consume the Enclave Compute Gas (WASM execution cost)
+		// This is the gas for the WASM execution itself, separate from DB ops.
+		// The keeper's consumeGas(ctx, gasUsed) does: (gas / GasMultiplier) + 1
+		// We consume (gasUsed / GasMultiplier) here, and return 0 so the keeper
+		// will call consumeGas(ctx, 0) which adds the +1 part.
+		// Total consumed: (gasUsed / GasMultiplier) + 1, matching SGX behavior.
+		const GasMultiplier = 1000
+		computeGasToConsume := trace.GasUsed // This will be divided by GasMultiplier in ConsumeGas
+		(*gasMeter).ConsumeGas(computeGasToConsume, "enclave compute gas replay")
+		fmt.Printf("[replayExecution] Consumed compute gas: gasUsed=%d (consumed %d on underlying meter, keeper will add +1)\n",
+			trace.GasUsed, computeGasToConsume/GasMultiplier)
+	}
+
+	if trace.HasError {
+		fmt.Printf("[replayExecution] Returning error: %s\n", trace.ErrorMsg)
+		// Return 0 so keeper's consumeGas(ctx, 0) adds the +1 part
+		return nil, 0, fmt.Errorf("%s", trace.ErrorMsg), true
+	}
+	// Return 0 for gasUsed since we already consumed (gasUsed / GasMultiplier) above.
+	// The keeper will call consumeGas(ctx, 0) which consumes (0 / GasMultiplier) + 1 = 1,
+	// adding the +1 part to match SGX's (gasUsed / GasMultiplier) + 1.
+	return trace.Result, 0, nil, true
+}
+
 func HealthCheck() ([]byte, error) {
 	errmsg := C.Buffer{}
 
@@ -76,6 +140,14 @@ func SubmitValidatorSetEvidence(evidence []byte) error {
 }
 
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, return a dummy 32-byte public key
+		// This function is only called during bootstrap which doesn't happen in replay
+		fmt.Println("[InitBootstrap] Skipped in replay mode")
+		return make([]byte, 32), nil
+	}
+
 	errmsg := C.Buffer{}
 	spidSlice := sendSlice(spid)
 	defer freeAfterSend(spidSlice)
@@ -90,6 +162,13 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 }
 
 func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, skip loading seed to enclave (no enclave)
+		fmt.Println("[LoadSeedToEnclave] Skipped in replay mode")
+		return true, nil
+	}
+
 	pkSlice := sendSlice(masterKey)
 	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
@@ -177,6 +256,13 @@ func ReleaseCache(cache Cache) {
 }
 
 func InitEnclaveRuntime(moduleCacheSize uint16) error {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, skip enclave runtime initialization (no enclave)
+		fmt.Println("[InitEnclaveRuntime] Skipped in replay mode")
+		return nil
+	}
+
 	errmsg := C.Buffer{}
 
 	config := C.EnclaveRuntimeConfig{
@@ -256,6 +342,20 @@ func Migrate(
 	admin []byte,
 	adminProof []byte,
 ) ([]byte, uint64, error) {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	execIndex := recorder.NextExecutionIndex()
+
+	if recorder.IsReplayMode() {
+		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
+			return result, gas, err
+		}
+		return nil, 0, fmt.Errorf("Migrate replay failed: trace not found for height %d index %d", height, execIndex)
+	}
+
+	// SGX mode: wrap store to record operations
+	recordingStore := NewRecordingKVStore(store)
+
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -267,7 +367,7 @@ func Migrate(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(recordingStore, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -283,17 +383,44 @@ func Migrate(
 	adminProofBuffer := sendSlice(adminProof)
 	defer freeAfterSend(adminProofBuffer)
 
-	//// This is done in order to ensure that goroutines don't
-	//// swap threads between recursive calls to the enclave.
-	//runtime.LockOSThread()
-	//defer runtime.UnlockOSThread()
+	// Capture gas before execution to measure callback gas
+	var gasBefore uint64
+	if gasMeter != nil {
+		gasBefore = (*gasMeter).GasConsumed()
+	}
 
 	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer, adminProofBuffer)
+
+	// Calculate callback gas consumed during execution
+	var callbackGas uint64
+	if gasMeter != nil {
+		gasAfter := (*gasMeter).GasConsumed()
+		callbackGas = gasAfter - gasBefore
+	}
+
+	// Record the execution trace
+	trace := &ExecutionTrace{
+		Index:       execIndex,
+		Ops:         recordingStore.GetOps(),
+		GasUsed:     uint64(gasUsed),
+		CallbackGas: callbackGas,
+	}
+
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		trace.HasError = true
+		trace.ErrorMsg = string(receiveVector(errmsg))
+		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+			fmt.Printf("[Migrate] Failed to record trace: %v\n", recordErr)
+		}
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+
+	trace.Result = receiveVector(res)
+	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+		fmt.Printf("[Migrate] Failed to record trace: %v\n", recordErr)
+	}
+
+	return trace.Result, uint64(gasUsed), nil
 }
 
 func UpdateAdmin(
@@ -310,6 +437,20 @@ func UpdateAdmin(
 	currentAdminProof []byte,
 	newAdmin []byte,
 ) ([]byte, error) {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	execIndex := recorder.NextExecutionIndex()
+
+	if recorder.IsReplayMode() {
+		if result, _, err, found := replayExecution(store, gasMeter, execIndex); found {
+			return result, err
+		}
+		return nil, fmt.Errorf("UpdateAdmin replay failed: trace not found for height %d index %d", height, execIndex)
+	}
+
+	// SGX mode: wrap store to record operations
+	recordingStore := NewRecordingKVStore(store)
+
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -319,7 +460,7 @@ func UpdateAdmin(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(recordingStore, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -337,16 +478,44 @@ func UpdateAdmin(
 	newAdminBuffer := sendSlice(newAdmin)
 	defer freeAfterSend(newAdminBuffer)
 
-	//// This is done in order to ensure that goroutines don't
-	//// swap threads between recursive calls to the enclave.
-	//runtime.LockOSThread()
-	//defer runtime.UnlockOSThread()
+	// Capture gas before execution to measure callback gas
+	var gasBefore uint64
+	if gasMeter != nil {
+		gasBefore = (*gasMeter).GasConsumed()
+	}
 
 	res, err := C.update_admin(cache.ptr, id, p, db, a, q, u64(gasLimit), &errmsg, s, currentAdminBuffer, currentAdminProofBuffer, newAdminBuffer)
+
+	// Calculate callback gas consumed during execution
+	var callbackGas uint64
+	if gasMeter != nil {
+		gasAfter := (*gasMeter).GasConsumed()
+		callbackGas = gasAfter - gasBefore
+	}
+
+	// Record the execution trace
+	trace := &ExecutionTrace{
+		Index:       execIndex,
+		Ops:         recordingStore.GetOps(),
+		GasUsed:     0, // UpdateAdmin doesn't return gas used
+		CallbackGas: callbackGas,
+	}
+
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		trace.HasError = true
+		trace.ErrorMsg = string(receiveVector(errmsg))
+		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+			fmt.Printf("[UpdateAdmin] Failed to record trace: %v\n", recordErr)
+		}
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), nil
+
+	trace.Result = receiveVector(res)
+	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+		fmt.Printf("[UpdateAdmin] Failed to record trace: %v\n", recordErr)
+	}
+
+	return trace.Result, nil
 }
 
 func Instantiate(
@@ -362,6 +531,23 @@ func Instantiate(
 	sigInfo []byte,
 	admin []byte,
 ) ([]byte, uint64, error) {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	execIndex := recorder.NextExecutionIndex()
+
+	if recorder.IsReplayMode() {
+		fmt.Printf("[Instantiate] REPLAY mode: height=%d execIndex=%d\n", height, execIndex)
+		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
+			fmt.Printf("[Instantiate] REPLAY success: resultLen=%d gas=%d err=%v\n", len(result), gas, err)
+			return result, gas, err
+		}
+		fmt.Printf("[Instantiate] REPLAY FAILED: trace not found!\n")
+		return nil, 0, fmt.Errorf("Instantiate replay failed: trace not found for height %d index %d", height, execIndex)
+	}
+
+	// SGX mode: wrap store to record operations
+	recordingStore := NewRecordingKVStore(store)
+
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -373,7 +559,7 @@ func Instantiate(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(recordingStore, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -386,17 +572,49 @@ func Instantiate(
 	adminBuffer := sendSlice(admin)
 	defer freeAfterSend(adminBuffer)
 
-	//// This is done in order to ensure that goroutines don't
-	//// swap threads between recursive calls to the enclave.
-	//runtime.LockOSThread()
-	//defer runtime.UnlockOSThread()
+	// Capture gas before execution to measure callback gas
+	var gasBefore uint64
+	if gasMeter != nil {
+		gasBefore = (*gasMeter).GasConsumed()
+	}
 
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer)
+
+	// Calculate callback gas consumed during execution
+	var callbackGas uint64
+	if gasMeter != nil {
+		gasAfter := (*gasMeter).GasConsumed()
+		callbackGas = gasAfter - gasBefore
+	}
+
+	fmt.Printf("[Instantiate] SGX C.instantiate returned: gasUsed=%d callbackGas=%d\n", gasUsed, callbackGas)
+
+	// Record the execution trace
+	trace := &ExecutionTrace{
+		Index:       execIndex,
+		Ops:         recordingStore.GetOps(),
+		GasUsed:     uint64(gasUsed),
+		CallbackGas: callbackGas,
+	}
+
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		trace.HasError = true
+		trace.ErrorMsg = string(receiveVector(errmsg))
+		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+			fmt.Printf("[Instantiate] Failed to record trace: %v\n", recordErr)
+		}
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+
+	trace.Result = receiveVector(res)
+	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+		fmt.Printf("[Instantiate] Failed to record trace: %v\n", recordErr)
+	} else {
+		fmt.Printf("[Instantiate] SGX recorded trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d\n",
+			height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas)
+	}
+
+	return trace.Result, uint64(gasUsed), nil
 }
 
 func Handle(
@@ -412,6 +630,23 @@ func Handle(
 	sigInfo []byte,
 	handleType types.HandleType,
 ) ([]byte, uint64, error) {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	execIndex := recorder.NextExecutionIndex()
+
+	if recorder.IsReplayMode() {
+		fmt.Printf("[Handle] REPLAY mode: height=%d execIndex=%d\n", height, execIndex)
+		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
+			fmt.Printf("[Handle] REPLAY success: resultLen=%d gas=%d err=%v\n", len(result), gas, err)
+			return result, gas, err
+		}
+		fmt.Printf("[Handle] REPLAY FAILED: trace not found!\n")
+		return nil, 0, fmt.Errorf("Handle replay failed: trace not found for height %d index %d", height, execIndex)
+	}
+
+	// SGX mode: wrap store to record operations
+	recordingStore := NewRecordingKVStore(store)
+
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -423,7 +658,7 @@ func Handle(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(recordingStore, counter)
 	db := buildDB(&dbState, gasMeter)
 	s := sendSlice(sigInfo)
 	defer freeAfterSend(s)
@@ -432,17 +667,49 @@ func Handle(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	//// This is done in order to ensure that goroutines don't
-	//// swap threads between recursive calls to the enclave.
-	//runtime.LockOSThread()
-	//defer runtime.UnlockOSThread()
+	// Capture gas before execution to measure callback gas
+	var gasBefore uint64
+	if gasMeter != nil {
+		gasBefore = (*gasMeter).GasConsumed()
+	}
 
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, u8(handleType))
+
+	// Calculate callback gas consumed during execution
+	var callbackGas uint64
+	if gasMeter != nil {
+		gasAfter := (*gasMeter).GasConsumed()
+		callbackGas = gasAfter - gasBefore
+	}
+
+	fmt.Printf("[Handle] SGX C.handle returned: gasUsed=%d callbackGas=%d\n", gasUsed, callbackGas)
+
+	// Record the execution trace
+	trace := &ExecutionTrace{
+		Index:       execIndex,
+		Ops:         recordingStore.GetOps(),
+		GasUsed:     uint64(gasUsed),
+		CallbackGas: callbackGas,
+	}
+
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		trace.HasError = true
+		trace.ErrorMsg = string(receiveVector(errmsg))
+		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+			fmt.Printf("[Handle] Failed to record trace: %v\n", recordErr)
+		}
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+
+	trace.Result = receiveVector(res)
+	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
+		fmt.Printf("[Handle] Failed to record trace: %v\n", recordErr)
+	} else {
+		fmt.Printf("[Handle] SGX recorded trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d\n",
+			height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas)
+	}
+
+	return trace.Result, uint64(gasUsed), nil
 }
 
 func Query(
@@ -507,6 +774,14 @@ func AnalyzeCode(
 
 // KeyGen Send KeyGen request to enclave
 func KeyGen() ([]byte, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, return a dummy 32-byte public key
+		// Key generation is only needed for node registration which doesn't happen in replay
+		fmt.Println("[KeyGen] Skipped in replay mode, returning dummy key")
+		return make([]byte, 32), nil
+	}
+
 	errmsg := C.Buffer{}
 	res, err := C.key_gen(&errmsg)
 	if err != nil {
@@ -517,6 +792,13 @@ func KeyGen() ([]byte, error) {
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
 func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, skip attestation report creation (no SGX)
+		fmt.Println("[CreateAttestationReport] Skipped in replay mode")
+		return true, nil
+	}
+
 	errmsg := C.Buffer{}
 
 	flags := u32(0)
@@ -579,6 +861,8 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 }
 
 func GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {
+	// Genesis seed is only used during bootstrap of a new network.
+	// Non-SGX replay nodes don't need this - they sync from existing networks.
 	errmsg := C.Buffer{}
 	pkSlice := sendSlice(pk)
 	defer freeAfterSend(pkSlice)

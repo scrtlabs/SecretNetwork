@@ -12,6 +12,24 @@ const (
 	NodeModeReplay NodeMode = "replay"
 )
 
+// StorageOp represents a single storage operation (Set or Delete)
+type StorageOp struct {
+	Key      []byte
+	Value    []byte
+	IsDelete bool
+}
+
+// ExecutionTrace stores all storage operations from a contract execution
+type ExecutionTrace struct {
+	Index       int64
+	Ops         []StorageOp
+	Result      []byte
+	GasUsed     uint64
+	CallbackGas uint64
+	HasError    bool
+	ErrorMsg    string
+}
+
 // EcallRecorder stub for secretcli
 type EcallRecorder struct {
 	mode NodeMode
@@ -60,3 +78,22 @@ func (r *EcallRecorder) RecordGetEncryptedSeed(certHash []byte, output []byte) e
 func (r *EcallRecorder) ReplayGetEncryptedSeed(certHash []byte) (output []byte, found bool) {
 	return nil, false
 }
+
+func (r *EcallRecorder) RecordExecutionTrace(height int64, index int64, trace *ExecutionTrace) error {
+	return nil
+}
+
+func (r *EcallRecorder) ReplayExecutionTrace(height int64, index int64) (*ExecutionTrace, bool) {
+	return nil, false
+}
+
+func (r *EcallRecorder) GetAllTracesForBlock(height int64) ([]*ExecutionTrace, error) {
+	return nil, nil
+}
+
+// Block-scoped execution tracking stubs
+func (r *EcallRecorder) StartBlock(height int64)                                {}
+func (r *EcallRecorder) NextExecutionIndex() int64                              { return 0 }
+func (r *EcallRecorder) GetCurrentBlockHeight() int64                           { return 0 }
+func (r *EcallRecorder) SetBlockTraces(traces []*ExecutionTrace)                {}
+func (r *EcallRecorder) GetTraceFromMemory(index int64) (*ExecutionTrace, bool) { return nil, false }

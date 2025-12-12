@@ -163,6 +163,22 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	block_header := ctx.BlockHeader()
 	height := ctx.BlockHeight()
 
+	// Initialize block-scoped execution tracking
+	recorder := api.GetRecorder()
+	recorder.StartBlock(height)
+
+	// In replay mode, prefetch all execution traces for this block
+	if recorder.IsReplayMode() {
+		client := api.GetEcallClient()
+		traces, err := client.FetchBlockTraces(height)
+		if err != nil {
+			ctx.Logger().Error("Failed to prefetch block traces", "height", height, "error", err)
+		} else {
+			recorder.SetBlockTraces(traces)
+			ctx.Logger().Info("Prefetched execution traces", "height", height, "count", len(traces))
+		}
+	}
+
 	execCronMsgs, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
 	if err != nil {
 		ctx.Logger().Error("Failed to get scheduled cron msgs")
@@ -179,7 +195,6 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	if block_header.EncryptedRandom != nil {
 		var random, validator_set_evidence []byte
 
-		recorder := api.GetRecorder()
 		if recorder.IsReplayMode() {
 			// REPLAY MODE: Try to get from local DB first, then fetch from remote SGX node
 			var found bool

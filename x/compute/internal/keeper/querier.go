@@ -371,6 +371,49 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 	}, nil
 }
 
+// BlockTraces returns all execution traces for a specific block height
+// This is used by non-SGX nodes to batch fetch all traces for a block
+func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesRequest) (*types.QueryBlockTracesResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.Height <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "height must be positive")
+	}
+
+	recorder := api.GetRecorder()
+	traces, err := recorder.GetAllTracesForBlock(req.Height)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get traces: %v", err)
+	}
+
+	// Convert api.ExecutionTrace to types.ExecutionTraceData
+	protoTraces := make([]types.ExecutionTraceData, len(traces))
+	for i, trace := range traces {
+		ops := make([]types.StorageOp, len(trace.Ops))
+		for j, op := range trace.Ops {
+			ops[j] = types.StorageOp{
+				IsDelete: op.IsDelete,
+				Key:      op.Key,
+				Value:    op.Value,
+			}
+		}
+		protoTraces[i] = types.ExecutionTraceData{
+			Index:    trace.Index,
+			Ops:      ops,
+			Result:   trace.Result,
+			GasUsed:  trace.GasUsed,
+			HasError: trace.HasError,
+			ErrorMsg: trace.ErrorMsg,
+		}
+	}
+
+	return &types.QueryBlockTracesResponse{
+		Traces: protoTraces,
+	}, nil
+}
+
 func queryContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, keeper Keeper) (*types.ContractInfoWithAddress, error) {
 	info := keeper.GetContractInfo(ctx, contractAddress)
 	if info == nil {

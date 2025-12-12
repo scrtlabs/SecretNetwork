@@ -92,6 +92,7 @@ type Gas = uint64
 // // https://github.com/cosmos/cosmos-sdk/blob/18890a225b46260a9adc587be6fa1cc2aff101cd/store/types/gas.go#L34
 type GasMeter interface {
 	GasConsumed() Gas
+	ConsumeGas(amount Gas, descriptor string)
 }
 
 // /****** DB ********/
