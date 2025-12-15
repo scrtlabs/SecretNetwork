@@ -9,8 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	dbm "github.com/cosmos/cosmos-db"
+	"github.com/gogo/protobuf/proto"
 )
 
 // NodeMode determines how the node handles SGX enclave calls
@@ -28,6 +30,14 @@ type EcallRecorder struct {
 	mu   sync.RWMutex
 	mode NodeMode
 	db   dbm.DB
+
+	// Block-scoped execution tracking
+	currentBlockHeight int64
+	executionIndex     int64
+
+	// In-memory cache for current block's traces (replay mode)
+	blockTracesMu sync.RWMutex
+	blockTraces   map[int64]*ExecutionTrace // key: execution index
 }
 
 var (
@@ -39,7 +49,19 @@ var (
 var (
 	prefixSubmitBlockSignatures = []byte{0x01}
 	prefixGetEncryptedSeed      = []byte{0x02}
+	prefixExecutionTrace        = []byte{0x03} // For contract execution: prefix | height | index
 )
+
+// ExecutionTrace stores all storage operations from a contract execution
+type ExecutionTrace struct {
+	Index       int64 // Execution index within the block
+	Ops         []StorageOp
+	Result      []byte // The return value from the ecall
+	GasUsed     uint64 // Gas reported by the enclave
+	CallbackGas uint64 // Total gas consumed by callbacks (store ops) during execution
+	HasError    bool
+	ErrorMsg    string
+}
 
 // DefaultRetentionBlocks is the default number of blocks to retain (~1 day at 6s blocks)
 const DefaultRetentionBlocks int64 = 14400
@@ -86,13 +108,58 @@ func GetRecorder() *EcallRecorder {
 		}
 
 		globalRecorder = &EcallRecorder{
-			mode: mode,
-			db:   db,
+			mode:        mode,
+			db:          db,
+			blockTraces: make(map[int64]*ExecutionTrace),
 		}
 
 		fmt.Printf("[EcallRecorder] Initialized in %s mode, db dir: %s\n", mode, dbDir)
 	})
 	return globalRecorder
+}
+
+// --- Block-scoped execution tracking ---
+
+// StartBlock initializes tracking for a new block, resetting the execution counter
+func (r *EcallRecorder) StartBlock(height int64) {
+	atomic.StoreInt64(&r.currentBlockHeight, height)
+	atomic.StoreInt64(&r.executionIndex, 0)
+
+	// Clear previous block's traces from memory
+	r.blockTracesMu.Lock()
+	r.blockTraces = make(map[int64]*ExecutionTrace)
+	r.blockTracesMu.Unlock()
+}
+
+// NextExecutionIndex returns the next execution index and increments the counter
+func (r *EcallRecorder) NextExecutionIndex() int64 {
+	return atomic.AddInt64(&r.executionIndex, 1)
+}
+
+// GetCurrentBlockHeight returns the current block height being processed
+func (r *EcallRecorder) GetCurrentBlockHeight() int64 {
+	return atomic.LoadInt64(&r.currentBlockHeight)
+}
+
+// SetBlockTraces sets all traces for the current block (used in replay mode after batch fetch)
+func (r *EcallRecorder) SetBlockTraces(traces []*ExecutionTrace) {
+	r.blockTracesMu.Lock()
+	defer r.blockTracesMu.Unlock()
+
+	r.blockTraces = make(map[int64]*ExecutionTrace)
+	for _, trace := range traces {
+		r.blockTraces[trace.Index] = trace
+		fmt.Printf("[SetBlockTraces] Stored trace at index=%d\n", trace.Index)
+	}
+}
+
+// GetTraceFromMemory retrieves a trace from the in-memory cache
+func (r *EcallRecorder) GetTraceFromMemory(index int64) (*ExecutionTrace, bool) {
+	r.blockTracesMu.RLock()
+	defer r.blockTracesMu.RUnlock()
+
+	trace, found := r.blockTraces[index]
+	return trace, found
 }
 
 // Mode returns the current node mode
@@ -220,6 +287,168 @@ func (r *EcallRecorder) ReplayGetEncryptedSeed(certHash []byte) (output []byte, 
 
 	fmt.Printf("[EcallRecorder] Replayed GetEncryptedSeed (%d bytes)\n", len(value))
 	return value, true
+}
+
+// --- ExecutionTrace recording (for contract executions) ---
+
+// makeExecutionKey creates a key for height+index indexed execution traces
+// Key format: prefix (1 byte) | height (8 bytes) | index (8 bytes)
+func makeExecutionKey(height int64, index int64) []byte {
+	key := make([]byte, 1+8+8)
+	key[0] = prefixExecutionTrace[0]
+	binary.BigEndian.PutUint64(key[1:9], uint64(height))
+	binary.BigEndian.PutUint64(key[9:17], uint64(index))
+	return key
+}
+
+// RecordExecutionTrace records contract execution storage ops and result
+// Uses current block height and the provided execution index
+func (r *EcallRecorder) RecordExecutionTrace(height int64, index int64, trace *ExecutionTrace) error {
+	if r.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	trace.Index = index
+
+	fmt.Printf("[RecordExecutionTrace] DEBUG: Storing trace height=%d index=%d callbackGas=%d\n", height, index, trace.CallbackGas)
+
+	// Convert to protobuf and serialize
+	protoTrace := executionTraceToProto(trace)
+	data, err := proto.Marshal(protoTrace)
+	if err != nil {
+		return fmt.Errorf("failed to marshal trace: %w", err)
+	}
+
+	fmt.Printf("[RecordExecutionTrace] DEBUG: Serialized data length=%d\n", len(data))
+
+	key := makeExecutionKey(height, index)
+	if err := r.db.Set(key, data); err != nil {
+		return fmt.Errorf("failed to write to db: %w", err)
+	}
+
+	// Verify we can read it back
+	readBack, err := r.db.Get(key)
+	if err == nil && readBack != nil {
+		var verifyProto ExecutionTraceProto
+		if err := proto.Unmarshal(readBack, &verifyProto); err == nil {
+			verifyTrace := protoToExecutionTrace(&verifyProto)
+			fmt.Printf("[RecordExecutionTrace] DEBUG: Verified readback callbackGas=%d\n", verifyTrace.CallbackGas)
+		}
+	}
+
+	return nil
+}
+
+// ReplayExecutionTrace retrieves recorded execution trace by height and index
+func (r *EcallRecorder) ReplayExecutionTrace(height int64, index int64) (*ExecutionTrace, bool) {
+	if r.db == nil {
+		return nil, false
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	key := makeExecutionKey(height, index)
+	value, err := r.db.Get(key)
+	if err != nil || value == nil {
+		return nil, false
+	}
+
+	// Deserialize protobuf
+	var protoTrace ExecutionTraceProto
+	if err := proto.Unmarshal(value, &protoTrace); err != nil {
+		fmt.Printf("[EcallRecorder] Failed to deserialize trace: %v\n", err)
+		return nil, false
+	}
+
+	trace := protoToExecutionTrace(&protoTrace)
+	return trace, true
+}
+
+// GetAllTracesForBlock retrieves all execution traces for a given block height
+func (r *EcallRecorder) GetAllTracesForBlock(height int64) ([]*ExecutionTrace, error) {
+	if r.db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Create range for this block: [prefix|height|0, prefix|height|maxUint64]
+	startKey := makeExecutionKey(height, 0)
+	endKey := makeExecutionKey(height+1, 0) // Next block's start is this block's end
+
+	iter, err := r.db.Iterator(startKey, endKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create iterator: %w", err)
+	}
+	defer iter.Close()
+
+	var traces []*ExecutionTrace
+	for ; iter.Valid(); iter.Next() {
+		rawData := iter.Value()
+		fmt.Printf("[GetAllTracesForBlock] DEBUG: Raw trace data length=%d\n", len(rawData))
+
+		// Deserialize protobuf
+		var protoTrace ExecutionTraceProto
+		if err := proto.Unmarshal(rawData, &protoTrace); err != nil {
+			fmt.Printf("[EcallRecorder] Failed to deserialize trace: %v\n", err)
+			continue
+		}
+
+		trace := protoToExecutionTrace(&protoTrace)
+
+		fmt.Printf("[GetAllTracesForBlock] DEBUG: Deserialized trace index=%d callbackGas=%d gasUsed=%d ops=%d\n",
+			trace.Index, trace.CallbackGas, trace.GasUsed, len(trace.Ops))
+		traces = append(traces, trace)
+	}
+
+	return traces, nil
+}
+
+// executionTraceToProto converts ExecutionTrace to ExecutionTraceProto
+func executionTraceToProto(trace *ExecutionTrace) *ExecutionTraceProto {
+	ops := make([]*StorageOpProto, len(trace.Ops))
+	for i, op := range trace.Ops {
+		ops[i] = &StorageOpProto{
+			IsDelete: op.IsDelete,
+			Key:      op.Key,
+			Value:    op.Value,
+		}
+	}
+	return &ExecutionTraceProto{
+		Index:       trace.Index,
+		Ops:         ops,
+		Result:      trace.Result,
+		GasUsed:     trace.GasUsed,
+		CallbackGas: trace.CallbackGas,
+		HasError:    trace.HasError,
+		ErrorMsg:    trace.ErrorMsg,
+	}
+}
+
+// protoToExecutionTrace converts ExecutionTraceProto to ExecutionTrace
+func protoToExecutionTrace(proto *ExecutionTraceProto) *ExecutionTrace {
+	ops := make([]StorageOp, len(proto.Ops))
+	for i, op := range proto.Ops {
+		ops[i] = StorageOp{
+			IsDelete: op.IsDelete,
+			Key:      op.Key,
+			Value:    op.Value,
+		}
+	}
+	return &ExecutionTrace{
+		Index:       proto.Index,
+		Ops:         ops,
+		Result:      proto.Result,
+		GasUsed:     proto.GasUsed,
+		CallbackGas: proto.CallbackGas,
+		HasError:    proto.HasError,
+		ErrorMsg:    proto.ErrorMsg,
+	}
 }
 
 // --- Utility functions ---

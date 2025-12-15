@@ -160,12 +160,17 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	block_header := ctx.BlockHeader()
 	height := ctx.BlockHeight()
 
+	// Initialize block-scoped execution tracking
+	recorder := api.GetRecorder()
+	recorder.StartBlock(height)
+	// Note: Traces are fetched on-demand in replayExecution when needed,
+	// since they are created during execution on the SGX node
+
 	x2_data := scrt.UnFlatten(ctx.TxBytes())
 
 	if block_header.EncryptedRandom != nil {
 		var random, validator_set_evidence []byte
 
-		recorder := api.GetRecorder()
 		if recorder.IsReplayMode() {
 			// REPLAY MODE: Try to get from local DB first, then fetch from remote SGX node
 			var found bool

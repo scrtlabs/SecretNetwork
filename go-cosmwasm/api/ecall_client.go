@@ -67,13 +67,62 @@ type QueryEncryptedSeedResponse struct {
 	EncryptedSeed []byte `protobuf:"bytes,1,opt,name=encrypted_seed,json=encryptedSeed,proto3" json:"encrypted_seed,omitempty"`
 }
 
-func (m *QueryEncryptedSeedResponse) Reset()         { *m = QueryEncryptedSeedResponse{} }
-func (m *QueryEncryptedSeedResponse) String() string { return fmt.Sprintf("{len:%d}", len(m.EncryptedSeed)) }
-func (m *QueryEncryptedSeedResponse) ProtoMessage()  {}
+func (m *QueryEncryptedSeedResponse) Reset() { *m = QueryEncryptedSeedResponse{} }
+func (m *QueryEncryptedSeedResponse) String() string {
+	return fmt.Sprintf("{len:%d}", len(m.EncryptedSeed))
+}
+func (m *QueryEncryptedSeedResponse) ProtoMessage() {}
+
+// StorageOpProto matches the proto definition for storage operation
+type StorageOpProto struct {
+	IsDelete bool   `protobuf:"varint,1,opt,name=is_delete,json=isDelete,proto3" json:"is_delete,omitempty"`
+	Key      []byte `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Value    []byte `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+}
+
+func (m *StorageOpProto) Reset()         { *m = StorageOpProto{} }
+func (m *StorageOpProto) String() string { return fmt.Sprintf("{IsDelete:%v}", m.IsDelete) }
+func (m *StorageOpProto) ProtoMessage()  {}
+
+// QueryBlockTracesRequest matches QueryBlockTracesRequest proto
+type QueryBlockTracesRequest struct {
+	Height int64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+}
+
+func (m *QueryBlockTracesRequest) Reset()         { *m = QueryBlockTracesRequest{} }
+func (m *QueryBlockTracesRequest) String() string { return fmt.Sprintf("{Height:%d}", m.Height) }
+func (m *QueryBlockTracesRequest) ProtoMessage()  {}
+
+// ExecutionTraceProto matches the proto definition
+type ExecutionTraceProto struct {
+	Index       int64             `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
+	Ops         []*StorageOpProto `protobuf:"bytes,2,rep,name=ops,proto3" json:"ops,omitempty"`
+	Result      []byte            `protobuf:"bytes,3,opt,name=result,proto3" json:"result,omitempty"`
+	GasUsed     uint64            `protobuf:"varint,4,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty"`
+	CallbackGas uint64            `protobuf:"varint,7,opt,name=callback_gas,json=callbackGas,proto3" json:"callback_gas,omitempty"`
+	HasError    bool              `protobuf:"varint,5,opt,name=has_error,json=hasError,proto3" json:"has_error,omitempty"`
+	ErrorMsg    string            `protobuf:"bytes,6,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"`
+}
+
+func (m *ExecutionTraceProto) Reset()         { *m = ExecutionTraceProto{} }
+func (m *ExecutionTraceProto) String() string { return fmt.Sprintf("{Index:%d}", m.Index) }
+func (m *ExecutionTraceProto) ProtoMessage()  {}
+
+// QueryBlockTracesResponse matches QueryBlockTracesResponse proto
+type QueryBlockTracesResponse struct {
+	Traces []*ExecutionTraceProto `protobuf:"bytes,1,rep,name=traces,proto3" json:"traces,omitempty"`
+}
+
+func (m *QueryBlockTracesResponse) Reset() { *m = QueryBlockTracesResponse{} }
+func (m *QueryBlockTracesResponse) String() string {
+	return fmt.Sprintf("{NumTraces:%d}", len(m.Traces))
+}
+func (m *QueryBlockTracesResponse) ProtoMessage() {}
 
 const (
-	methodEcallRecord    = "/secret.compute.v1beta1.Query/EcallRecord"
-	methodEncryptedSeed  = "/secret.compute.v1beta1.Query/EncryptedSeed"
+	methodEcallRecord   = "/secret.compute.v1beta1.Query/EcallRecord"
+	methodEncryptedSeed = "/secret.compute.v1beta1.Query/EncryptedSeed"
+	methodBlockTraces   = "/secret.compute.v1beta1.Query/BlockTraces"
 )
 
 var (
@@ -87,6 +136,10 @@ var (
 	_ proto.Message = (*QueryEcallRecordResponse)(nil)
 	_ proto.Message = (*QueryEncryptedSeedRequest)(nil)
 	_ proto.Message = (*QueryEncryptedSeedResponse)(nil)
+	_ proto.Message = (*StorageOpProto)(nil)
+	_ proto.Message = (*QueryBlockTracesRequest)(nil)
+	_ proto.Message = (*QueryBlockTracesResponse)(nil)
+	_ proto.Message = (*ExecutionTraceProto)(nil)
 )
 
 // GetEcallClient returns the global ecall client instance
@@ -205,6 +258,59 @@ func (c *EcallClient) FetchEncryptedSeed(certHashHex string) ([]byte, error) {
 
 	fmt.Printf("[EcallClient] Fetched encrypted seed (%d bytes)\n", len(resp.EncryptedSeed))
 	return resp.EncryptedSeed, nil
+}
+
+// FetchBlockTraces fetches all execution traces for a block from the remote SGX node
+func (c *EcallClient) FetchBlockTraces(height int64) ([]*ExecutionTrace, error) {
+	if c.conn == nil {
+		if err := c.connect(); err != nil {
+			return nil, fmt.Errorf("not connected to gRPC server: %w", err)
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	req := &QueryBlockTracesRequest{Height: height}
+	resp := &QueryBlockTracesResponse{}
+
+	if err := c.conn.Invoke(ctx, methodBlockTraces, req, resp); err != nil {
+		return nil, fmt.Errorf("gRPC BlockTraces failed for height %d: %w", height, err)
+	}
+
+	// Convert proto response to ExecutionTrace slice
+	traces := make([]*ExecutionTrace, len(resp.Traces))
+	for i, t := range resp.Traces {
+		fmt.Printf("[EcallClient] DEBUG: Proto trace callbackGas=%d (from gRPC response)\n", t.CallbackGas)
+		ops := make([]StorageOp, len(t.Ops))
+		for j, op := range t.Ops {
+			ops[j] = StorageOp{
+				IsDelete: op.IsDelete,
+				Key:      op.Key,
+				Value:    op.Value,
+			}
+		}
+		traces[i] = &ExecutionTrace{
+			Index:       t.Index,
+			Ops:         ops,
+			Result:      t.Result,
+			GasUsed:     t.GasUsed,
+			CallbackGas: t.CallbackGas,
+			HasError:    t.HasError,
+			ErrorMsg:    t.ErrorMsg,
+		}
+		fmt.Printf("[EcallClient] DEBUG: Converted trace callbackGas=%d\n", traces[i].CallbackGas)
+	}
+
+	if len(traces) > 0 {
+		for _, t := range traces {
+			fmt.Printf("[EcallClient] Fetched trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d hasError=%v\n",
+				height, t.Index, len(t.Ops), len(t.Result), t.GasUsed, t.CallbackGas, t.HasError)
+		}
+	} else if height%1000 == 0 {
+		fmt.Printf("[EcallClient] Fetched %d traces for block %d\n", len(traces), height)
+	}
+	return traces, nil
 }
 
 // IsConnected returns true if the client is connected to the gRPC server
