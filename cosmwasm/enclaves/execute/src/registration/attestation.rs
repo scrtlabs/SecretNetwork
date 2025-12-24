@@ -530,7 +530,8 @@ impl AttestationCombined {
             let set = &FMSPC_EOL;
             let fmspc_str: &str = &fmspc;
             if set.contains(fmspc_str) {
-                warn!("The CPU is deprecated");
+                error!("The CPU is deprecated. Running forbidden");
+                return false;
             }
             // fmspc.starts_with("0090")
         } else {
