@@ -113,8 +113,9 @@ func (msg *MsgUpdateParams) Validate() error {
 		return errors.Wrap(err, "authority is invalid")
 	}
 
-	if _, err := sdk.AccAddressFromBech32(msg.Params.SecurityAddress); err != nil {
-		return errors.Wrap(err, "security_address is invalid")
+	// Validate all params
+	if err := msg.Params.Validate(); err != nil {
+		return errors.Wrap(err, "params validation failed")
 	}
 
 	return nil
