@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/tx"
 
@@ -646,6 +647,28 @@ Examples:
 	return cmd
 }
 
+func ParseHexList(s string) ([][]byte, error) {
+	if strings.TrimSpace(s) == "" {
+		return nil, nil // or empty slice, your choice
+	}
+
+	parts := strings.Split(s, ",")
+	out := make([][]byte, 0, len(parts))
+
+	for i, p := range parts {
+		p = strings.TrimSpace(p)
+
+		b, err := hex.DecodeString(p)
+		if err != nil {
+			return nil, fmt.Errorf("invalid hex token #%d (%q): %w", i, p, err)
+		}
+
+		out = append(out, b)
+	}
+
+	return out, nil
+}
+
 func UpdateMachineWhitelistCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update-machine-whitelist [proposal-id] [machine-id]",
@@ -666,6 +689,14 @@ Machine ID must match the approved proposal exactly.`,
 
 			// Read machine ID
 			machineId := args[1]
+
+			ids, err := ParseHexList(machineId)
+			if err != nil {
+				return fmt.Errorf("machine_id malformed")
+			}
+			if len(ids) == 0 {
+				return fmt.Errorf("machine_id must not be empty")
+			}
 
 			msg := &types.MsgUpdateMachineWhitelist{
 				Sender:     clientCtx.GetFromAddress().String(),
