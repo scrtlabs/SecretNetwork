@@ -693,44 +693,123 @@ fn calculate_machine_id_evidence(machine_id: &[u8]) -> [u8; HASH_SIZE] {
     ret
 }
 
+struct ProtobufParser<'a> {
+    pub cursor: &'a [u8],
+}
+
+impl ProtobufParser<'_> {
+    fn cut_head(&mut self, size: usize) {
+        self.cursor = &self.cursor[size..];
+    }
+
+    pub fn read_uint(&mut self) -> Option<usize> {
+        let mut ret: usize = 0;
+        let len = self.cursor.len();
+        for i in 0..len {
+            let byte = self.cursor[i];
+
+            if byte & 0x80 == 0 {
+                self.cut_head(i + 1);
+                ret |= (byte as usize) << (i * 7);
+                return Some(ret);
+            }
+
+            ret |= ((byte & 0x7f) as usize) << (i * 7);
+        }
+
+        None
+    }
+
+    pub fn read_fix_arr(&mut self, fixed: &[u8]) -> bool {
+        let fixed_len = fixed.len();
+        if self.cursor.len() < fixed_len {
+            return false;
+        }
+
+        if &self.cursor[0..fixed_len] != fixed {
+            return false;
+        }
+
+        self.cut_head(fixed_len);
+        true
+    }
+
+    fn read_const_size(&mut self, len: usize) -> bool {
+        if self.cursor.len() < len {
+            return false;
+        }
+
+        self.cut_head(len);
+        true
+    }
+}
+
 fn is_msg_machine_id(msg_in_block: &[u8], machine_id: &[u8]) -> bool {
-    trace!("*** block msg: {:?}", hex::encode(msg_in_block));
+    trace!("*** block msg: {}", hex::encode(msg_in_block));
+    //trace!("*** target: {}", hex::encode(machine_id));
 
     // we expect a message of the form:
     // 0a 2d (addr, len=45 bytes)
     // 10 (proposal-id, varible length)
-    // 1a 28 (machine_id 40 bytes)
+    // 1a size (machine_ids)
 
-    let msg_len = msg_in_block.len();
+    let mut r = ProtobufParser {
+        cursor: msg_in_block,
+    };
 
-    if msg_len < 91 {
-        trace!("len mismatch: {}", msg_in_block.len());
-        return false;
-    }
-
-    if &msg_in_block[0..2] != [0x0a, 0x2d].as_slice() {
+    if !r.read_fix_arr([0x0a, 0x2d].as_slice()) {
         trace!("wrong sub1");
         return false;
     }
 
-    if &msg_in_block[47..48] != [0x10].as_slice() {
+    if !r.read_const_size(45) {
         trace!("wrong sub2");
         return false;
     }
 
-    let offs = msg_len - 42;
-
-    if &msg_in_block[offs..offs + 2] != [0x1a, 0x28].as_slice() {
+    if !r.read_fix_arr([0x10].as_slice()) {
         trace!("wrong sub3");
         return false;
     }
 
-    if &msg_in_block[offs + 2..offs + 42] != machine_id {
-        trace!("wrong mrenclave");
+    if r.read_uint().is_none() {
+        trace!("wrong sub4");
         return false;
     }
 
-    true
+    if !r.read_fix_arr([0x1a].as_slice()) {
+        trace!("wrong sub5");
+        return false;
+    }
+
+    if let Some(x) = r.read_uint() {
+        r.cursor = &r.cursor[0..x];
+    } else {
+        trace!("wrong sub6");
+        return false;
+    };
+
+    loop {
+        let (elem_size, is_last) = if let Some(pos) = r.cursor.iter().position(|&b| b == b',') {
+            (pos, false)
+        } else {
+            (r.cursor.len(), true)
+        };
+
+        //trace!("elem: {}", hex::encode(&r.cursor[0..elem_size]));
+
+        if (elem_size == machine_id.len()) && (&r.cursor[0..elem_size] == machine_id) {
+            return true;
+        }
+
+        if is_last {
+            break;
+        }
+
+        r.cut_head(elem_size + 1);
+    }
+
+    false
 }
 
 #[cfg(feature = "light-client-validation")]
@@ -738,10 +817,12 @@ fn check_machine_id_in_block(msg_slice: &[u8]) -> bool {
     let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
 
     while verified_msgs.remaining() > 0 {
-        if let Some(verified_msg) = verified_msgs.get_next() {
-            if is_msg_machine_id(&verified_msg, msg_slice) {
+        if let Some(verified_msg) = verified_msgs.show_next() {
+            if is_msg_machine_id(verified_msg, msg_slice) {
                 return true;
             }
+
+            verified_msgs.get_next(); // skip
         }
     }
     false
