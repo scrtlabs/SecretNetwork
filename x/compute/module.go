@@ -185,11 +185,7 @@ func (am AppModule) BeginBlock(c context.Context) error {
 				}
 				random = record.RandomSeed
 				validator_set_evidence = record.ValidatorSetEvidence
-
-				// Cache locally for future use
-				if cacheErr := recorder.RecordSubmitBlockSignatures(height, random, validator_set_evidence); cacheErr != nil {
-					ctx.Logger().Debug("Failed to cache ecall record locally", "error", cacheErr)
-				}
+				// Note: We don't cache in replay mode - we apply data only once
 			}
 		} else {
 			// SGX MODE: Call enclave and record the result
@@ -236,9 +232,6 @@ func (am AppModule) BeginBlock(c context.Context) error {
 
 // EndBlock returns the end blocker for the compute module.
 func (am AppModule) EndBlock(c context.Context) error {
-	if api.GetRecorder().IsReplayMode() {
-		return nil
-	}
 	ctx := c.(sdk.Context)
 
 	bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx)
@@ -254,6 +247,7 @@ func (am AppModule) EndBlock(c context.Context) error {
 		// return err
 	}
 
+	ctx.Logger().Info("Setting scheduled txs")
 	err = tmenclave.SetScheduledTxs(cron_data)
 	if err != nil {
 		ctx.Logger().Error("Failed to set scheduled txs %+v", err)
