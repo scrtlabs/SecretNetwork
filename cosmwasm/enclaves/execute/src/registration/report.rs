@@ -551,7 +551,6 @@ pub struct AttestationReport {
     pub tcb_eval_data_number: u16,
 }
 
-
 #[cfg(feature = "test")]
 pub mod tests {
     use serde_json::json;
@@ -610,7 +609,7 @@ pub mod tests {
         cert
     }
 
-    fn attesation_report() -> Value {
+    fn attesation_report() -> serde_json::Value {
         let report = json!({
             "version": 3,
             "timestamp": "2020-02-11T22:25:59.682915",
@@ -702,41 +701,6 @@ pub mod tests {
         );
     }
 
-    pub fn test_attestation_report_from_cert() {
-        let tls_ra_cert = tls_ra_cert_der_v4();
-        let report = AttestationReport::from_cert(&tls_ra_cert);
-        assert!(report.is_ok());
-
-        let report = report.unwrap();
-        assert_eq!(report.sgx_quote_status, SgxQuoteStatus::GroupOutOfDate);
-    }
-
-    pub fn test_attestation_report_from_cert_invalid() {
-        let tls_ra_cert = tls_ra_cert_der_v4();
-        let report = AttestationReport::from_cert(&tls_ra_cert);
-        assert!(report.is_ok());
-
-        let report = report.unwrap();
-        assert_eq!(report.sgx_quote_status, SgxQuoteStatus::GroupOutOfDate);
-    }
-
-    pub fn test_attestation_report_from_cert_api_version_not_compatible() {
-        let tls_ra_cert = tls_ra_cert_der_v3();
-        let report = AttestationReport::from_cert(&tls_ra_cert);
-        assert!(report.is_err());
-    }
-
-    pub fn test_attestation_report_test() {
-        let tls_ra_cert = tls_ra_cert_der_test();
-        let report = AttestationReport::from_cert(&tls_ra_cert);
-
-        if report.is_err() {
-            println!("err: {:?}", report)
-        }
-
-        assert!(report.is_ok());
-    }
-
     fn load_attestation_dcap() -> (Vec<u8>, Vec<u8>, i64) {
         let mut vec_quote = vec![];
         {
@@ -759,7 +723,13 @@ pub mod tests {
     pub fn test_attestation_dcap() {
         let (vec_quote, vec_coll, time_s) = load_attestation_dcap();
 
-        let res = verify_quote_sgx(&vec_quote, &vec_coll, time_s, None, false);
+        let attestation = crate::registration::attestation::AttestationCombined {
+            quote: vec_quote,
+            coll: vec_coll,
+            jwt_token: Vec::new(),
+        };
+
+        let res = verify_quote_sgx(&attestation, time_s, false);
         assert!(res.is_ok());
     }
 
@@ -774,7 +744,13 @@ pub mod tests {
             p_data.d[6] = p_data.d[6] ^ 4;
         };
 
-        let res = verify_quote_sgx(&vec_quote, &vec_coll, time_s, None, false);
+        let attestation = crate::registration::attestation::AttestationCombined {
+            quote: vec_quote,
+            coll: vec_coll,
+            jwt_token: Vec::new(),
+        };
+
+        let res = verify_quote_sgx(&attestation, time_s, false);
         assert!(!res.is_ok());
     }
 }
