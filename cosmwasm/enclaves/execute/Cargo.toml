@@ -90,9 +90,9 @@ block-verifier = { path = "../shared/block-verifier", optional = true }
 time = "=0.3.17"
 ed25519-dalek = { version = "1.0", default-features = false }
 sha2 = "0.10"
-tendermint = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.7-beta", default-features = false, features = ["rust-crypto"] }
-tendermint-proto = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.7-beta", default-features = false }
-tendermint-light-client-verifier = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.7-beta", default-features = false, features = ["rust-crypto"] }
+tendermint = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.7", default-features = false, features = ["rust-crypto"] }
+tendermint-proto = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.7", default-features = false }
+tendermint-light-client-verifier = { git = "https://github.com/scrtlabs/tendermint-rs", tag = "v0.38.0-secret.7", default-features = false, features = ["rust-crypto"] }
 rsa = { version = "0.9", default-features = false, features = ["sha2"] }
 base64ct = { version = "1.6", default-features = false, features = ["alloc"] }
 
