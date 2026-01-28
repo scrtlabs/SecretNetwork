@@ -2,10 +2,6 @@ VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 DOCKER := $(shell which docker)
 
-# SPID and API_KEY are used for Intel SGX attestation
-SPID ?= 00000000000000000000000000000000
-API_KEY ?= FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-
 # Environment variables and build tags setup
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
@@ -157,7 +153,7 @@ go.sum: go.mod
 build_cli:
 	CGO_LDFLAGS=$(CGO_LDFLAGS) go build -o secretcli -mod=readonly $(GCFLAGS) -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
-build_local_no_rust: bin-data-$(IAS_BUILD)
+build_local_no_rust:
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 	CGO_LDFLAGS=$(CGO_LDFLAGS) go build -mod=readonly $(GCFLAGS) -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
@@ -238,8 +234,6 @@ localsecret:
 	DOCKER_BUILDKIT=1 docker build \
 			--build-arg FEATURES="${FEATURES},debug-print,random,light-client-validation" \
 			--build-arg FEATURES_U=${FEATURES_U} \
-			--secret id=API_KEY,src=.env.local \
-			--secret id=SPID,src=.env.local \
 			--build-arg SGX_MODE=SW \
 			$(DOCKER_BUILD_ARGS) \
  			--build-arg SECRET_NODE_TYPE=BOOTSTRAP \
@@ -254,8 +248,6 @@ build-ibc-hermes:
 build-testnet-bootstrap:
 	@mkdir build 2>&3 || true
 	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
-				 --secret id=API_KEY,src=api_key.txt \
-				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=${SGX_MODE} \
 				 $(DOCKER_BUILD_ARGS) \
@@ -269,8 +261,6 @@ build-testnet-bootstrap:
 build-testnet:
 	@mkdir build 2>&3 || true
 	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
-				 --secret id=API_KEY,src=api_key.txt \
-				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=${SGX_MODE} \
 				 --build-arg FEATURES="verify-validator-whitelist,light-client-validation,random,${FEATURES}" \
@@ -282,8 +272,6 @@ build-testnet:
 				 -t ghcr.io/scrtlabs/secret-network-node-testnet:v$(VERSION) \
 				 --target release-image .
 	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
-				 --secret id=API_KEY,src=api_key.txt \
-				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=${SGX_MODE} \
 				 --build-arg FEATURES="verify-validator-whitelist,light-client-validation,random,${FEATURES}" \
@@ -302,8 +290,6 @@ build-mainnet-upgrade:
 	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
                  --build-arg FEATURES_U="production, ${FEATURES_U}" \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
-                 --secret id=API_KEY,src=api_key.txt \
-                 --secret id=SPID,src=spid.txt \
                  --build-arg SECRET_NODE_TYPE=NODE \
                  --build-arg DB_BACKEND=${DB_BACKEND} \
                  --build-arg BUILD_VERSION=${VERSION} \
@@ -315,8 +301,6 @@ build-mainnet-upgrade:
 	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
 				 --build-arg FEATURES_U="production, ${FEATURES_U}" \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
-				 --secret id=API_KEY,src=api_key.txt \
-				 --secret id=SPID,src=spid.txt \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
@@ -331,8 +315,6 @@ build-mainnet:
 	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production,random, ${FEATURES}" \
                  --build-arg FEATURES_U=${FEATURES_U} \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
-                 --secret id=API_KEY,src=api_key.txt \
-                 --secret id=SPID,src=spid.txt \
                  --build-arg SECRET_NODE_TYPE=NODE \
                  --build-arg BUILD_VERSION=${VERSION} \
                  --build-arg SGX_MODE=HW \
@@ -345,8 +327,6 @@ build-mainnet:
 	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production,random, ${FEATURES}" \
 				 --build-arg FEATURES_U=${FEATURES_U} \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
-				 --secret id=API_KEY,src=api_key.txt \
-				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
@@ -363,9 +343,6 @@ build-check-hw-tool:
 	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="${FEATURES}" \
                  --build-arg FEATURES_U=${FEATURES_U} \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
-                 --secret id=API_KEY,src=ias_keys/develop/api_key.txt \
-				 --secret id=API_KEY_MAINNET,src=ias_keys/production/api_key.txt \
-                 --secret id=SPID,src=spid.txt \
                  --build-arg SECRET_NODE_TYPE=NODE \
                  --build-arg BUILD_VERSION=${VERSION} \
                  --build-arg SGX_MODE=HW \
@@ -460,19 +437,19 @@ build-test-contracts:
 	cp $(TEST_CONTRACT_V1_PATH)/random-test/v1_random_test.wasm $(TEST_COMPUTE_MODULE_PATH)/v1_random_test.wasm
 
 
-prep-go-tests: build-test-contracts bin-data-sw
+prep-go-tests: build-test-contracts
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 
-go-tests: build-test-contracts bin-data-sw
+go-tests: build-test-contracts
 	# SGX_MODE=SW $(MAKE) build-tm-secret-enclave
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
-go-tests-hw: build-test-contracts bin-data
+go-tests-hw: build-test-contracts
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	# SGX_MODE=HW $(MAKE) build-tm-secret-enclave
 	SGX_MODE=HW $(MAKE) build-linux
@@ -515,17 +492,6 @@ build-all-test-contracts: build-test-contracts
 build-erc20-contract: build-test-contracts
 	cd .$(CW_CONTRACTS_V010_PATH)/erc20 && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os .$(CW_CONTRACTS_V010_PATH)/erc20/target/wasm32-unknown-unknown/release/cw_erc20.wasm -o ./erc20.wasm
-
-bin-data: bin-data-sw bin-data-develop bin-data-production
-
-bin-data-sw:
-	cd ./x/registration/internal/types && go-bindata -o ias_bin_sw.go -pkg types -prefix "../../../../ias_keys/sw_dummy/" -tags "!hw" ../../../../ias_keys/sw_dummy/...
-
-bin-data-develop:
-	cd ./x/registration/internal/types && go-bindata -o ias_bin_dev.go -pkg types -prefix "../../../../ias_keys/develop/" -tags "develop,hw" ../../../../ias_keys/develop/...
-
-bin-data-production:
-	cd ./x/registration/internal/types && go-bindata -o ias_bin_prod.go -pkg types -prefix "../../../../ias_keys/production/" -tags "production,hw" ../../../../ias_keys/production/...
 
 # Before running this you might need to do:
 # 1. sudo docker login -u ABC -p XYZ

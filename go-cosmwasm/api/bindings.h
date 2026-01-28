@@ -185,11 +185,11 @@ Buffer handle(cache_t *cache,
               Buffer sig_info,
               uint8_t handle_type);
 
-Buffer init_bootstrap(Buffer spid, Buffer api_key, Buffer *err);
+Buffer init_bootstrap(Buffer *err);
 
 cache_t *init_cache(Buffer data_dir, Buffer supported_features, uintptr_t _cache_size, Buffer *err);
 
-bool init_node(Buffer master_key, Buffer encrypted_seed, Buffer api_key, Buffer *err);
+bool init_node(Buffer master_key, Buffer encrypted_seed, Buffer *err);
 
 Buffer instantiate(cache_t *cache,
                    Buffer contract_id,

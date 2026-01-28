@@ -43,8 +43,6 @@ var (
 	NewQuerier                  = keeper.NewQuerier
 	GetGenesisStateFromAppState = keeper.GetGenesisStateFromAppState
 	IsHexString                 = keeper.IsHexString
-	GetApiKey                   = types.GetApiKey
-	GetSpid                     = types.GetSpid
 	// variable aliases
 	ModuleCdc               = types.ModuleCdc
 	DefaultCodespace        = types.DefaultCodespace

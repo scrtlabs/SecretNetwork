@@ -17,9 +17,6 @@ jobs:
       matrix:
         db_backend: [goleveldb]
     runs-on: ubuntu-22.04
-    env: # Or as an environment variable
-      SPID: ${{ secrets.SPID_TESTNET }}
-      API_KEY: ${{ secrets.API_KEY_TESTNET }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,9 +42,6 @@ jobs:
           context: .
           load: true
           tags: deb_build
-          secrets: |
-            API_KEY=${{ secrets.API_KEY_TESTNET }}
-            SPID=${{ secrets.SPID_TESTNET }}
           build-args: |
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
@@ -71,9 +65,6 @@ jobs:
       matrix:
         db_backend: [goleveldb]
     runs-on: ubuntu-24.04
-    env: # Or as an environment variable
-      SPID: ${{ secrets.SPID_TESTNET }}
-      API_KEY: ${{ secrets.API_KEY_TESTNET }}
     steps:
       - name: Clean up space (workaround)
         run: |
@@ -105,9 +96,6 @@ jobs:
           context: .
           load: true
           tags: deb_build
-          secrets: |
-            API_KEY=${{ secrets.API_KEY_TESTNET }}
-            SPID=${{ secrets.SPID_TESTNET }}
           build-args: |
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
@@ -132,8 +120,6 @@ jobs:
       matrix:
         db_backend: [goleveldb]
     env: # Or as an environment variable
-      SPID: ${{ secrets.SPID_MAINNET }}
-      API_KEY: ${{ secrets.API_KEY_MAINNET }}
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
     steps:
@@ -164,9 +150,6 @@ jobs:
           context: .
           push: false
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.get_version.outputs.VERSION }}
-          secrets: |
-            API_KEY=${{ secrets.API_KEY_MAINNET }}
-            SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
             FEATURES=verify-validator-whitelist,light-client-validation,random,production
             FEATURES_U=production
@@ -187,9 +170,6 @@ jobs:
           context: .
           load: true
           tags: deb_build
-          secrets: |
-            API_KEY=${{ secrets.API_KEY_MAINNET }}
-            SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
             FEATURES=verify-validator-whitelist,light-client-validation,random,production
             FEATURES_U=production
@@ -215,8 +195,6 @@ jobs:
       matrix:
         db_backend: [goleveldb]
     env: # Or as an environment variable
-      SPID: ${{ secrets.SPID_MAINNET }}
-      API_KEY: ${{ secrets.API_KEY_MAINNET }}
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
     steps:
@@ -241,9 +219,6 @@ jobs:
           context: .
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.get_version.outputs.VERSION }}
-          secrets: |
-            API_KEY=${{ secrets.API_KEY_MAINNET }}
-            SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
             FEATURES=verify-validator-whitelist,light-client-validation,random,production
             FEATURES_U=production
@@ -264,9 +239,6 @@ jobs:
           context: .
           load: true
           tags: deb_build
-          secrets: |
-            API_KEY=${{ secrets.API_KEY_MAINNET }}
-            SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
             FEATURES=verify-validator-whitelist,light-client-validation,random,production
             FEATURES_U=production
@@ -330,10 +302,6 @@ jobs:
 
   check-hw-tool:
     runs-on: ubuntu-22.04
-    env: # Or as an environment variable
-      SPID: ${{ secrets.SPID_TESTNET }}
-      API_KEY: ${{ secrets.API_KEY_TESTNET }}
-      API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -348,10 +316,6 @@ jobs:
           context: .
           load: true
           tags: check_hw_tool_build
-          secrets: |
-            API_KEY=${{ secrets.API_KEY_TESTNET }}
-            SPID=${{ secrets.SPID_TESTNET }}
-            API_KEY_MAINNET=${{ secrets.API_KEY_MAINNET }}
           build-args: |
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
@@ -368,10 +332,6 @@ jobs:
 
   check-hw-tool-2404:
     runs-on: ubuntu-24.04
-    env: # Or as an environment variable
-      SPID: ${{ secrets.SPID_TESTNET }}
-      API_KEY: ${{ secrets.API_KEY_TESTNET }}
-      API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -386,10 +346,6 @@ jobs:
           context: .
           load: true
           tags: check_hw_tool_build
-          secrets: |
-            API_KEY=${{ secrets.API_KEY_TESTNET }}
-            SPID=${{ secrets.SPID_TESTNET }}
-            API_KEY_MAINNET=${{ secrets.API_KEY_MAINNET }}
           build-args: |
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
@@ -432,9 +388,6 @@ jobs:
           context: .
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
-          secrets: |
-            API_KEY=00000000000000000000000000000000
-            SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1

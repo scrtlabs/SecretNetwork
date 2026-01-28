@@ -7,14 +7,6 @@ use lazy_static::lazy_static;
 use log::*;
 use sgx_types::{sgx_report_body_t, sgx_self_report};
 
-#[allow(dead_code)]
-#[derive(PartialEq, Eq, Debug)]
-pub enum SigningMethod {
-    MRSIGNER,
-    MRENCLAVE,
-    NONE,
-}
-
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";
 
@@ -69,15 +61,6 @@ pub const SEALED_FILE_REGISTRATION_KEY: &str = "new_node_seed_exchange_keypair.s
 pub const SEALED_FILE_REK: &str = "rek.sealed";
 pub const SEALED_FILE_IRS: &str = "irs.sealed";
 pub const SEALED_FILE_VALIDATOR_SET: &str = "validator_set.sealed";
-
-#[cfg(feature = "production")]
-pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
-
-#[cfg(all(not(feature = "production"), not(feature = "test")))]
-pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
-
-#[cfg(all(not(feature = "production"), feature = "test"))]
-pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
 
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
 pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 2;

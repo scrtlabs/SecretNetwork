@@ -35,7 +35,7 @@ func HealthCheck() ([]byte, error) {
 	return nil, nil
 }
 
-func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
+func InitBootstrap() ([]byte, error) {
 	return nil, nil
 }
 
@@ -47,7 +47,7 @@ func SubmitValidatorSetEvidence(evidence []byte) error {
 	return nil
 }
 
-func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
+func LoadSeedToEnclave(masterKey []byte, seed []byte) (bool, error) {
 	return true, nil
 }
 
@@ -272,7 +272,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // KeyGen Seng KeyGen request to enclave
-func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
+func CreateAttestationReport(is_migration_report bool) (bool, error) {
 	//errmsg := C.Buffer{}
 	//_, err := C.create_attestation_report(&errmsg)
 	//if err != nil {

@@ -134,18 +134,6 @@ RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/releas
 COPY --from=compile-enclave /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so
 COPY --from=compile-enclave /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so
 
-RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/develop
-RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/sw_dummy
-RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/production
-
-RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/develop/spid.txt
-RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/sw_dummy/spid.txt
-RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/production/spid.txt
-
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/develop/api_key.txt
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/sw_dummy/api_key.txt
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/production/api_key.txt
-
 RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS=${CGO_LDFLAGS} DB_BACKEND=${DB_BACKEND} VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
 RUN . /opt/sgxsdk/environment && env && VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
 
@@ -311,15 +299,6 @@ COPY check-hw check-hw
 RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O check-hw/check_hw_enclave.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
 COPY --from=compile-secretd /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so check-hw/check_hw_enclave_testnet.so
-
-RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/develop
-RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/sw_dummy
-RUN mkdir -p /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/production
-
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/develop/api_key.txt
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/sw_dummy/api_key.txt
-RUN --mount=type=secret,id=API_KEY_MAINNET,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/scrtlabs/SecretNetwork/ias_keys/production/api_key.txt
-
 
 WORKDIR /go/src/github.com/scrtlabs/SecretNetwork/check-hw
 

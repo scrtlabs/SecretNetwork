@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/hex"
+	fmt "fmt"
 	"strings"
 
 	errorsmod "cosmossdk.io/errors"
@@ -327,13 +329,39 @@ func (msg MsgUpdateMachineWhitelistProposal) Type() string {
 	return "update-machine-whitelist-proposal"
 }
 
+func ParseHexList(s string) ([][]byte, error) {
+	if strings.TrimSpace(s) == "" {
+		return nil, nil // or empty slice, your choice
+	}
+
+	parts := strings.Split(s, ",")
+	out := make([][]byte, 0, len(parts))
+
+	for i, p := range parts {
+		p = strings.TrimSpace(p)
+
+		b, err := hex.DecodeString(p)
+		if err != nil {
+			return nil, fmt.Errorf("invalid hex token #%d (%q): %w", i, p, err)
+		}
+
+		out = append(out, b)
+	}
+
+	return out, nil
+}
+
 func (msg MsgUpdateMachineWhitelistProposal) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
 		return errorsmod.Wrap(err, "invalid authority")
 	}
 
-	if len(msg.MachineId) != 40 {
-		return errorsmod.Wrap(ErrInvalid, "machine_id must be 40 characters")
+	ids, err := ParseHexList(msg.MachineId)
+	if err != nil {
+		return errorsmod.Wrap(ErrInvalid, "machine_id malformed")
+	}
+	if len(ids) == 0 {
+		return errorsmod.Wrap(ErrInvalid, "machine_id must not be empty")
 	}
 
 	return nil
@@ -368,8 +396,12 @@ func (msg MsgUpdateMachineWhitelist) ValidateBasic() error {
 		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "proposal ID cannot be zero")
 	}
 
-	if len(msg.MachineId) != 40 {
-		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "machine ID must be 40 characters")
+	ids, err := ParseHexList(msg.MachineId)
+	if err != nil {
+		return errorsmod.Wrap(ErrInvalid, "machine_id malformed")
+	}
+	if len(ids) == 0 {
+		return errorsmod.Wrap(ErrInvalid, "machine_id must not be empty")
 	}
 
 	return nil

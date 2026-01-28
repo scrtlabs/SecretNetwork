@@ -13,18 +13,12 @@ extern "C" {
         master_key_len: u32,
         encrypted_seed: *const u8,
         encrypted_seed_len: u32,
-        api_key: *const u8,
-        api_key_len: u32,
     ) -> sgx_status_t;
 
     pub fn ecall_init_bootstrap(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         public_key: &mut [u8; 32],
-        spid: *const u8,
-        spid_len: u32,
-        api_key: *const u8,
-        api_key_len: u32,
     ) -> sgx_status_t;
 
     pub fn ecall_key_gen(
@@ -102,11 +96,7 @@ pub fn untrusted_health_check() -> SgxResult<HealthCheckResult> {
     Ok(ret)
 }
 
-pub fn untrusted_init_node(
-    master_key: &[u8],
-    encrypted_seed: &[u8],
-    api_key: &[u8],
-) -> SgxResult<()> {
+pub fn untrusted_init_node(master_key: &[u8], encrypted_seed: &[u8]) -> SgxResult<()> {
     info!("Initializing enclave..");
 
     // Bind the token to a local variable to ensure its
@@ -129,8 +119,6 @@ pub fn untrusted_init_node(
             master_key.len() as u32,
             encrypted_seed.as_ptr(),
             encrypted_seed.len() as u32,
-            api_key.as_ptr(),
-            api_key.len() as u32,
         )
     };
 
@@ -352,7 +340,7 @@ pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {
     Ok(public_key)
 }
 
-pub fn untrusted_init_bootstrap(spid: &[u8], api_key: &[u8]) -> SgxResult<[u8; 32]> {
+pub fn untrusted_init_bootstrap() -> SgxResult<[u8; 32]> {
     info!("Hello from just before initializing - untrusted_init_bootstrap");
 
     // Bind the token to a local variable to ensure its
@@ -368,17 +356,7 @@ pub fn untrusted_init_bootstrap(spid: &[u8], api_key: &[u8]) -> SgxResult<[u8; 3
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let mut public_key = [0u8; 32];
     // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
-    let status = unsafe {
-        ecall_init_bootstrap(
-            eid,
-            &mut retval,
-            &mut public_key,
-            spid.as_ptr(),
-            spid.len() as u32,
-            api_key.as_ptr(),
-            api_key.len() as u32,
-        )
-    };
+    let status = unsafe { ecall_init_bootstrap(eid, &mut retval, &mut public_key) };
 
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);

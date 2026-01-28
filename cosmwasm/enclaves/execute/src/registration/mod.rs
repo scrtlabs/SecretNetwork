@@ -26,24 +26,13 @@ pub mod tests {
 
         count_failures!(failures, {
             report::tests::test_sgx_quote_parse_from();
-            report::tests::test_attestation_report_from_cert();
-            report::tests::test_attestation_report_from_cert_invalid();
-            report::tests::test_attestation_report_from_cert_api_version_not_compatible();
-            report::tests::test_attestation_report_test();
             report::tests::test_attestation_dcap();
             report::tests::test_attestation_dcap_temper();
-            cert::tests::test_certificate_valid();
-            cert::tests::test_certificate_invalid_configuration_needed();
         });
 
         if failures != 0 {
             panic!("{}: {} tests failed", file!(), failures);
         }
-
-        #[cfg(not(feature = "epid_whitelist_disabled"))]
-        count_failures!(failures, {
-            cert::tests::test_epid_whitelist();
-        });
 
         // The test doesn't work for some reason
         // #[cfg(feature = "SGX_MODE_HW")]

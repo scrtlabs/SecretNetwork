@@ -25,9 +25,6 @@ use crate::sgx_types::{
 #[cfg(feature = "SGX_MODE_HW")]
 use std::{cmp, mem};
 
-#[cfg(not(feature = "epid_whitelist_disabled"))]
-use crate::registration::cert::check_epid_gid_is_whitelisted;
-
 use crate::registration::report::AttestationReport;
 
 /// # Safety
@@ -72,7 +69,6 @@ unsafe fn check_patch_level_dcap(pub_k: &[u8; 32]) -> (NodeAuthResult, Option<Ve
 }
 
 /// # Safety
-/// Don't forget to check the input length of api_key_len
 #[no_mangle]
 #[cfg(feature = "SGX_MODE_HW")]
 

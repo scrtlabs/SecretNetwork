@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -336,6 +337,28 @@ func (m msgServer) UpdateMachineWhitelistProposal(goCtx context.Context, msg *ty
 	return &types.MsgUpdateMachineWhitelistProposalResponse{}, nil
 }
 
+func ParseHexList(s string) ([][]byte, error) {
+	if strings.TrimSpace(s) == "" {
+		return nil, nil // or empty slice, your choice
+	}
+
+	parts := strings.Split(s, ",")
+	out := make([][]byte, 0, len(parts))
+
+	for i, p := range parts {
+		p = strings.TrimSpace(p)
+
+		b, err := hex.DecodeString(p)
+		if err != nil {
+			return nil, fmt.Errorf("invalid hex token #%d (%q): %w", i, p, err)
+		}
+
+		out = append(out, b)
+	}
+
+	return out, nil
+}
+
 func (m msgServer) UpdateMachineWhitelist(goCtx context.Context, msg *types.MsgUpdateMachineWhitelist) (*types.MsgUpdateMachineWhitelistResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
@@ -352,19 +375,22 @@ func (m msgServer) UpdateMachineWhitelist(goCtx context.Context, msg *types.MsgU
 
 	store := m.keeper.storeService.OpenKVStore(ctx)
 
-	id, err := hex.DecodeString(msg.MachineId)
+	ids, err := ParseHexList(msg.MachineId)
 	if err != nil {
 		return nil, err
 	}
 
-	{
+	for _, id := range ids {
 		proof := [32]byte{}
-		if err := api.OnApproveMachineID(id, &proof, true); err != nil {
-			return nil, err
+		err := api.OnApproveMachineID(id, &proof, true)
+		id_txt := hex.EncodeToString(id)
+		if err != nil {
+			fmt.Println("Failed to add machine_id: ", id_txt)
+		} else {
+			fmt.Println("Added machine_id: ", id_txt)
+			key := append(types.MachineIDEvidencePrefix, id...)
+			_ = store.Set(key, proof[:])
 		}
-
-		key := append(types.MachineIDEvidencePrefix, id...)
-		_ = store.Set(key, proof[:])
 	}
 
 	return &types.MsgUpdateMachineWhitelistResponse{}, nil

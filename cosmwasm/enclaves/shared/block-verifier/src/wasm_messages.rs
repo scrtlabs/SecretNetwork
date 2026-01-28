@@ -24,6 +24,13 @@ impl VerifiedBlockMessages {
         self.messages.pop_front()
     }
 
+    pub fn show_next(&mut self) -> Option<&[u8]> {
+        match self.messages.front() {
+            Some(msg) => Some(msg.as_slice()),
+            None => None,
+        }
+    }
+
     pub fn remaining(&self) -> usize {
         self.messages.len()
     }

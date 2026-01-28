@@ -1,9 +1,3 @@
-#![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
-
-use log::*;
-use enclave_crypto::consts::{SigningMethod, SELF_REPORT_BODY, SIGNING_METHOD};
-use enclave_ffi_types::NodeAuthResult;
-
 pub enum Error {
     GenericError,
 }
@@ -41,53 +35,6 @@ pub fn extract_asn1_value(cert: &[u8], oid: &[u8]) -> Result<Vec<u8>, Error> {
     Ok(payload)
 }
 
-pub fn verify_ra_report(
-    report_mr_signer: &[u8; 32],
-    report_mr_enclave: &[u8; 32],
-    override_verify_type: Option<SigningMethod>,
-) -> NodeAuthResult {
-    let signing_method: SigningMethod = match override_verify_type {
-        Some(method) => method,
-        None => SIGNING_METHOD,
-    };
-
-    // verify certificate
-    match signing_method {
-        SigningMethod::MRENCLAVE => {
-            if (*report_mr_enclave) != SELF_REPORT_BODY.mr_enclave.m
-                || (*report_mr_signer) != SELF_REPORT_BODY.mr_signer.m
-            {
-                error!(
-                    "Got a different mr_enclave or mr_signer than expected. Invalid certificate"
-                );
-                warn!(
-                    "mr_enclave: received: {:?} \n expected: {:?}",
-                    report_mr_enclave, SELF_REPORT_BODY.mr_enclave.m
-                );
-                warn!(
-                    "mr_signer: received: {:?} \n expected: {:?}",
-                    report_mr_signer, SELF_REPORT_BODY.mr_signer.m
-                );
-                return NodeAuthResult::MrEnclaveMismatch;
-            }
-        }
-        SigningMethod::MRSIGNER => {
-            if (*report_mr_signer) != SELF_REPORT_BODY.mr_signer.m {
-                error!("Got a different mrsigner than expected. Invalid certificate");
-                warn!(
-                    "received: {:?} \n expected: {:?}",
-                    report_mr_signer, SELF_REPORT_BODY.mr_signer.m
-                );
-                return NodeAuthResult::MrSignerMismatch;
-            }
-        }
-        SigningMethod::NONE => {}
-    }
-
-    NodeAuthResult::Success
-}
-
-
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
 #[allow(dead_code)]
 const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
@@ -97,17 +44,6 @@ const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
     feature = "test"
 ))]
 const WHITELIST_FROM_FILE: &str = include_str!("fixtures/test_whitelist.txt");
-
-#[cfg(not(feature = "epid_whitelist_disabled"))]
-pub fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
-    let decoded = base64::decode(WHITELIST_FROM_FILE.trim()).unwrap(); //will never fail since data is constant
-    decoded.as_chunks::<4>().0.iter().any(|&arr| {
-        if epid_gid == &u32::from_be_bytes(arr) {
-            return true;
-        }
-        false
-    })
-}
 
 #[cfg(feature = "test")]
 pub mod tests {
@@ -159,28 +95,4 @@ pub mod tests {
 
     #[cfg(not(feature = "SGX_MODE_HW"))]
     pub fn test_certificate_invalid_configuration_needed() {}
-
-    #[cfg(not(feature = "epid_whitelist_disabled"))]
-    pub fn test_epid_whitelist() {
-        // check that we parse this correctly
-        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc12 as u32));
-        assert_eq!(res, true);
-
-        // check that 2nd number works
-        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x6942 as u32));
-        assert_eq!(res, true);
-
-        // check all kinds of failures that should return false
-        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x0 as u32));
-        assert_eq!(res, false);
-
-        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x120c as u32));
-        assert_eq!(res, false);
-
-        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc120000 as u32));
-        assert_eq!(res, false);
-
-        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x1242 as u32));
-        assert_eq!(res, false);
-    }
 }
