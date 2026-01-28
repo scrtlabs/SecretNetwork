@@ -2,7 +2,6 @@ package compute
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -159,19 +158,6 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	ctx := c.(sdk.Context)
 	block_header := ctx.BlockHeader()
 
-	// execCronMsgs, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
-	// if err != nil {
-	// 	ctx.Logger().Error("Failed to get scheduled cron msgs")
-	// 	return err
-	// }
-
-	cron_msgs := tm_type.Data{Txs: [][]byte{}}
-	cron_data, err := cron_msgs.Marshal()
-	if err != nil {
-		ctx.Logger().Error("Failed to marshal cron_msgs")
-		return err
-	}
-
 	header, err := block_header.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal block header")
@@ -194,19 +180,11 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	}
 	if block_header.EncryptedRandom != nil {
 		randomAndProof := append(block_header.EncryptedRandom.Random, block_header.EncryptedRandom.Proof...)
-		random, validator_set_evidence, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof, cron_data)
+		random, validator_set_evidence, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof)
 		if err != nil {
 			ctx.Logger().Error("Failed to submit block signatures")
 			return err
 		}
-
-		// for idx, msg := range execCronMsgs {
-		// 	ctx = ctx.WithTxBytes(bytesCronMsgs[idx])
-		// 	_, err := am.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, wasmtypes.HandleTypeExecute)
-		// 	if err != nil {
-		// 		ctx.Logger().Error("Failed to execute cron message", "error", err)
-		// 	}
-		// }
 
 		am.keeper.SetRandomSeed(ctx, random, validator_set_evidence)
 	} else {
@@ -219,24 +197,23 @@ func (am AppModule) BeginBlock(c context.Context) error {
 func (am AppModule) EndBlock(c context.Context) error {
 	ctx := c.(sdk.Context)
 
-	// _, _, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_END_BLOCKER)
-	// if err != nil {
-	// 	ctx.Logger().Error("Failed to get scheduled cron msgs")
-	// 	return err
-	// }
+	bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx)
+	if err != nil {
+		ctx.Logger().Error("Failed to get scheduled cron msgs for end blocker", "error", err)
+		// return err
+	}
 
-	cron_msgs := tm_type.Data{Txs: [][]byte{}}
+	cron_msgs := tm_type.Data{Txs: bytesCronMsgs}
 	cron_data, err := cron_msgs.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal cron_msgs")
-		return err
+		// return err
 	}
-	hash := sha256.Sum256(cron_data)
 
-	err = tmenclave.SetImplicitHash(hash[:])
+	err = tmenclave.SetScheduledTxs(cron_data)
 	if err != nil {
-		ctx.Logger().Error("Failed to set implicit hash %+v", err)
-		return err
+		ctx.Logger().Error("Failed to set scheduled txs %+v", err)
+		// return err
 	}
 	return nil
 }

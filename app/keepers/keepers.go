@@ -246,7 +246,7 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		ak.keys[crontypes.StoreKey],
 		ak.memKeys[crontypes.StoreKey],
 		ak.AccountKeeper,
-		authtypes.NewModuleAddress(crontypes.ModuleName).String(),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	ak.CronKeeper = cronKeeper
 

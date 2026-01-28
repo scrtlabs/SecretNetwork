@@ -39,7 +39,7 @@ func InitBootstrap() ([]byte, error) {
 	return nil, nil
 }
 
-func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, random []byte, cronmsgs []byte /* valSet []byte, nextValSet []byte*/) ([]byte, []byte, error) {
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, random []byte /* valSet []byte, nextValSet []byte*/) ([]byte, []byte, error) {
 	return nil, nil, nil
 }
 

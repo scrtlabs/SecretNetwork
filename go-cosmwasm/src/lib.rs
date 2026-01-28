@@ -222,7 +222,6 @@ pub extern "C" fn submit_block_signatures(
     commit: Buffer,
     txs: Buffer,
     random: Buffer,
-    cron_msgs: Buffer,
     // val_set: Buffer,
     // next_val_set: Buffer,
     err: Option<&mut Buffer>,
@@ -261,10 +260,6 @@ pub extern "C" fn submit_block_signatures(
         Some(r) => r,
     };
 
-    let cron_msgs_slice = match unsafe { cron_msgs.read() } {
-        None => &[],
-        Some(r) => r,
-    };
     // let val_set_slice = match unsafe { val_set.read() } {
     //     None => {
     //         set_error(Error::empty_arg("val_set"), err);
@@ -286,8 +281,8 @@ pub extern "C" fn submit_block_signatures(
         commit_slice,
         txs_slice,
         random_slice,
-        cron_msgs_slice, // val_set_slice,
-                         // next_val_set_slice,
+        // val_set_slice,
+        // next_val_set_slice,
     ) {
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), err);

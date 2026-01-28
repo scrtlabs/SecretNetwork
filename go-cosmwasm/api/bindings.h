@@ -253,7 +253,6 @@ TwoBuffers submit_block_signatures(Buffer header,
                                    Buffer commit,
                                    Buffer txs,
                                    Buffer random,
-                                   Buffer cron_msgs,
                                    Buffer *err);
 
 void submit_validator_set_evidence(Buffer evidence, Buffer *err);

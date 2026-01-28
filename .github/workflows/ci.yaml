@@ -263,6 +263,19 @@ jobs:
   Build-LocalSecret:
     runs-on: ubuntu-22.04
     steps:
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo docker system prune -af
+          df -h    
+      - name: Check disk space after cleanup
+        run: |
+            df -h
+            echo "=== Checking large directories ==="
+            du -sh /usr/share/dotnet 2>/dev/null || echo "dotnet not found"
+            du -sh /usr/local/lib/android 2>/dev/null || echo "android not found"
+            du -sh /opt/ghc 2>/dev/null || echo "ghc not found"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:

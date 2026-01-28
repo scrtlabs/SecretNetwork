@@ -108,7 +108,7 @@ func TestKeeperExecuteReadySchedules(t *testing.T) {
 	ctx = ctx.WithBlockHeight(5)
 
 	// Use GetScheduledMsgs instead of ExecuteReadySchedules
-	_ = k.GetScheduledMsgs(ctx, types.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
+	_ = k.GetScheduledMsgs(ctx)
 
 	unready1, _ := k.GetSchedule(ctx, "1_unready1")
 	ready1, _ := k.GetSchedule(ctx, "2_ready1")
@@ -128,7 +128,7 @@ func TestKeeperExecuteReadySchedules(t *testing.T) {
 	// Notice that now only one ready schedule left because we got limit of 2 at once
 	ctx = ctx.WithBlockHeight(6)
 
-	_ = k.GetScheduledMsgs(ctx, types.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
+	_ = k.GetScheduledMsgs(ctx)
 
 	unready1, _ = k.GetSchedule(ctx, "1_unready1")
 	ready1, _ = k.GetSchedule(ctx, "2_ready1")
@@ -146,7 +146,7 @@ func TestKeeperExecuteReadySchedules(t *testing.T) {
 
 	ctx = ctx.WithBlockHeight(8)
 
-	_ = k.GetScheduledMsgs(ctx, types.ExecutionStage_EXECUTION_STAGE_END_BLOCKER)
+	_ = k.GetScheduledMsgs(ctx)
 
 	unready1, _ = k.GetSchedule(ctx, "1_unready1")
 	ready1, _ = k.GetSchedule(ctx, "2_ready1")
@@ -183,14 +183,14 @@ func TestKeeperExecuteReadySchedules(t *testing.T) {
 
 	// expect it to not executed right away
 
-	_ = k.GetScheduledMsgs(ctx, types.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
+	_ = k.GetScheduledMsgs(ctx)
 	// LastExecuteHeight should still be at 0
 	s, _ = k.GetSchedule(ctx, "every_block")
 	require.Equal(t, s.LastExecuteHeight, uint64(0))
 
 	ctx = ctx.WithBlockHeight(1)
 	// expect it to be executed again
-	_ = k.GetScheduledMsgs(ctx, types.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
+	_ = k.GetScheduledMsgs(ctx)
 	// last execute height changed to 1
 	s, _ = k.GetSchedule(ctx, "every_block")
 	require.Equal(t, s.LastExecuteHeight, uint64(1))
@@ -217,20 +217,20 @@ func TestKeeperExecuteReadySchedules(t *testing.T) {
 	require.NoError(t, err)
 
 	// expect it to not executed on 0 and 1 blocks
-	_ = k.GetScheduledMsgs(ctx, types.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
+	_ = k.GetScheduledMsgs(ctx)
 	// LastExecuteHeight should still be at 0
 	s, _ = k.GetSchedule(ctx, "once_in_two")
 	require.Equal(t, s.LastExecuteHeight, uint64(0))
 
 	ctx = ctx.WithBlockHeight(1)
-	_ = k.GetScheduledMsgs(ctx, types.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
+	_ = k.GetScheduledMsgs(ctx)
 	s, _ = k.GetSchedule(ctx, "once_in_two")
 	require.Equal(t, s.LastExecuteHeight, uint64(0))
 
 	// expect it to be executed on 2 block
 	ctx = ctx.WithBlockHeight(2)
 	// expect it to be executed again
-	_ = k.GetScheduledMsgs(ctx, types.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
+	_ = k.GetScheduledMsgs(ctx)
 	// last execute height changed to 2
 	s, _ = k.GetSchedule(ctx, "once_in_two")
 	require.Equal(t, s.LastExecuteHeight, uint64(2))
