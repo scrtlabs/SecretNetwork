@@ -40,6 +40,11 @@ pub use kdf::hkdf_sha_256;
 
 #[cfg(feature = "test")]
 pub mod tests {
+    use crate::aes_siv;
+    use crate::ed25519;
+    use crate::hash;
+    use crate::hmac;
+
     /// Catch failures like the standard test runner, and print similar information per test.
     /// Tests can only fail by panicking, not by returning a `Result` type.
     #[macro_export]
@@ -59,10 +64,24 @@ pub mod tests {
     }
 
     pub fn run_tests() {
-        let failures = 0;
+        let mut failures = 0;
 
         count_failures!(failures, {
-            // todo: add encryption and other tests here
+            // Encryption tests
+            aes_siv::tests::test_aes_encrypt;
+            aes_siv::tests::test_aes_decrypt;
+            aes_siv::tests::test_aes_encrypt_decrypt_roundtrip;
+            aes_siv::tests::test_aes_encrypt_empty_aad;
+            
+            // Hash tests
+            hash::tests::test_sha_256;
+            
+            // HMAC tests
+            hmac::tests::test_hmac_sha256;
+            
+            // Ed25519 tests
+            ed25519::tests::test_keypair_generation;
+            ed25519::tests::test_signing_and_verification;
         });
 
         if failures != 0 {
