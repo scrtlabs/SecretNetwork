@@ -8,7 +8,7 @@ package registration
 //	keeper     Keeper
 //}
 //
-//// returns a cleanup function, which must be defered on
+//// returns a cleanup function, which must be deferred on
 //func setupTest(t *testing.T) (testData, func()) {
 //	tempDir, err := os.MkdirTemp("", "wasm")
 //	require.NoError(t, err)
