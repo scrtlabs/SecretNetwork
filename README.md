@@ -45,7 +45,7 @@ Click the button below to start a new development environment:
 sudo apt-get install -y --no-install-recommends g++ libtool automake autoconf clang
 ```
 
-#### Optinal packages to install ((needed for local testing))
+#### Optional packages to install ((needed for local testing))
 ```
 sudo apt install -y  jq nodejs npm
 ```
