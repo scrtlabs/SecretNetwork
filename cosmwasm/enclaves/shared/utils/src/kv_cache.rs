@@ -32,7 +32,7 @@ impl KvCache {
         self.readable_cache.insert(k.to_vec(), v.to_vec())
     }
     pub fn read(&self, key: &[u8]) -> Option<Vec<u8>> {
-        // first to to read from the writeable cache - this will be more updated
+        // first to read from the writeable cache - this will be more updated
         if let Some(value) = self.writeable_cache.get(key) {
             Some(value.clone())
         }
