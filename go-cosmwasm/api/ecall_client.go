@@ -5,8 +5,11 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -15,12 +18,26 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// EcallClient fetches ecall records from a remote SGX node via gRPC
+// EcallClient fetches ecall records from remote SGX nodes via gRPC
+// It maintains connections to multiple nodes and selects randomly for load distribution
 type EcallClient struct {
-	mu       sync.Mutex // Protects conn during reconnect
-	grpcAddr string
-	conn     *grpc.ClientConn
-	timeout  time.Duration
+	mu      sync.RWMutex
+	nodes   []*nodeConn // Pool of node connections
+	timeout time.Duration
+	rng     *rand.Rand
+}
+
+// nodeConn represents a connection to a single SGX node
+type nodeConn struct {
+	addr   string
+	conn   *grpc.ClientConn
+	mu     sync.Mutex
+	failed bool // Mark node as failed to avoid repeated connection attempts
+}
+
+// sgxNodesConfig represents the JSON configuration file format
+type sgxNodesConfig struct {
+	Nodes []string `json:"nodes"` // List of gRPC addresses (host:port)
 }
 
 // EcallRecordData represents the ecall record for a block
@@ -145,85 +162,229 @@ var (
 // GetEcallClient returns the global ecall client instance
 func GetEcallClient() *EcallClient {
 	clientOnce.Do(func() {
-		grpcAddr := os.Getenv("SECRET_SGX_NODE_GRPC")
-		if grpcAddr == "" {
-			grpcAddr = "localhost:9090"
+		var addrs []string
+
+		// Try to load from JSON file first
+		configPath := os.Getenv("SECRET_SGX_NODES_CONFIG")
+		if configPath == "" {
+			// Default path: ~/.secretd/config/sgx_nodes.json
+			homeDir := os.Getenv("HOME")
+			secretHome := os.Getenv("SECRETD_HOME")
+			if secretHome != "" {
+				configPath = filepath.Join(secretHome, "config", "sgx_nodes.json")
+			} else {
+				configPath = filepath.Join(homeDir, ".secretd", "config", "sgx_nodes.json")
+			}
+		}
+
+		if addrsFromFile := loadNodesFromJSON(configPath); len(addrsFromFile) > 0 {
+			addrs = addrsFromFile
+			fmt.Printf("[EcallClient] Loaded %d nodes from config file: %s\n", len(addrs), configPath)
+		} else {
+			// Fallback to env var
+			grpcAddr := os.Getenv("SECRET_SGX_NODE_GRPC")
+			if grpcAddr == "" {
+				grpcAddr = "localhost:9090"
+			}
+			addrs = []string{grpcAddr}
+			fmt.Printf("[EcallClient] Using single node from env: %s\n", grpcAddr)
+		}
+
+		nodes := make([]*nodeConn, len(addrs))
+		for i, addr := range addrs {
+			nodes[i] = &nodeConn{addr: addr}
 		}
 
 		globalClient = &EcallClient{
-			grpcAddr: grpcAddr,
-			timeout:  30 * time.Second,
+			nodes:   nodes,
+			timeout: 30 * time.Second,
+			rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		}
 
-		if err := globalClient.connect(); err != nil {
-			fmt.Printf("[EcallClient] Warning: failed to connect to gRPC server: %v\n", err)
-		} else {
-			fmt.Printf("[EcallClient] Connected to gRPC server: %s\n", grpcAddr)
-		}
+		fmt.Printf("[EcallClient] Initialized with %d SGX nodes\n", len(addrs))
 	})
 	return globalClient
 }
 
-// connect establishes the gRPC connection
-func (c *EcallClient) connect() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// loadNodesFromJSON loads gRPC node addresses from a JSON configuration file
+// JSON format: {"nodes": ["node1:9090", "node2:9090", "node3:9090"]}
+func loadNodesFromJSON(configPath string) []string {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		// File doesn't exist or can't be read - that's okay, use fallback
+		return nil
+	}
+
+	var config sgxNodesConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		fmt.Printf("[EcallClient] Warning: failed to parse config file %s: %v\n", configPath, err)
+		return nil
+	}
+
+	if len(config.Nodes) == 0 {
+		return nil
+	}
+
+	// Validate and filter out empty addresses
+	var validAddrs []string
+	for _, addr := range config.Nodes {
+		if addr != "" {
+			validAddrs = append(validAddrs, addr)
+		}
+	}
+
+	return validAddrs
+}
+
+// getRandomNode returns a random healthy node connection
+// It tries up to len(nodes) times to find a working connection
+func (c *EcallClient) getRandomNode() (*grpc.ClientConn, string, error) {
+	c.mu.RLock()
+	numNodes := len(c.nodes)
+	if numNodes == 0 {
+		c.mu.RUnlock()
+		return nil, "", fmt.Errorf("no SGX nodes configured")
+	}
+
+	// Create shuffled indices for random selection without replacement
+	indices := make([]int, numNodes)
+	for i := range indices {
+		indices[i] = i
+	}
+	c.rng.Shuffle(len(indices), func(i, j int) {
+		indices[i], indices[j] = indices[j], indices[i]
+	})
+	c.mu.RUnlock()
+
+	// Try each node in random order until one works
+	var lastErr error
+	for _, idx := range indices {
+		c.mu.RLock()
+		if idx >= len(c.nodes) {
+			c.mu.RUnlock()
+			continue
+		}
+		node := c.nodes[idx]
+		c.mu.RUnlock()
+
+		conn, err := c.ensureConnection(node)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		return conn, node.addr, nil
+	}
+
+	return nil, "", fmt.Errorf("all SGX nodes unavailable: %w", lastErr)
+}
+
+// ensureConnection ensures the node has an active connection, creating one if needed
+func (c *EcallClient) ensureConnection(node *nodeConn) (*grpc.ClientConn, error) {
+	node.mu.Lock()
+	defer node.mu.Unlock()
+
+	// Already connected
+	if node.conn != nil {
+		return node.conn, nil
+	}
+
+	// Try to connect (with short timeout to not block too long)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	conn, err := grpc.DialContext(
 		ctx,
-		c.grpcAddr,
+		node.addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to connect to %s: %w", c.grpcAddr, err)
+		node.failed = true
+		return nil, fmt.Errorf("failed to connect to %s: %w", node.addr, err)
 	}
 
-	c.conn = conn
-	return nil
+	node.conn = conn
+	node.failed = false
+	return conn, nil
 }
 
-// Close closes the gRPC connection
+// markNodeFailed marks a node as failed after a request error
+func (c *EcallClient) markNodeFailed(addr string) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	for _, n := range c.nodes {
+		if n.addr == addr {
+			n.mu.Lock()
+			n.failed = true
+			if n.conn != nil {
+				n.conn.Close()
+				n.conn = nil
+			}
+			n.mu.Unlock()
+			return
+		}
+	}
+}
+
+// Close closes all gRPC connections
 func (c *EcallClient) Close() error {
-	if c.conn != nil {
-		return c.conn.Close()
-	}
-	return nil
-}
-
-// SetGrpcAddr updates the gRPC address and reconnects
-func (c *EcallClient) SetGrpcAddr(addr string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.conn != nil {
-		c.conn.Close()
+	for _, n := range c.nodes {
+		n.mu.Lock()
+		if n.conn != nil {
+			n.conn.Close()
+			n.conn = nil
+		}
+		n.mu.Unlock()
 	}
-
-	c.grpcAddr = addr
-	if err := c.connect(); err != nil {
-		return err
-	}
-
-	fmt.Printf("[EcallClient] Reconnected to gRPC server: %s\n", addr)
 	return nil
 }
 
-// FetchEcallRecord fetches a single ecall record from the remote SGX node
-func (c *EcallClient) FetchEcallRecord(height int64) (*EcallRecordData, error) {
-	if c.conn == nil {
-		if err := c.connect(); err != nil {
-			return nil, fmt.Errorf("not connected to gRPC server: %w", err)
+// invokeWithRetry invokes a gRPC method with automatic retry on different nodes
+func (c *EcallClient) invokeWithRetry(method string, req, resp proto.Message) error {
+	c.mu.RLock()
+	maxRetries := len(c.nodes)
+	if maxRetries < 1 {
+		maxRetries = 1
+	}
+	if maxRetries > 5 {
+		maxRetries = 5 // Cap retries to avoid too many attempts
+	}
+	c.mu.RUnlock()
+
+	var lastErr error
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		conn, nodeAddr, err := c.getRandomNode()
+		if err != nil {
+			lastErr = err
+			continue
 		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+		err = conn.Invoke(ctx, method, req, resp)
+		cancel()
+
+		if err == nil {
+			return nil
+		}
+
+		lastErr = err
+		c.markNodeFailed(nodeAddr)
+		fmt.Printf("[EcallClient] Request to %s failed (attempt %d/%d): %v\n", nodeAddr, attempt+1, maxRetries, err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
+	return fmt.Errorf("all retry attempts failed: %w", lastErr)
+}
 
+// FetchEcallRecord fetches a single ecall record from a random SGX node
+func (c *EcallClient) FetchEcallRecord(height int64) (*EcallRecordData, error) {
 	req := &QueryEcallRecordRequest{Height: height}
 	resp := &QueryEcallRecordResponse{}
 
-	if err := c.conn.Invoke(ctx, methodEcallRecord, req, resp); err != nil {
+	if err := c.invokeWithRetry(methodEcallRecord, req, resp); err != nil {
 		return nil, fmt.Errorf("gRPC EcallRecord failed for height %d: %w", height, err)
 	}
 
@@ -238,21 +399,12 @@ func (c *EcallClient) FetchEcallRecord(height int64) (*EcallRecordData, error) {
 	}, nil
 }
 
-// FetchEncryptedSeed fetches encrypted seed data from the remote SGX node
+// FetchEncryptedSeed fetches encrypted seed data from a random SGX node
 func (c *EcallClient) FetchEncryptedSeed(certHashHex string) ([]byte, error) {
-	if c.conn == nil {
-		if err := c.connect(); err != nil {
-			return nil, fmt.Errorf("not connected to gRPC server: %w", err)
-		}
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-
 	req := &QueryEncryptedSeedRequest{CertHash: certHashHex}
 	resp := &QueryEncryptedSeedResponse{}
 
-	if err := c.conn.Invoke(ctx, methodEncryptedSeed, req, resp); err != nil {
+	if err := c.invokeWithRetry(methodEncryptedSeed, req, resp); err != nil {
 		return nil, fmt.Errorf("gRPC EncryptedSeed failed: %w", err)
 	}
 
@@ -260,21 +412,12 @@ func (c *EcallClient) FetchEncryptedSeed(certHashHex string) ([]byte, error) {
 	return resp.EncryptedSeed, nil
 }
 
-// FetchBlockTraces fetches all execution traces for a block from the remote SGX node
+// FetchBlockTraces fetches all execution traces for a block from a random SGX node
 func (c *EcallClient) FetchBlockTraces(height int64) ([]*ExecutionTrace, error) {
-	if c.conn == nil {
-		if err := c.connect(); err != nil {
-			return nil, fmt.Errorf("not connected to gRPC server: %w", err)
-		}
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-
 	req := &QueryBlockTracesRequest{Height: height}
 	resp := &QueryBlockTracesResponse{}
 
-	if err := c.conn.Invoke(ctx, methodBlockTraces, req, resp); err != nil {
+	if err := c.invokeWithRetry(methodBlockTraces, req, resp); err != nil {
 		return nil, fmt.Errorf("gRPC BlockTraces failed for height %d: %w", height, err)
 	}
 
@@ -313,7 +456,18 @@ func (c *EcallClient) FetchBlockTraces(height int64) ([]*ExecutionTrace, error) 
 	return traces, nil
 }
 
-// IsConnected returns true if the client is connected to the gRPC server
+// IsConnected returns true if at least one node is connected
 func (c *EcallClient) IsConnected() bool {
-	return c.conn != nil
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	for _, n := range c.nodes {
+		n.mu.Lock()
+		connected := n.conn != nil
+		n.mu.Unlock()
+		if connected {
+			return true
+		}
+	}
+	return false
 }
