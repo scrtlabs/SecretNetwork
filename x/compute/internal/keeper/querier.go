@@ -282,6 +282,7 @@ func (q GrpcQuerier) AuthorizedAdminUpdate(c context.Context, req *types.QueryAu
 
 // EcallRecord returns the ecall record for a specific block height
 // This is used by non-SGX nodes to sync with the network
+// SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)
 func (q GrpcQuerier) EcallRecord(c context.Context, req *types.QueryEcallRecordRequest) (*types.QueryEcallRecordResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
@@ -289,6 +290,14 @@ func (q GrpcQuerier) EcallRecord(c context.Context, req *types.QueryEcallRecordR
 
 	if req.Height <= 0 {
 		return nil, status.Error(codes.InvalidArgument, "height must be positive")
+	}
+
+	// SECURITY: Enforce height restriction - only allow querying heights < current height
+	// This prevents non-SGX nodes from getting data for the current block and participating in consensus
+	ctx := sdk.UnwrapSDKContext(c)
+	currentHeight := ctx.BlockHeight()
+	if req.Height >= currentHeight {
+		return nil, status.Errorf(codes.FailedPrecondition, "cannot query ecall record for height %d: must be less than current height %d", req.Height, currentHeight)
 	}
 
 	recorder := api.GetRecorder()
@@ -306,6 +315,7 @@ func (q GrpcQuerier) EcallRecord(c context.Context, req *types.QueryEcallRecordR
 
 // EcallRecords returns ecall records for a range of block heights
 // This is used by non-SGX nodes to batch sync with the network
+// SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)
 func (q GrpcQuerier) EcallRecords(c context.Context, req *types.QueryEcallRecordsRequest) (*types.QueryEcallRecordsResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
@@ -323,6 +333,18 @@ func (q GrpcQuerier) EcallRecords(c context.Context, req *types.QueryEcallRecord
 	maxRange := int64(1000)
 	if req.EndHeight-req.StartHeight > maxRange {
 		return nil, status.Errorf(codes.InvalidArgument, "range too large, max %d blocks per request", maxRange)
+	}
+
+	// SECURITY: Enforce height restriction - only allow querying heights < current height
+	// This prevents non-SGX nodes from getting data for the current block and participating in consensus
+	ctx := sdk.UnwrapSDKContext(c)
+	currentHeight := ctx.BlockHeight()
+	if req.EndHeight >= currentHeight {
+		// Clamp end height to currentHeight - 1
+		req.EndHeight = currentHeight - 1
+	}
+	if req.StartHeight >= currentHeight {
+		return nil, status.Errorf(codes.FailedPrecondition, "cannot query ecall records for height %d: must be less than current height %d", req.StartHeight, currentHeight)
 	}
 
 	recorder := api.GetRecorder()
@@ -374,6 +396,7 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 
 // BlockTraces returns all execution traces for a specific block height
 // This is used by non-SGX nodes to batch fetch all traces for a block
+// SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)
 func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesRequest) (*types.QueryBlockTracesResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
@@ -381,6 +404,14 @@ func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesR
 
 	if req.Height <= 0 {
 		return nil, status.Error(codes.InvalidArgument, "height must be positive")
+	}
+
+	// SECURITY: Enforce height restriction - only allow querying heights < current height
+	// This prevents non-SGX nodes from getting data for the current block and participating in consensus
+	ctx := sdk.UnwrapSDKContext(c)
+	currentHeight := ctx.BlockHeight()
+	if req.Height >= currentHeight {
+		return nil, status.Errorf(codes.FailedPrecondition, "cannot query block traces for height %d: must be less than current height %d", req.Height, currentHeight)
 	}
 
 	fmt.Printf("[BlockTraces] DEBUG: Query received for height=%d\n", req.Height)
