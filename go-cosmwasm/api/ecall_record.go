@@ -77,6 +77,20 @@ func GetRecorder() *EcallRecorder {
 			mode = NodeModeSGX // Default to SGX mode
 		}
 
+		// Check if storing SGX data is enabled (from config or env var)
+		// In SGX mode, only store if explicitly enabled via config
+		storeSGXData := os.Getenv("SECRET_STORE_SGX_DATA") == "true"
+		if mode == NodeModeSGX && !storeSGXData {
+			// SGX mode but storing disabled - create recorder without DB
+			globalRecorder = &EcallRecorder{
+				mode:        mode,
+				db:          nil,
+				blockTraces: make(map[int64]*ExecutionTrace),
+			}
+			fmt.Printf("[EcallRecorder] Initialized in %s mode (storing disabled)\n", mode)
+			return
+		}
+
 		// Get database directory from env or use default
 		dbDir := os.Getenv("SECRET_ECALL_RECORD_DIR")
 		if dbDir == "" {
@@ -101,8 +115,9 @@ func GetRecorder() *EcallRecorder {
 			fmt.Printf("[EcallRecorder] Error opening database: %v\n", err)
 			// Create a nil recorder that will skip recording
 			globalRecorder = &EcallRecorder{
-				mode: mode,
-				db:   nil,
+				mode:        mode,
+				db:          nil,
+				blockTraces: make(map[int64]*ExecutionTrace),
 			}
 			return
 		}
@@ -113,7 +128,11 @@ func GetRecorder() *EcallRecorder {
 			blockTraces: make(map[int64]*ExecutionTrace),
 		}
 
-		fmt.Printf("[EcallRecorder] Initialized in %s mode, db dir: %s\n", mode, dbDir)
+		if storeSGXData {
+			fmt.Printf("[EcallRecorder] Initialized in %s mode with storing enabled, db dir: %s\n", mode, dbDir)
+		} else {
+			fmt.Printf("[EcallRecorder] Initialized in %s mode, db dir: %s\n", mode, dbDir)
+		}
 	})
 	return globalRecorder
 }
@@ -200,7 +219,8 @@ func makeBlockKey(prefix []byte, height int64) []byte {
 // RecordSubmitBlockSignatures records the output of SubmitBlockSignatures by block height
 func (r *EcallRecorder) RecordSubmitBlockSignatures(height int64, random []byte, evidence []byte) error {
 	if r.db == nil {
-		return fmt.Errorf("database not initialized")
+		// Storing is disabled (opt-in feature) - silently skip
+		return nil
 	}
 
 	r.mu.Lock()
@@ -255,7 +275,8 @@ func (r *EcallRecorder) ReplaySubmitBlockSignatures(height int64) (random []byte
 // RecordGetEncryptedSeed records the GetEncryptedSeed ecall output
 func (r *EcallRecorder) RecordGetEncryptedSeed(certHash []byte, output []byte) error {
 	if r.db == nil {
-		return fmt.Errorf("database not initialized")
+		// Storing is disabled (opt-in feature) - silently skip
+		return nil
 	}
 
 	r.mu.Lock()
@@ -305,7 +326,8 @@ func makeExecutionKey(height int64, index int64) []byte {
 // Uses current block height and the provided execution index
 func (r *EcallRecorder) RecordExecutionTrace(height int64, index int64, trace *ExecutionTrace) error {
 	if r.db == nil {
-		return fmt.Errorf("database not initialized")
+		// Storing is disabled (opt-in feature) - silently skip
+		return nil
 	}
 
 	r.mu.Lock()

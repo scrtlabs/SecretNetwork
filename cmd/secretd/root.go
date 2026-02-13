@@ -341,10 +341,16 @@ func newApp_internal(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts
 		panic(err)
 	}
 
+	// Get compute config and set environment variable for recorder
+	computeConfig := compute.GetConfig(appOpts)
+	if computeConfig.StoreSGXData {
+		os.Setenv("SECRET_STORE_SGX_DATA", "true")
+	}
+
 	res := app.NewSecretNetworkApp(logger, db, traceStore, true,
 		bootstrap,
 		appOpts,
-		compute.GetConfig(appOpts),
+		computeConfig,
 		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(server.FlagMinGasPrices))),
 		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(server.FlagHaltHeight))),
