@@ -8,9 +8,9 @@ replace (
 	cosmossdk.io/api => github.com/scrtlabs/cosmos-sdk-api v0.7.6-secret.0
 	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v1.1.1-secret.1
 	cosmossdk.io/x/tx => github.com/scrtlabs/cosmos-sdk-x-tx v0.13.7-secret.0
-	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.19-secret.11-non-sgx
+	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.19-secret.0-legacy-non-sgx
 
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.14-secret.10
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.14-secret.4-legacy-non-sgx
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.2.2-secret.0
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 
@@ -77,7 +77,6 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/hashicorp/go-metrics v0.5.3
-	github.com/scrtlabs/tm-secret-enclave v1.13.1
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -203,6 +202,7 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect
+	github.com/scrtlabs/tm-secret-enclave v1.13.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect

@@ -2,7 +2,6 @@ package compute
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 
@@ -20,7 +19,6 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute/client/cli"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-	tmenclave "github.com/scrtlabs/tm-secret-enclave"
 )
 
 var (
@@ -262,20 +260,20 @@ func (am AppModule) EndBlock(c context.Context) error {
 	// 	return err
 	// }
 
-	cron_msgs := tm_type.Data{Txs: [][]byte{}}
-	cron_data, err := cron_msgs.Marshal()
-	if err != nil {
-		ctx.Logger().Error("Failed to marshal cron_msgs")
-		return err
-	}
-	hash := sha256.Sum256(cron_data)
+	// cron_msgs := tm_type.Data{Txs: [][]byte{}}
+	// cron_data, err := cron_msgs.Marshal()
+	// if err != nil {
+	// 	ctx.Logger().Error("Failed to marshal cron_msgs")
+	// 	return err
+	// }
+	// hash := sha256.Sum256(cron_data)
 
-	ctx.Logger().Info("Setting scheduled txs")
-	err = tmenclave.SetImplicitHash(hash[:])
-	if err != nil {
-		ctx.Logger().Error("Failed to set implicit hash %+v", err)
-		return err
-	}
+	// ctx.Logger().Info("Setting scheduled txs")
+	// err = tmenclave.SetImplicitHash(hash[:])
+	// if err != nil {
+	// 	ctx.Logger().Error("Failed to set implicit hash %+v", err)
+	// 	return err
+	// }
 
 	// Prune old ecall records periodically
 	api.GetRecorder().PruneOldRecords(ctx.BlockHeight())
