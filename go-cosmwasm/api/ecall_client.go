@@ -179,7 +179,7 @@ func GetEcallClient() *EcallClient {
 
 		if addrsFromFile := loadNodesFromJSON(configPath); len(addrsFromFile) > 0 {
 			addrs = addrsFromFile
-			fmt.Printf("[EcallClient] Loaded %d nodes from config file: %s\n", len(addrs), configPath)
+			logInfo("EcallClient", "Loaded %d nodes from config file: %s", len(addrs), configPath)
 		} else {
 			// Fallback to env var
 			grpcAddr := os.Getenv("SECRET_SGX_NODE_GRPC")
@@ -187,7 +187,7 @@ func GetEcallClient() *EcallClient {
 				grpcAddr = "localhost:9090"
 			}
 			addrs = []string{grpcAddr}
-			fmt.Printf("[EcallClient] Using single node from env: %s\n", grpcAddr)
+			logInfo("EcallClient", "Using single node from env: %s", grpcAddr)
 		}
 
 		nodes := make([]*nodeConn, len(addrs))
@@ -201,7 +201,7 @@ func GetEcallClient() *EcallClient {
 			rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		}
 
-		fmt.Printf("[EcallClient] Initialized with %d SGX nodes\n", len(addrs))
+		logInfo("EcallClient", "Initialized with %d SGX nodes", len(addrs))
 	})
 	return globalClient
 }
@@ -217,7 +217,7 @@ func loadNodesFromJSON(configPath string) []string {
 
 	var config sgxNodesConfig
 	if err := json.Unmarshal(data, &config); err != nil {
-		fmt.Printf("[EcallClient] Warning: failed to parse config file %s: %v\n", configPath, err)
+		logWarn("EcallClient", "Failed to parse config file %s: %v", configPath, err)
 		return nil
 	}
 
@@ -373,7 +373,7 @@ func (c *EcallClient) invokeWithRetry(method string, req, resp proto.Message) er
 
 		lastErr = err
 		c.markNodeFailed(nodeAddr)
-		fmt.Printf("[EcallClient] Request to %s failed (attempt %d/%d): %v\n", nodeAddr, attempt+1, maxRetries, err)
+		logWarn("EcallClient", "Request to %s failed (attempt %d/%d): %v", nodeAddr, attempt+1, maxRetries, err)
 	}
 
 	return fmt.Errorf("all retry attempts failed: %w", lastErr)
@@ -389,7 +389,7 @@ func (c *EcallClient) FetchEcallRecord(height int64) (*EcallRecordData, error) {
 	}
 
 	if height%1000 == 0 {
-		fmt.Printf("[EcallClient] Fetched ecall record for height %d\n", height)
+		logInfo("EcallClient", "Fetched ecall record for height %d", height)
 	}
 
 	return &EcallRecordData{
@@ -408,7 +408,7 @@ func (c *EcallClient) FetchEncryptedSeed(certHashHex string) ([]byte, error) {
 		return nil, fmt.Errorf("gRPC EncryptedSeed failed: %w", err)
 	}
 
-	fmt.Printf("[EcallClient] Fetched encrypted seed (%d bytes)\n", len(resp.EncryptedSeed))
+	logInfo("EcallClient", "Fetched encrypted seed (%d bytes)", len(resp.EncryptedSeed))
 	return resp.EncryptedSeed, nil
 }
 
@@ -424,7 +424,7 @@ func (c *EcallClient) FetchBlockTraces(height int64) ([]*ExecutionTrace, error) 
 	// Convert proto response to ExecutionTrace slice
 	traces := make([]*ExecutionTrace, len(resp.Traces))
 	for i, t := range resp.Traces {
-		fmt.Printf("[EcallClient] DEBUG: Proto trace callbackGas=%d (from gRPC response)\n", t.CallbackGas)
+		logDebug("EcallClient", "Proto trace callbackGas=%d (from gRPC response)", t.CallbackGas)
 		ops := make([]StorageOp, len(t.Ops))
 		for j, op := range t.Ops {
 			ops[j] = StorageOp{
@@ -442,16 +442,16 @@ func (c *EcallClient) FetchBlockTraces(height int64) ([]*ExecutionTrace, error) 
 			HasError:    t.HasError,
 			ErrorMsg:    t.ErrorMsg,
 		}
-		fmt.Printf("[EcallClient] DEBUG: Converted trace callbackGas=%d\n", traces[i].CallbackGas)
+		logDebug("EcallClient", "Converted trace callbackGas=%d", traces[i].CallbackGas)
 	}
 
 	if len(traces) > 0 {
 		for _, t := range traces {
-			fmt.Printf("[EcallClient] Fetched trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d hasError=%v\n",
+			logDebug("EcallClient", "Fetched trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d hasError=%v",
 				height, t.Index, len(t.Ops), len(t.Result), t.GasUsed, t.CallbackGas, t.HasError)
 		}
 	} else if height%1000 == 0 {
-		fmt.Printf("[EcallClient] Fetched %d traces for block %d\n", len(traces), height)
+		logInfo("EcallClient", "Fetched %d traces for block %d", len(traces), height)
 	}
 	return traces, nil
 }

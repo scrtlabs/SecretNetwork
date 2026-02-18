@@ -49,11 +49,11 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 
 	// Get trace from memory (fetched on-demand when needed)
 	// Traces are created during execution on SGX node, so we fetch them when actually needed
-	trace, found := recorder.GetTraceFromMemory(execIndex)
+		trace, found := recorder.GetTraceFromMemory(execIndex)
 	if !found {
 		// Trace not in memory - wait for it to become available from SGX node
 		// Traces are created during execution on SGX node, so we need to wait for them
-		fmt.Printf("[replayExecution] TRACE NOT FOUND in memory: height=%d index=%d, waiting for SGX node to create it\n", height, execIndex)
+		logDebug("replayExecution", "TRACE NOT FOUND in memory: height=%d index=%d, waiting for SGX node to create it", height, execIndex)
 
 		client := GetEcallClient()
 		maxRetries := 20                    // More retries since traces are created during execution
@@ -70,7 +70,7 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 				// Check if our trace is now in memory
 				trace, found = recorder.GetTraceFromMemory(execIndex)
 				if found {
-					fmt.Printf("[replayExecution] Successfully fetched trace: height=%d index=%d (attempt %d)\n", height, execIndex, attempt+1)
+					logInfo("replayExecution", "Successfully fetched trace: height=%d index=%d (attempt %d)", height, execIndex, attempt+1)
 					break
 				}
 			}
@@ -81,47 +81,47 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 				if delay > maxDelay {
 					delay = maxDelay
 				}
-				fmt.Printf("[replayExecution] Trace not available yet, waiting: height=%d index=%d attempt=%d delay=%v\n", height, execIndex, attempt+1, delay)
+				logDebug("replayExecution", "Trace not available yet, waiting: height=%d index=%d attempt=%d delay=%v", height, execIndex, attempt+1, delay)
 				time.Sleep(delay)
 			}
 		}
 
 		if !found {
-			fmt.Printf("[replayExecution] TRACE NOT FOUND after retries: height=%d index=%d\n", height, execIndex)
+			logWarn("replayExecution", "TRACE NOT FOUND after retries: height=%d index=%d", height, execIndex)
 			return nil, 0, nil, false
 		}
 	}
 
-	fmt.Printf("[replayExecution] Found trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d hasError=%v\n",
+	logDebug("replayExecution", "Found trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d hasError=%v",
 		height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas, trace.HasError)
-	fmt.Printf("[replayExecution] DEBUG: Will consume callbackGas=%d (in multiplied units) if > localConsumed\n", trace.CallbackGas)
+	logDebug("replayExecution", "Will consume callbackGas=%d (in multiplied units) if > localConsumed", trace.CallbackGas)
 
 	// Snapshot gas before applying ops
 	var gasBefore uint64
 	if gasMeter != nil {
 		gasBefore = (*gasMeter).GasConsumed()
-		fmt.Printf("[replayExecution] Gas snapshot before ops: %d\n", gasBefore)
+		logDebug("replayExecution", "Gas snapshot before ops: %d", gasBefore)
 	}
 
 	// Apply recorded storage ops to the store
 	replayer := NewReplayingKVStore(store)
-	fmt.Printf("[replayExecution] Applying %d ops to store\n", len(trace.Ops))
+	logDebug("replayExecution", "Applying %d ops to store", len(trace.Ops))
 	replayer.ApplyOps(trace.Ops)
-	fmt.Printf("[replayExecution] Finished applying ops\n")
+	logDebug("replayExecution", "Finished applying ops")
 
 	// Calculate and consume remaining gas to match SGX callback gas
 	if gasMeter != nil {
 		gasAfter := (*gasMeter).GasConsumed()
 		localGasConsumed := gasAfter - gasBefore
 
-		fmt.Printf("[replayExecution] Gas consumption: before=%d after=%d localConsumed=%d callbackGas=%d\n",
+		logDebug("replayExecution", "Gas consumption: before=%d after=%d localConsumed=%d callbackGas=%d",
 			gasBefore, gasAfter, localGasConsumed, trace.CallbackGas)
 
 		// SAFETY CHECK: If Infinite Meter is working, localGasConsumed MUST be 0 when callbackGas=0
 		if localGasConsumed > 0 && trace.CallbackGas == 0 {
-			fmt.Printf("[replayExecution] CRITICAL WARNING: Local DB writes consumed %d gas but Validator consumed 0.\n", localGasConsumed)
-			fmt.Printf("[replayExecution] This means the Infinite Gas Meter trick in keeper.go is NOT working.\n")
-			fmt.Printf("[replayExecution] The store passed to replayExecution is still connected to the real gas meter.\n")
+			logWarn("replayExecution", "CRITICAL WARNING: Local DB writes consumed %d gas but Validator consumed 0", localGasConsumed)
+			logWarn("replayExecution", "This means the Infinite Gas Meter trick in keeper.go is NOT working")
+			logWarn("replayExecution", "The store passed to replayExecution is still connected to the real gas meter")
 			// We cannot "refund" gas, so this execution is doomed to fail consensus.
 		}
 
@@ -131,21 +131,21 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 				gasBeforeConsume := (*gasMeter).GasConsumed()
 				(*gasMeter).ConsumeGas(remaining, "enclave callback gas replay")
 				gasAfterConsume := (*gasMeter).GasConsumed()
-				fmt.Printf("[replayExecution] Consumed remaining callback gas: callbackGas=%d localConsumed=%d remaining=%d\n",
+				logDebug("replayExecution", "Consumed remaining callback gas: callbackGas=%d localConsumed=%d remaining=%d",
 					trace.CallbackGas, localGasConsumed, remaining)
-				fmt.Printf("[replayExecution] Gas before consume=%d after consume=%d (consumed %d multiplied units = %d SDK gas)\n",
+				logDebug("replayExecution", "Gas before consume=%d after consume=%d (consumed %d multiplied units = %d SDK gas)",
 					gasBeforeConsume, gasAfterConsume, remaining, remaining/1000)
 			} else if trace.CallbackGas < localGasConsumed {
-				fmt.Printf("[replayExecution] WARNING: local gas (%d) > recorded callbackGas (%d), cannot reconcile\n",
+				logWarn("replayExecution", "local gas (%d) > recorded callbackGas (%d), cannot reconcile",
 					localGasConsumed, trace.CallbackGas)
 			} else {
-				fmt.Printf("[replayExecution] Callback gas matches: %d\n", trace.CallbackGas)
+				logDebug("replayExecution", "Callback gas matches: %d", trace.CallbackGas)
 			}
 		} else {
 			// callbackGas=0 means validator consumed 0 callback gas
 			// Since localConsumed=0 (infinite meter working), we match perfectly
 			// No need to consume additional gas
-			fmt.Printf("[replayExecution] callbackGas=0 and localConsumed=0 - gas consumption matches validator\n")
+			logDebug("replayExecution", "callbackGas=0 and localConsumed=0 - gas consumption matches validator")
 		}
 
 		// Note: We do NOT consume compute gas here. The keeper will call consumeGas(ctx, gasUsed)
@@ -154,7 +154,7 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 	}
 
 	if trace.HasError {
-		fmt.Printf("[replayExecution] Returning error: %s\n", trace.ErrorMsg)
+		logDebug("replayExecution", "Returning error: %s", trace.ErrorMsg)
 		return nil, trace.GasUsed, fmt.Errorf("%s", trace.ErrorMsg), true
 	}
 
@@ -164,7 +164,7 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 	// If gasUsed=0, this will consume 1 SDK gas, which matches the validator's behavior.
 	gasToReturn := trace.GasUsed
 	if gasToReturn == 0 {
-		fmt.Printf("[replayExecution] gasUsed=0: validator consumed 0 compute gas, returning 0 (keeper will consume 1 SDK gas minimum)\n")
+		logDebug("replayExecution", "gasUsed=0: validator consumed 0 compute gas, returning 0 (keeper will consume 1 SDK gas minimum)")
 	}
 
 	// Return gasToReturn so the keeper can call consumeGas(ctx, gasUsed)
@@ -482,14 +482,14 @@ func Migrate(
 		trace.HasError = true
 		trace.ErrorMsg = string(receiveVector(errmsg))
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-			fmt.Printf("[Migrate] Failed to record trace: %v\n", recordErr)
+			logError("Migrate", "Failed to record trace: %v", recordErr)
 		}
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
 
 	trace.Result = receiveVector(res)
 	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-		fmt.Printf("[Migrate] Failed to record trace: %v\n", recordErr)
+		logError("Migrate", "Failed to record trace: %v", recordErr)
 	}
 
 	return trace.Result, uint64(gasUsed), nil
@@ -577,14 +577,14 @@ func UpdateAdmin(
 		trace.HasError = true
 		trace.ErrorMsg = string(receiveVector(errmsg))
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-			fmt.Printf("[UpdateAdmin] Failed to record trace: %v\n", recordErr)
+			logError("UpdateAdmin", "Failed to record trace: %v", recordErr)
 		}
 		return nil, errorWithMessage(err, errmsg)
 	}
 
 	trace.Result = receiveVector(res)
 	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-		fmt.Printf("[UpdateAdmin] Failed to record trace: %v\n", recordErr)
+		logError("UpdateAdmin", "Failed to record trace: %v", recordErr)
 	}
 
 	return trace.Result, nil
@@ -608,12 +608,12 @@ func Instantiate(
 	execIndex := recorder.NextExecutionIndex()
 
 	if recorder.IsReplayMode() {
-		fmt.Printf("[Instantiate] REPLAY mode: height=%d execIndex=%d\n", height, execIndex)
+		logDebug("Instantiate", "REPLAY mode: height=%d execIndex=%d", height, execIndex)
 		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
-			fmt.Printf("[Instantiate] REPLAY success: resultLen=%d gas=%d err=%v\n", len(result), gas, err)
+			logDebug("Instantiate", "REPLAY success: resultLen=%d gas=%d err=%v", len(result), gas, err)
 			return result, gas, err
 		}
-		fmt.Printf("[Instantiate] REPLAY FAILED: trace not found!\n")
+		logWarn("Instantiate", "REPLAY FAILED: trace not found!")
 		return nil, 0, fmt.Errorf("Instantiate replay failed: trace not found for height %d index %d", height, execIndex)
 	}
 
@@ -648,7 +648,7 @@ func Instantiate(
 	var gasBefore uint64
 	if gasMeter != nil {
 		gasBefore = (*gasMeter).GasConsumed()
-		fmt.Printf("[Instantiate] SGX gasBefore=%d\n", gasBefore)
+		logDebug("Instantiate", "SGX gasBefore=%d", gasBefore)
 	}
 
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer)
@@ -658,12 +658,12 @@ func Instantiate(
 	if gasMeter != nil {
 		gasAfter := (*gasMeter).GasConsumed()
 		callbackGas = gasAfter - gasBefore
-		fmt.Printf("[Instantiate] SGX gasAfter=%d callbackGas=%d (gasAfter - gasBefore)\n", gasAfter, callbackGas)
+		logDebug("Instantiate", "SGX gasAfter=%d callbackGas=%d (gasAfter - gasBefore)", gasAfter, callbackGas)
 	} else {
-		fmt.Printf("[Instantiate] SGX WARNING: gasMeter is nil, cannot measure callbackGas\n")
+		logWarn("Instantiate", "SGX WARNING: gasMeter is nil, cannot measure callbackGas")
 	}
 
-	fmt.Printf("[Instantiate] SGX C.instantiate returned: gasUsed=%d callbackGas=%d\n", gasUsed, callbackGas)
+	logDebug("Instantiate", "SGX C.instantiate returned: gasUsed=%d callbackGas=%d", gasUsed, callbackGas)
 
 	// Record the execution trace
 	trace := &ExecutionTrace{
@@ -677,16 +677,16 @@ func Instantiate(
 		trace.HasError = true
 		trace.ErrorMsg = string(receiveVector(errmsg))
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-			fmt.Printf("[Instantiate] Failed to record trace: %v\n", recordErr)
+			logError("Instantiate", "Failed to record trace: %v", recordErr)
 		}
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
 
 	trace.Result = receiveVector(res)
 	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-		fmt.Printf("[Instantiate] Failed to record trace: %v\n", recordErr)
+		logError("Instantiate", "Failed to record trace: %v", recordErr)
 	} else {
-		fmt.Printf("[Instantiate] SGX recorded trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d\n",
+		logDebug("Instantiate", "SGX recorded trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d",
 			height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas)
 	}
 
@@ -711,12 +711,12 @@ func Handle(
 	execIndex := recorder.NextExecutionIndex()
 
 	if recorder.IsReplayMode() {
-		fmt.Printf("[Handle] REPLAY mode: height=%d execIndex=%d\n", height, execIndex)
+		logDebug("Handle", "REPLAY mode: height=%d execIndex=%d", height, execIndex)
 		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
-			fmt.Printf("[Handle] REPLAY success: resultLen=%d gas=%d err=%v\n", len(result), gas, err)
+			logDebug("Handle", "REPLAY success: resultLen=%d gas=%d err=%v", len(result), gas, err)
 			return result, gas, err
 		}
-		fmt.Printf("[Handle] REPLAY FAILED: trace not found!\n")
+		logWarn("Handle", "REPLAY FAILED: trace not found!")
 		return nil, 0, fmt.Errorf("Handle replay failed: trace not found for height %d index %d", height, execIndex)
 	}
 
@@ -747,7 +747,7 @@ func Handle(
 	var gasBefore uint64
 	if gasMeter != nil {
 		gasBefore = (*gasMeter).GasConsumed()
-		fmt.Printf("[Handle] SGX gasBefore=%d\n", gasBefore)
+		logDebug("Handle", "SGX gasBefore=%d", gasBefore)
 	}
 
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, u8(handleType))
@@ -757,12 +757,12 @@ func Handle(
 	if gasMeter != nil {
 		gasAfter := (*gasMeter).GasConsumed()
 		callbackGas = gasAfter - gasBefore
-		fmt.Printf("[Handle] SGX gasAfter=%d callbackGas=%d (gasAfter - gasBefore)\n", gasAfter, callbackGas)
+		logDebug("Handle", "SGX gasAfter=%d callbackGas=%d (gasAfter - gasBefore)", gasAfter, callbackGas)
 	} else {
-		fmt.Printf("[Handle] SGX WARNING: gasMeter is nil, cannot measure callbackGas\n")
+		logWarn("Handle", "SGX WARNING: gasMeter is nil, cannot measure callbackGas")
 	}
 
-	fmt.Printf("[Handle] SGX C.handle returned: gasUsed=%d callbackGas=%d\n", gasUsed, callbackGas)
+	logDebug("Handle", "SGX C.handle returned: gasUsed=%d callbackGas=%d", gasUsed, callbackGas)
 
 	// Record the execution trace
 	trace := &ExecutionTrace{
@@ -776,16 +776,16 @@ func Handle(
 		trace.HasError = true
 		trace.ErrorMsg = string(receiveVector(errmsg))
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-			fmt.Printf("[Handle] Failed to record trace: %v\n", recordErr)
+			logError("Handle", "Failed to record trace: %v", recordErr)
 		}
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
 
 	trace.Result = receiveVector(res)
 	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-		fmt.Printf("[Handle] Failed to record trace: %v\n", recordErr)
+		logError("Handle", "Failed to record trace: %v", recordErr)
 	} else {
-		fmt.Printf("[Handle] SGX recorded trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d\n",
+		logDebug("Handle", "SGX recorded trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d",
 			height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas)
 	}
 
@@ -919,7 +919,7 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 
 		// Cache locally
 		if cacheErr := recorder.RecordGetEncryptedSeed(certHash[:], output); cacheErr != nil {
-			fmt.Printf("[GetEncryptedSeed] Failed to cache: %v\n", cacheErr)
+			logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
 		}
 		return output, nil
 	}
@@ -935,7 +935,7 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 
 	output := receiveVector(res)
 	if err := recorder.RecordGetEncryptedSeed(certHash[:], output); err != nil {
-		fmt.Printf("[GetEncryptedSeed] Failed to record: %v\n", err)
+		logError("GetEncryptedSeed", "Failed to record: %v", err)
 	}
 	return output, nil
 }

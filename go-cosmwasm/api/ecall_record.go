@@ -87,7 +87,7 @@ func GetRecorder() *EcallRecorder {
 				db:          nil,
 				blockTraces: make(map[int64]*ExecutionTrace),
 			}
-			fmt.Printf("[EcallRecorder] Initialized in %s mode (storing disabled)\n", mode)
+			logInfo("EcallRecorder", "Initialized in %s mode (storing disabled)", mode)
 			return
 		}
 
@@ -106,13 +106,13 @@ func GetRecorder() *EcallRecorder {
 
 		// Ensure directory exists
 		if err := os.MkdirAll(dbDir, 0o755); err != nil {
-			fmt.Printf("[EcallRecorder] Warning: could not create db directory: %v\n", err)
+			logWarn("EcallRecorder", "Could not create db directory: %v", err)
 		}
 
 		// Open LevelDB database
 		db, err := dbm.NewDB("ecall_records", dbm.GoLevelDBBackend, dbDir)
 		if err != nil {
-			fmt.Printf("[EcallRecorder] Error opening database: %v\n", err)
+			logError("EcallRecorder", "Error opening database: %v", err)
 			// Create a nil recorder that will skip recording
 			globalRecorder = &EcallRecorder{
 				mode:        mode,
@@ -129,9 +129,9 @@ func GetRecorder() *EcallRecorder {
 		}
 
 		if storeSGXData {
-			fmt.Printf("[EcallRecorder] Initialized in %s mode with storing enabled, db dir: %s\n", mode, dbDir)
+			logInfo("EcallRecorder", "Initialized in %s mode with storing enabled, db dir: %s", mode, dbDir)
 		} else {
-			fmt.Printf("[EcallRecorder] Initialized in %s mode, db dir: %s\n", mode, dbDir)
+			logInfo("EcallRecorder", "Initialized in %s mode, db dir: %s", mode, dbDir)
 		}
 	})
 	return globalRecorder
@@ -168,7 +168,7 @@ func (r *EcallRecorder) SetBlockTraces(traces []*ExecutionTrace) {
 	r.blockTraces = make(map[int64]*ExecutionTrace)
 	for _, trace := range traces {
 		r.blockTraces[trace.Index] = trace
-		fmt.Printf("[SetBlockTraces] Stored trace at index=%d\n", trace.Index)
+		logDebug("SetBlockTraces", "Stored trace at index=%d", trace.Index)
 	}
 }
 
@@ -238,7 +238,7 @@ func (r *EcallRecorder) RecordSubmitBlockSignatures(height int64, random []byte,
 
 	// Only log every 1000 blocks to reduce noise
 	if height%1000 == 0 {
-		fmt.Printf("[EcallRecorder] Recorded SubmitBlockSignatures for height %d\n", height)
+		logInfo("EcallRecorder", "Recorded SubmitBlockSignatures for height %d", height)
 	}
 	return nil
 }
@@ -265,7 +265,7 @@ func (r *EcallRecorder) ReplaySubmitBlockSignatures(height int64) (random []byte
 
 	// Only log every 1000 blocks to reduce noise
 	if height%1000 == 0 {
-		fmt.Printf("[EcallRecorder] Replayed SubmitBlockSignatures for height %d\n", height)
+		logInfo("EcallRecorder", "Replayed SubmitBlockSignatures for height %d", height)
 	}
 	return random, evidence, true
 }
@@ -287,7 +287,7 @@ func (r *EcallRecorder) RecordGetEncryptedSeed(certHash []byte, output []byte) e
 		return fmt.Errorf("failed to write to db: %w", err)
 	}
 
-	fmt.Printf("[EcallRecorder] Recorded GetEncryptedSeed (%d bytes)\n", len(output))
+	logInfo("EcallRecorder", "Recorded GetEncryptedSeed (%d bytes)", len(output))
 	return nil
 }
 
@@ -306,7 +306,7 @@ func (r *EcallRecorder) ReplayGetEncryptedSeed(certHash []byte) (output []byte, 
 		return nil, false
 	}
 
-	fmt.Printf("[EcallRecorder] Replayed GetEncryptedSeed (%d bytes)\n", len(value))
+	logInfo("EcallRecorder", "Replayed GetEncryptedSeed (%d bytes)", len(value))
 	return value, true
 }
 
@@ -335,7 +335,7 @@ func (r *EcallRecorder) RecordExecutionTrace(height int64, index int64, trace *E
 
 	trace.Index = index
 
-	fmt.Printf("[RecordExecutionTrace] DEBUG: Storing trace height=%d index=%d callbackGas=%d\n", height, index, trace.CallbackGas)
+	logDebug("RecordExecutionTrace", "Storing trace height=%d index=%d callbackGas=%d", height, index, trace.CallbackGas)
 
 	// Convert to protobuf and serialize
 	protoTrace := executionTraceToProto(trace)
@@ -344,7 +344,7 @@ func (r *EcallRecorder) RecordExecutionTrace(height int64, index int64, trace *E
 		return fmt.Errorf("failed to marshal trace: %w", err)
 	}
 
-	fmt.Printf("[RecordExecutionTrace] DEBUG: Serialized data length=%d\n", len(data))
+	logDebug("RecordExecutionTrace", "Serialized data length=%d", len(data))
 
 	key := makeExecutionKey(height, index)
 	if err := r.db.Set(key, data); err != nil {
@@ -357,7 +357,7 @@ func (r *EcallRecorder) RecordExecutionTrace(height int64, index int64, trace *E
 		var verifyProto ExecutionTraceProto
 		if err := proto.Unmarshal(readBack, &verifyProto); err == nil {
 			verifyTrace := protoToExecutionTrace(&verifyProto)
-			fmt.Printf("[RecordExecutionTrace] DEBUG: Verified readback callbackGas=%d\n", verifyTrace.CallbackGas)
+			logDebug("RecordExecutionTrace", "Verified readback callbackGas=%d", verifyTrace.CallbackGas)
 		}
 	}
 
@@ -382,7 +382,7 @@ func (r *EcallRecorder) ReplayExecutionTrace(height int64, index int64) (*Execut
 	// Deserialize protobuf
 	var protoTrace ExecutionTraceProto
 	if err := proto.Unmarshal(value, &protoTrace); err != nil {
-		fmt.Printf("[EcallRecorder] Failed to deserialize trace: %v\n", err)
+		logError("EcallRecorder", "Failed to deserialize trace: %v", err)
 		return nil, false
 	}
 
@@ -412,18 +412,18 @@ func (r *EcallRecorder) GetAllTracesForBlock(height int64) ([]*ExecutionTrace, e
 	var traces []*ExecutionTrace
 	for ; iter.Valid(); iter.Next() {
 		rawData := iter.Value()
-		fmt.Printf("[GetAllTracesForBlock] DEBUG: Raw trace data length=%d\n", len(rawData))
+		logDebug("GetAllTracesForBlock", "Raw trace data length=%d", len(rawData))
 
 		// Deserialize protobuf
 		var protoTrace ExecutionTraceProto
 		if err := proto.Unmarshal(rawData, &protoTrace); err != nil {
-			fmt.Printf("[EcallRecorder] Failed to deserialize trace: %v\n", err)
+			logError("EcallRecorder", "Failed to deserialize trace: %v", err)
 			continue
 		}
 
 		trace := protoToExecutionTrace(&protoTrace)
 
-		fmt.Printf("[GetAllTracesForBlock] DEBUG: Deserialized trace index=%d callbackGas=%d gasUsed=%d ops=%d\n",
+		logDebug("GetAllTracesForBlock", "Deserialized trace index=%d callbackGas=%d gasUsed=%d ops=%d",
 			trace.Index, trace.CallbackGas, trace.GasUsed, len(trace.Ops))
 		traces = append(traces, trace)
 	}
@@ -551,7 +551,7 @@ func (r *EcallRecorder) DeleteRecordsBeforeHeight(height int64) error {
 	}
 
 	if count > 0 {
-		fmt.Printf("[EcallRecorder] Pruned %d records before height %d\n", count, height)
+		logInfo("EcallRecorder", "Pruned %d records before height %d", count, height)
 	}
 	return nil
 }
@@ -577,7 +577,7 @@ func (r *EcallRecorder) PruneOldRecords(currentHeight int64) {
 	// Run pruning in background to not block block processing
 	go func() {
 		if err := r.DeleteRecordsBeforeHeight(cutoffHeight); err != nil {
-			fmt.Printf("[EcallRecorder] Pruning error: %v\n", err)
+			logError("EcallRecorder", "Pruning error: %v", err)
 		}
 	}()
 }
