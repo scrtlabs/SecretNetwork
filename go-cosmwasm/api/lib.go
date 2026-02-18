@@ -49,7 +49,7 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 
 	// Get trace from memory (fetched on-demand when needed)
 	// Traces are created during execution on SGX node, so we fetch them when actually needed
-		trace, found := recorder.GetTraceFromMemory(execIndex)
+	trace, found := recorder.GetTraceFromMemory(execIndex)
 	if !found {
 		// Trace not in memory - wait for it to become available from SGX node
 		// Traces are created during execution on SGX node, so we need to wait for them
@@ -480,11 +480,20 @@ func Migrate(
 
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		trace.HasError = true
-		trace.ErrorMsg = string(receiveVector(errmsg))
+		errorMsgBytes := receiveVector(errmsg)
+		trace.ErrorMsg = string(errorMsgBytes)
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("Migrate", "Failed to record trace: %v", recordErr)
 		}
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		// Create error from the already-extracted message (errmsg buffer already freed by receiveVector)
+		// Check for OutOfGasError (errno == 2)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			return nil, uint64(gasUsed), types.OutOfGasError{}
+		}
+		if errorMsgBytes == nil {
+			return nil, uint64(gasUsed), err
+		}
+		return nil, uint64(gasUsed), fmt.Errorf("%s", string(errorMsgBytes))
 	}
 
 	trace.Result = receiveVector(res)
@@ -575,11 +584,20 @@ func UpdateAdmin(
 
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		trace.HasError = true
-		trace.ErrorMsg = string(receiveVector(errmsg))
+		errorMsgBytes := receiveVector(errmsg)
+		trace.ErrorMsg = string(errorMsgBytes)
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("UpdateAdmin", "Failed to record trace: %v", recordErr)
 		}
-		return nil, errorWithMessage(err, errmsg)
+		// Create error from the already-extracted message (errmsg buffer already freed by receiveVector)
+		// Check for OutOfGasError (errno == 2)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			return nil, types.OutOfGasError{}
+		}
+		if errorMsgBytes == nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%s", string(errorMsgBytes))
 	}
 
 	trace.Result = receiveVector(res)
@@ -675,11 +693,20 @@ func Instantiate(
 
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		trace.HasError = true
-		trace.ErrorMsg = string(receiveVector(errmsg))
+		errorMsgBytes := receiveVector(errmsg)
+		trace.ErrorMsg = string(errorMsgBytes)
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("Instantiate", "Failed to record trace: %v", recordErr)
 		}
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		// Create error from the already-extracted message (errmsg buffer already freed by receiveVector)
+		// Check for OutOfGasError (errno == 2)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			return nil, uint64(gasUsed), types.OutOfGasError{}
+		}
+		if errorMsgBytes == nil {
+			return nil, uint64(gasUsed), err
+		}
+		return nil, uint64(gasUsed), fmt.Errorf("%s", string(errorMsgBytes))
 	}
 
 	trace.Result = receiveVector(res)
@@ -774,11 +801,20 @@ func Handle(
 
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		trace.HasError = true
-		trace.ErrorMsg = string(receiveVector(errmsg))
+		errorMsgBytes := receiveVector(errmsg)
+		trace.ErrorMsg = string(errorMsgBytes)
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("Handle", "Failed to record trace: %v", recordErr)
 		}
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		// Create error from the already-extracted message (errmsg buffer already freed by receiveVector)
+		// Check for OutOfGasError (errno == 2)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			return nil, uint64(gasUsed), types.OutOfGasError{}
+		}
+		if errorMsgBytes == nil {
+			return nil, uint64(gasUsed), err
+		}
+		return nil, uint64(gasUsed), fmt.Errorf("%s", string(errorMsgBytes))
 	}
 
 	trace.Result = receiveVector(res)

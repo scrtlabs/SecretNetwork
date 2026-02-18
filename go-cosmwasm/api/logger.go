@@ -18,10 +18,10 @@ const (
 )
 
 var (
-	globalLogger     *logger
-	loggerOnce       sync.Once
-	defaultLogLevel  = LogLevelInfo
-	logLevelEnvVar   = "LOG_LEVEL"
+	globalLogger    *logger
+	loggerOnce      sync.Once
+	defaultLogLevel = LogLevelInfo
+	logLevelEnvVar  = "LOG_LEVEL"
 )
 
 type logger struct {
@@ -90,4 +90,3 @@ func logWarn(prefix, format string, args ...interface{}) {
 func logError(prefix, format string, args ...interface{}) {
 	getLogger().logf(LogLevelError, prefix, format, args...)
 }
-
