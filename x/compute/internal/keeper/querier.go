@@ -3,7 +3,6 @@ package keeper
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"sort"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -414,19 +413,19 @@ func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesR
 		return nil, status.Errorf(codes.FailedPrecondition, "cannot query block traces for height %d: must be less than current height %d", req.Height, currentHeight)
 	}
 
-	fmt.Printf("[BlockTraces] DEBUG: Query received for height=%d\n", req.Height)
+	ctx.Logger().Debug("BlockTraces query received", "height", req.Height)
 	recorder := api.GetRecorder()
 	traces, err := recorder.GetAllTracesForBlock(req.Height)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get traces: %v", err)
 	}
 
-	fmt.Printf("[BlockTraces] DEBUG: Retrieved %d traces from database\n", len(traces))
+	ctx.Logger().Debug("Retrieved traces from database", "count", len(traces))
 
 	// Convert api.ExecutionTrace to types.ExecutionTraceData
 	protoTraces := make([]types.ExecutionTraceData, len(traces))
 	for i, trace := range traces {
-		fmt.Printf("[BlockTraces] DEBUG: Converting trace index=%d callbackGas=%d\n", trace.Index, trace.CallbackGas)
+		ctx.Logger().Debug("Converting trace", "index", trace.Index, "callbackGas", trace.CallbackGas)
 		ops := make([]types.StorageOp, len(trace.Ops))
 		for j, op := range trace.Ops {
 			ops[j] = types.StorageOp{
@@ -444,16 +443,14 @@ func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesR
 			HasError:    trace.HasError,
 			ErrorMsg:    trace.ErrorMsg,
 		}
-		fmt.Printf("[BlockTraces] DEBUG: Proto trace callbackGas=%d\n", protoTraces[i].CallbackGas)
+		ctx.Logger().Debug("Proto trace converted", "callbackGas", protoTraces[i].CallbackGas)
 	}
 
-	fmt.Printf("[BlockTraces] DEBUG: Returning %d traces, first trace callbackGas=%d\n", len(protoTraces),
-		func() uint64 {
-			if len(protoTraces) > 0 {
-				return protoTraces[0].CallbackGas
-			}
-			return 0
-		}())
+	firstTraceCallbackGas := uint64(0)
+	if len(protoTraces) > 0 {
+		firstTraceCallbackGas = protoTraces[0].CallbackGas
+	}
+	ctx.Logger().Debug("Returning traces", "count", len(protoTraces), "firstTraceCallbackGas", firstTraceCallbackGas)
 
 	return &types.QueryBlockTracesResponse{
 		Traces: protoTraces,

@@ -216,7 +216,7 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	if recorder.IsReplayMode() {
 		// In replay mode, return a dummy 32-byte public key
 		// This function is only called during bootstrap which doesn't happen in replay
-		fmt.Println("[InitBootstrap] Skipped in replay mode")
+		logInfo("InitBootstrap", "Skipped in replay mode")
 		return make([]byte, 32), nil
 	}
 
@@ -237,7 +237,7 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
 		// In replay mode, skip loading seed to enclave (no enclave)
-		fmt.Println("[LoadSeedToEnclave] Skipped in replay mode")
+		logInfo("LoadSeedToEnclave", "Skipped in replay mode")
 		return true, nil
 	}
 
@@ -331,7 +331,7 @@ func InitEnclaveRuntime(moduleCacheSize uint16) error {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
 		// In replay mode, skip enclave runtime initialization (no enclave)
-		fmt.Println("[InitEnclaveRuntime] Skipped in replay mode")
+		logInfo("InitEnclaveRuntime", "Skipped in replay mode")
 		return nil
 	}
 
@@ -894,7 +894,7 @@ func KeyGen() ([]byte, error) {
 	if recorder.IsReplayMode() {
 		// In replay mode, return a dummy 32-byte public key
 		// Key generation is only needed for node registration which doesn't happen in replay
-		fmt.Println("[KeyGen] Skipped in replay mode, returning dummy key")
+		logInfo("KeyGen", "Skipped in replay mode, returning dummy key")
 		return make([]byte, 32), nil
 	}
 
@@ -911,7 +911,7 @@ func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report boo
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
 		// In replay mode, skip attestation report creation (no SGX)
-		fmt.Println("[CreateAttestationReport] Skipped in replay mode")
+		logInfo("CreateAttestationReport", "Skipped in replay mode")
 		return true, nil
 	}
 
