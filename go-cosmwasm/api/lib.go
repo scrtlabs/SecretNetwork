@@ -364,6 +364,13 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 }
 
 func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// In replay mode, skip machine ID approval (no SGX)
+		logInfo("OnApproveMachineID", "Skipped in replay mode")
+		return nil
+	}
+
 	msgBuf := sendSlice(machineID)
 	defer freeAfterSend(msgBuf)
 
