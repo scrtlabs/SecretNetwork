@@ -728,20 +728,18 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		random,
 	)
 
-	// In replay mode, split reads (charge gas) and writes (free)
-	recorder := api.GetRecorder()
-	var prefixStore prefix.Store
-	if recorder.IsReplayMode() {
-		// 1. Charge Read Gas (Real Context) - reads from store.Get above already charged
-		// 2. Get Safe Store (Infinite Context) - for writes during contract execution
-		infCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
-		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
-		prefixStore = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(infCtx)), prefixStoreKey)
+	// create prefixed data store
+	// 0x03 | contractAddress (sdk.AccAddress)
+	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+	var storeForExecution prefix.Store
+	if api.GetRecorder().IsReplayMode() {
+		// In replay mode, use a gas-free store so ApplyOps doesn't charge
+		// native SDK gas. The real gas meter is charged exactly with
+		// trace.CallbackGas by replayExecution instead.
+		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
+		storeForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
 	} else {
-		// create prefixed data store
-		// 0x03 | contractAddress (sdk.AccAddress)
-		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
-		prefixStore = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), prefixStoreKey)
+		storeForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), prefixStoreKey)
 	}
 
 	// prepare querier
@@ -751,7 +749,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		Caller:  contractAddress,
 	}
 
-	response, ogContractKey, adminProof, gasUsed, initError := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, admin)
+	response, ogContractKey, adminProof, gasUsed, initError := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, storeForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, admin)
 	consumeGas(ctx, gasUsed)
 
 	if initError != nil {
@@ -879,33 +877,9 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
 
-	// In replay mode, split reads (charge gas) and writes (free)
-	recorder := api.GetRecorder()
-	var contractInfo types.ContractInfo
-	var codeInfo types.CodeInfo
-	var prefixStore prefix.Store
-	if recorder.IsReplayMode() {
-		// 1. Charge Read Gas (Real Context)
-		// We perform the reads to ensure the gas meter ticks exactly like the validator's.
-		contractInfo, codeInfo, _, err = k.contractInstance(ctx, contractAddress)
-		if err != nil {
-			return nil, err
-		}
-
-		// 2. Get Safe Store (Infinite Context)
-		// We call it again with the infinite context. This store will have Cost=0.
-		// The read overhead here is free (infinite meter) and harmless.
-		infCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
-		_, _, prefixStore, err = k.contractInstance(infCtx, contractAddress)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Normal SGX Mode
-		contractInfo, codeInfo, prefixStore, err = k.contractInstance(ctx, contractAddress)
-		if err != nil {
-			return nil, err
-		}
+	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, err
 	}
 
 	// add more funds
@@ -952,7 +926,19 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		Caller:  contractAddress,
 	}
 
-	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, handleType)
+	// In replay mode, use a gas-free store so ApplyOps doesn't charge
+	// native SDK gas on the real gas meter. replayExecution will charge
+	// exactly trace.CallbackGas instead.
+	var storeForExecution prefix.Store
+	if api.GetRecorder().IsReplayMode() {
+		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
+		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+		storeForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
+	} else {
+		storeForExecution = prefixStore
+	}
+
+	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, msg, storeForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, handleType)
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -1494,6 +1480,9 @@ func (k *Keeper) handleContractResponse(
 	// This is used mainly in replies in order to decrypt their data.
 	ogSigInfo wasmTypes.SigInfo,
 ) ([]byte, error) {
+	ctx.Logger().Info(fmt.Sprintf("[handleContractResponse] height=%d contract=%s numSubMsgs=%d numLogs=%d numEvents=%d dataLen=%d gasConsumed=%d",
+		ctx.BlockHeight(), contractAddr.String(), len(msgs), len(logs), len(evts), len(data), ctx.GasMeter().GasConsumed()))
+
 	events := types.ContractLogsToSdkEvents(logs, contractAddr)
 
 	ctx.EventManager().EmitEvents(events)
@@ -1692,33 +1681,9 @@ func (h ContractResponseHandler) Handle(ctx sdk.Context, contractAddr sdk.AccAdd
 
 // reply is only called from keeper internal functions (dispatchSubmessages) after processing the submessage
 func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.SigInfo) ([]byte, error) {
-	// In replay mode, split reads (charge gas) and writes (free)
-	recorder := api.GetRecorder()
-	var contractInfo types.ContractInfo
-	var codeInfo types.CodeInfo
-	var prefixStore prefix.Store
-	var err error
-	if recorder.IsReplayMode() {
-		// 1. Charge Read Gas (Real Context)
-		// We perform the reads to ensure the gas meter ticks exactly like the validator's.
-		contractInfo, codeInfo, _, err = k.contractInstance(ctx, contractAddress)
-		if err != nil {
-			return nil, err
-		}
-
-		// 2. Get Safe Store (Infinite Context)
-		// We call it again with the infinite context. This store will have Cost=0.
-		// The read overhead here is free (infinite meter) and harmless.
-		infCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
-		_, _, prefixStore, err = k.contractInstance(infCtx, contractAddress)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		contractInfo, codeInfo, prefixStore, err = k.contractInstance(ctx, contractAddress)
-		if err != nil {
-			return nil, err
-		}
+	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, err
 	}
 
 	// always consider this pinned
@@ -1780,33 +1745,9 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "update-contract-admin")
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: update-contract-admin")
 
-	// In replay mode, split reads (charge gas) and writes (free)
-	recorder := api.GetRecorder()
-	var contractInfo types.ContractInfo
-	var codeInfo types.CodeInfo
-	var prefixStore prefix.Store
-	var err error
-	if recorder.IsReplayMode() {
-		// 1. Charge Read Gas (Real Context)
-		// We perform the reads to ensure the gas meter ticks exactly like the validator's.
-		contractInfo, codeInfo, _, err = k.contractInstance(ctx, contractAddress)
-		if err != nil {
-			return err
-		}
-
-		// 2. Get Safe Store (Infinite Context)
-		// We call it again with the infinite context. This store will have Cost=0.
-		// The read overhead here is free (infinite meter) and harmless.
-		infCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
-		_, _, prefixStore, err = k.contractInstance(infCtx, contractAddress)
-		if err != nil {
-			return err
-		}
-	} else {
-		contractInfo, codeInfo, prefixStore, err = k.contractInstance(ctx, contractAddress)
-		if err != nil {
-			return err
-		}
+	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return err
 	}
 	if contractInfo.Admin != caller.String() {
 		return sdkerrors.ErrUnauthorized.Wrap("caller is not the admin")
@@ -1909,28 +1850,9 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
 
-	// In replay mode, split reads (charge gas) and writes (free)
-	recorder := api.GetRecorder()
-	var contractInfo types.ContractInfo
-	var prefixStore prefix.Store
-	if recorder.IsReplayMode() {
-		// 1. Charge Read Gas (Real Context)
-		// We perform the reads to ensure the gas meter ticks exactly like the validator's.
-		contractInfo, _, _, err = k.contractInstance(ctx, contractAddress)
-		if err != nil {
-			return nil, sdkerrors.ErrInvalidRequest.Wrap(errorsmod.Wrap(err, "unknown contract").Error())
-		}
-
-		// 2. Get Safe Store (Infinite Context)
-		// We call it again with the infinite context. This store will have Cost=0.
-		// The read overhead here is free (infinite meter) and harmless.
-		infCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
-		_, _, prefixStore, err = k.contractInstance(infCtx, contractAddress)
-	} else {
-		contractInfo, _, prefixStore, err = k.contractInstance(ctx, contractAddress)
-		if err != nil {
-			return nil, sdkerrors.ErrInvalidRequest.Wrap(errorsmod.Wrap(err, "unknown contract").Error())
-		}
+	contractInfo, _, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, sdkerrors.ErrInvalidRequest.Wrap(errorsmod.Wrap(err, "unknown contract").Error())
 	}
 
 	newCodeInfo, err := k.GetCodeInfo(ctx, newCodeID)
@@ -2001,7 +1923,18 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		Caller:  contractAddress,
 	}
 
-	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, adminAddr, adminProof)
+	// In replay mode, use a gas-free store so ApplyOps doesn't charge
+	// native SDK gas on the real gas meter.
+	var storeForExecution prefix.Store
+	if api.GetRecorder().IsReplayMode() {
+		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
+		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+		storeForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
+	} else {
+		storeForExecution = prefixStore
+	}
+
+	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, storeForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, adminAddr, adminProof)
 	consumeGas(ctx, gasUsed)
 
 	if migrateErr != nil {

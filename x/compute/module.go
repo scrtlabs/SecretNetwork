@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
@@ -175,17 +177,32 @@ func (am AppModule) BeginBlock(c context.Context) error {
 			var found bool
 			random, validator_set_evidence, found = recorder.ReplaySubmitBlockSignatures(height)
 			if !found {
-				// Try to fetch from remote SGX node
+				// Try to fetch from remote SGX node.
+				// When non-SGX is in consensus processing the same block as SGX validators,
+				// the SGX node rejects with "height must be less than current height" until
+				// it commits the block. Wait and retry indefinitely — the data will eventually
+				// become available once the SGX node commits.
 				client := api.GetEcallClient()
-				record, err := client.FetchEcallRecord(height)
-				if err != nil {
-					ctx.Logger().Error("Failed to fetch ecall record from remote", "height", height, "error", err)
-					return fmt.Errorf("no ecall record found for height %d: %w", height, err)
+				const retryInterval = 2 * time.Second
+				var record *api.EcallRecordData
+				var err error
+				for {
+					record, err = client.FetchEcallRecord(height)
+					if err == nil {
+						break
+					}
+					if !strings.Contains(err.Error(), "must be less than current height") {
+						// Not the "block not ready" error — fail immediately
+						ctx.Logger().Error("Failed to fetch ecall record from remote", "height", height, "error", err)
+						return fmt.Errorf("no ecall record found for height %d: %w", height, err)
+					}
+					ctx.Logger().Info("Waiting for SGX node to commit block, retrying ecall record fetch", "height", height)
+					time.Sleep(retryInterval)
 				}
 				random = record.RandomSeed
 				validator_set_evidence = record.ValidatorSetEvidence
-				// Note: We don't cache in replay mode - we apply data only once
 			}
+			// else: found in local DB
 		} else {
 			// SGX MODE: Call enclave and record the result
 			// execCronMsgs, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)

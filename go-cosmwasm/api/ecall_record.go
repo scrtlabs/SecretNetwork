@@ -42,7 +42,7 @@ type EcallRecorder struct {
 
 var (
 	globalRecorder *EcallRecorder
-	recorderOnce   sync.Once
+	recorderMu     sync.Mutex
 )
 
 // Key prefixes for different ecall types
@@ -63,77 +63,94 @@ type ExecutionTrace struct {
 	ErrorMsg    string
 }
 
-// DefaultRetentionBlocks is the default number of blocks to retain (~1 day at 6s blocks)
-const DefaultRetentionBlocks int64 = 14400
+// DefaultRetentionBlocks is the default number of blocks to retain (~90 days at 6s blocks)
+const DefaultRetentionBlocks int64 = 1296000
 
 // PruneIntervalBlocks defines how often to run pruning (every 100 blocks)
 const PruneIntervalBlocks int64 = 100
 
 // GetRecorder returns the global ecall recorder instance
 func GetRecorder() *EcallRecorder {
-	recorderOnce.Do(func() {
-		mode := NodeMode(os.Getenv("SECRET_NODE_MODE"))
-		if mode == "" {
-			mode = NodeModeSGX // Default to SGX mode
-		}
+	recorderMu.Lock()
+	defer recorderMu.Unlock()
 
-		// Check if storing SGX data is enabled (from config or env var)
-		// In SGX mode, only store if explicitly enabled via config
-		storeSGXData := os.Getenv("SECRET_STORE_SGX_DATA") == "true"
-		if mode == NodeModeSGX && !storeSGXData {
-			// SGX mode but storing disabled - create recorder without DB
-			globalRecorder = &EcallRecorder{
-				mode:        mode,
-				db:          nil,
-				blockTraces: make(map[int64]*ExecutionTrace),
-			}
-			logInfo("EcallRecorder", "Initialized in %s mode (storing disabled)", mode)
-			return
-		}
+	mode := NodeMode(os.Getenv("SECRET_NODE_MODE"))
+	if mode == "" {
+		mode = NodeModeSGX // Default to SGX mode
+	}
 
-		// Get database directory from env or use default
-		dbDir := os.Getenv("SECRET_ECALL_RECORD_DIR")
-		if dbDir == "" {
-			// Default to ~/.secretd/data/
-			homeDir := os.Getenv("HOME")
-			secretHome := os.Getenv("SECRETD_HOME")
-			if secretHome != "" {
-				dbDir = filepath.Join(secretHome, "data")
-			} else {
-				dbDir = filepath.Join(homeDir, ".secretd", "data")
-			}
-		}
+	// Check if storing SGX data is enabled (from config or env var)
+	storeSGXData := os.Getenv("SECRET_STORE_SGX_DATA") == "true"
 
-		// Ensure directory exists
-		if err := os.MkdirAll(dbDir, 0o755); err != nil {
-			logWarn("EcallRecorder", "Could not create db directory: %v", err)
+	// If already initialized, check if we need to upgrade the recording state
+	if globalRecorder != nil {
+		hasDB := globalRecorder.db != nil
+		if mode == NodeModeReplay || storeSGXData == hasDB {
+			return globalRecorder
 		}
-
-		// Open LevelDB database
-		db, err := dbm.NewDB("ecall_records", dbm.GoLevelDBBackend, dbDir)
-		if err != nil {
-			logError("EcallRecorder", "Error opening database: %v", err)
-			// Create a nil recorder that will skip recording
-			globalRecorder = &EcallRecorder{
-				mode:        mode,
-				db:          nil,
-				blockTraces: make(map[int64]*ExecutionTrace),
-			}
-			return
+		// Transitioning states (tempApp didn't have flag, but real app does)
+		if globalRecorder.db != nil {
+			globalRecorder.db.Close()
 		}
+	}
 
+	if mode == NodeModeReplay || (mode == NodeModeSGX && !storeSGXData) {
 		globalRecorder = &EcallRecorder{
 			mode:        mode,
-			db:          db,
+			db:          nil,
 			blockTraces: make(map[int64]*ExecutionTrace),
 		}
-
-		if storeSGXData {
-			logInfo("EcallRecorder", "Initialized in %s mode with storing enabled, db dir: %s", mode, dbDir)
+		if mode == NodeModeReplay {
+			logInfo("EcallRecorder", "Initialized in replay mode (no local DB, fetches from remote)")
 		} else {
-			logInfo("EcallRecorder", "Initialized in %s mode, db dir: %s", mode, dbDir)
+			logInfo("EcallRecorder", "Initialized in %s mode (storing disabled)", mode)
 		}
-	})
+		return globalRecorder
+	}
+
+	// Get database directory from env or use default (SGX mode with storing enabled only)
+	dbDir := os.Getenv("SECRET_ECALL_RECORD_DIR")
+	if dbDir == "" {
+		// Default to ~/.secretd/data/
+		homeDir := os.Getenv("HOME")
+		secretHome := os.Getenv("SECRETD_HOME")
+		if secretHome != "" {
+			dbDir = filepath.Join(secretHome, "data")
+		} else {
+			dbDir = filepath.Join(homeDir, ".secretd", "data")
+		}
+	}
+
+	// Ensure directory exists
+	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+		logWarn("EcallRecorder", "Could not create db directory: %v", err)
+	}
+
+	// Open LevelDB database
+	db, err := dbm.NewDB("ecall_records", dbm.GoLevelDBBackend, dbDir)
+	if err != nil {
+		logError("EcallRecorder", "Error opening database: %v", err)
+		// Create a nil recorder that will skip recording
+		globalRecorder = &EcallRecorder{
+			mode:        mode,
+			db:          nil,
+			blockTraces: make(map[int64]*ExecutionTrace),
+		}
+		return globalRecorder
+	}
+
+	globalRecorder = &EcallRecorder{
+		mode:        mode,
+		db:          db,
+		blockTraces: make(map[int64]*ExecutionTrace),
+	}
+
+	if storeSGXData {
+		logInfo("EcallRecorder", "Initialized in %s mode with storing enabled, db dir: %s", mode, dbDir)
+	} else {
+		logInfo("EcallRecorder", "Initialized in %s mode, db dir: %s", mode, dbDir)
+	}
+
 	return globalRecorder
 }
 

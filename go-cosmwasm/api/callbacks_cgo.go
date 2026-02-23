@@ -1,5 +1,5 @@
-//go:build !secretcli
-// +build !secretcli
+//go:build !secretcli && !nosgx
+// +build !secretcli,!nosgx
 
 package api
 

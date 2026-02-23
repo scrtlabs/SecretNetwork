@@ -427,10 +427,14 @@ func (c *EcallClient) FetchBlockTraces(height int64) ([]*ExecutionTrace, error) 
 		logDebug("EcallClient", "Proto trace callbackGas=%d (from gRPC response)", t.CallbackGas)
 		ops := make([]StorageOp, len(t.Ops))
 		for j, op := range t.Ops {
+			value := op.Value
+			if !op.IsDelete && value == nil {
+				value = []byte{}
+			}
 			ops[j] = StorageOp{
 				IsDelete: op.IsDelete,
 				Key:      op.Key,
-				Value:    op.Value,
+				Value:    value,
 			}
 		}
 		traces[i] = &ExecutionTrace{
