@@ -174,6 +174,10 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 }
 
 func HealthCheck() ([]byte, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		return []byte("replay"), nil
+	}
 	errmsg := C.Buffer{}
 
 	res, err := C.get_health_check(&errmsg)
@@ -184,6 +188,10 @@ func HealthCheck() ([]byte, error) {
 }
 
 func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte, cronMsgs []byte /* valSet []byte, nextValSet []byte */) ([]byte, []byte, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		return nil, nil, errors.New("submit block signatures not supported on non-SGX node")
+	}
 	errmsg := C.Buffer{}
 	spidSlice := sendSlice(header)
 	defer freeAfterSend(spidSlice)
@@ -204,6 +212,11 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 }
 
 func SubmitValidatorSetEvidence(evidence []byte) error {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		logInfo("SubmitValidatorSetEvidence", "Skipped in replay mode")
+		return nil
+	}
 	errmsg := C.Buffer{}
 	evidenceSlice := sendSlice(evidence)
 	defer freeAfterSend(evidenceSlice)
@@ -257,6 +270,11 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 }
 
 func RotateStore(kvs []byte) (bool, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		logInfo("RotateStore", "Skipped in replay mode")
+		return false, errors.New("rotate store not supported on non-SGX node")
+	}
 	// avoid buffer copy. We need modification in-place
 	kvSlice := C.Buffer{
 		ptr: (*C.uint8_t)(unsafe.Pointer(&kvs[0])),
@@ -275,6 +293,11 @@ func RotateStore(kvs []byte) (bool, error) {
 }
 
 func MigrationOp(op uint32) (bool, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		logInfo("MigrationOp", "Skipped in replay mode")
+		return true, nil // no-op success so upgrade handlers don't fail
+	}
 	ret, err := C.migration_op(u32(op))
 	if err != nil {
 		return false, err
@@ -286,11 +309,20 @@ func MigrationOp(op uint32) (bool, error) {
 }
 
 func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		// No enclave; return empty so UpdateNetworkKeys loop exits immediately
+		return nil, nil
+	}
 	res := C.get_network_pubkey(u32(i_seed))
 	return receiveVector(res.buf1), receiveVector(res.buf2)
 }
 
 func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		return false, errors.New("emergency approve upgrade not supported on non-SGX node")
+	}
 	nodeDirBuf := sendSlice([]byte(nodeDir))
 	defer freeAfterSend(nodeDirBuf)
 
@@ -349,6 +381,11 @@ func InitEnclaveRuntime(moduleCacheSize uint16) error {
 }
 
 func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		logInfo("OnUpgradeProposalPassed", "Skipped in replay mode")
+		return nil
+	}
 	msgBuf := sendSlice(mrEnclaveHash)
 	defer freeAfterSend(msgBuf)
 
@@ -846,6 +883,10 @@ func Query(
 	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		return nil, 0, errors.New("secret contract query not supported on non-SGX node")
+	}
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -986,6 +1027,10 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 func GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {
 	// Genesis seed is only used during bootstrap of a new network.
 	// Non-SGX replay nodes don't need this - they sync from existing networks.
+	recorder := GetRecorder()
+	if recorder.IsReplayMode() {
+		return nil, errors.New("get encrypted genesis seed not supported on non-SGX node")
+	}
 	errmsg := C.Buffer{}
 	pkSlice := sendSlice(pk)
 	defer freeAfterSend(pkSlice)
