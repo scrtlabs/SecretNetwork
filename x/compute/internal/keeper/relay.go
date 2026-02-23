@@ -6,9 +6,13 @@ import (
 	"time"
 
 	errorsmod "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
+	"cosmossdk.io/store/prefix"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
+	api "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
@@ -29,9 +33,22 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 
 	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
 
-	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
-	if err != nil {
-		return "", err
+	recorder := api.GetRecorder()
+	var codeInfo types.CodeInfo
+	var prefixStore prefix.Store
+	if recorder.IsReplayMode() {
+		_, codeInfo, _, err = k.contractInstance(ctx, contractAddress)
+		if err != nil {
+			return "", err
+		}
+		infCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
+		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+		prefixStore = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(infCtx)), prefixStoreKey)
+	} else {
+		_, codeInfo, prefixStore, err = k.contractInstance(ctx, contractAddress)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	contractKey, err := k.GetContractKey(ctx, contractAddress)
