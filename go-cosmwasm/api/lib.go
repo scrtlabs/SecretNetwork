@@ -41,47 +41,44 @@ type Cache struct {
 }
 
 // replayExecution handles replay of a recorded execution trace.
-// It applies storage ops to the store and consumes the correct amount of gas.
-// Returns (result, gasUsed, error, found). If found is false, trace was not available.
+// We trust the SGX node's trace data completely.
+//
+// Gas is consumed in two steps to exactly match the SGX node:
+//   1. callbackGas: charged on the original SDK meter directly (callbackGas/1000 SDK gas)
+//      This matches the SGX node where DB callbacks charge gas on ctx.GasMeter() during C.handle.
+//   2. gasUsed (compute gas): returned to the caller so the keeper's consumeGas handles it,
+//      adding (gasUsed/1000 + 1) SDK gas — same as on the SGX node.
+//
+// These must be separate divisions to avoid integer rounding differences.
 func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte, uint64, error, bool) {
 	recorder := GetRecorder()
 	height := recorder.GetCurrentBlockHeight()
 
-	// Get trace from memory (fetched on-demand when needed)
-	// Traces are created during execution on SGX node, so we fetch them when actually needed
 	trace, found := recorder.GetTraceFromMemory(execIndex)
 	if !found {
-		// Trace not in memory - wait for it to become available from SGX node
-		// Traces are created during execution on SGX node, so we need to wait for them
-		logDebug("replayExecution", "TRACE NOT FOUND in memory: height=%d index=%d, waiting for SGX node to create it", height, execIndex)
+		logDebug("replayExecution", "TRACE NOT FOUND in memory: height=%d index=%d, waiting for SGX node", height, execIndex)
 
 		client := GetEcallClient()
-		maxRetries := 20                    // More retries since traces are created during execution
-		retryDelay := 50 * time.Millisecond // Start with 50ms
-		maxDelay := 2 * time.Second         // Cap at 2 seconds
+		maxRetries := 20
+		retryDelay := 50 * time.Millisecond
+		maxDelay := 2 * time.Second
 
 		for attempt := 0; attempt < maxRetries; attempt++ {
-			// Fetch all traces for the block (new ones may have been added)
 			allTraces, err := client.FetchBlockTraces(height)
 			if err == nil {
-				// Update memory cache with all traces
 				recorder.SetBlockTraces(allTraces)
-
-				// Check if our trace is now in memory
 				trace, found = recorder.GetTraceFromMemory(execIndex)
 				if found {
-					logInfo("replayExecution", "Successfully fetched trace: height=%d index=%d (attempt %d)", height, execIndex, attempt+1)
+					logInfo("replayExecution", "Fetched trace: height=%d index=%d (attempt %d)", height, execIndex, attempt+1)
 					break
 				}
 			}
 
-			// Trace still not found - wait and retry
 			if attempt < maxRetries-1 {
 				delay := retryDelay * time.Duration(1<<uint(attempt))
 				if delay > maxDelay {
 					delay = maxDelay
 				}
-				logDebug("replayExecution", "Trace not available yet, waiting: height=%d index=%d attempt=%d delay=%v", height, execIndex, attempt+1, delay)
 				time.Sleep(delay)
 			}
 		}
@@ -94,83 +91,30 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 
 	logDebug("replayExecution", "Found trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d hasError=%v",
 		height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas, trace.HasError)
-	logDebug("replayExecution", "Will consume callbackGas=%d (in multiplied units) if > localConsumed", trace.CallbackGas)
 
-	// Snapshot gas before applying ops
-	var gasBefore uint64
-	if gasMeter != nil {
-		gasBefore = (*gasMeter).GasConsumed()
-		logDebug("replayExecution", "Gas snapshot before ops: %d", gasBefore)
-	}
-
-	// Apply recorded storage ops to the store
+	// Apply recorded storage ops (trusted data from SGX node)
 	replayer := NewReplayingKVStore(store)
-	logDebug("replayExecution", "Applying %d ops to store", len(trace.Ops))
 	replayer.ApplyOps(trace.Ops)
-	logDebug("replayExecution", "Finished applying ops")
 
-	// Calculate and consume remaining gas to match SGX callback gas
-	if gasMeter != nil {
-		gasAfter := (*gasMeter).GasConsumed()
-		localGasConsumed := gasAfter - gasBefore
-
-		logDebug("replayExecution", "Gas consumption: before=%d after=%d localConsumed=%d callbackGas=%d",
-			gasBefore, gasAfter, localGasConsumed, trace.CallbackGas)
-
-		// SAFETY CHECK: If Infinite Meter is working, localGasConsumed MUST be 0 when callbackGas=0
-		if localGasConsumed > 0 && trace.CallbackGas == 0 {
-			logWarn("replayExecution", "CRITICAL WARNING: Local DB writes consumed %d gas but Validator consumed 0", localGasConsumed)
-			logWarn("replayExecution", "This means the Infinite Gas Meter trick in keeper.go is NOT working")
-			logWarn("replayExecution", "The store passed to replayExecution is still connected to the real gas meter")
-			// We cannot "refund" gas, so this execution is doomed to fail consensus.
-		}
-
-		if trace.CallbackGas > 0 {
-			if trace.CallbackGas > localGasConsumed {
-				remaining := trace.CallbackGas - localGasConsumed
-				gasBeforeConsume := (*gasMeter).GasConsumed()
-				(*gasMeter).ConsumeGas(remaining, "enclave callback gas replay")
-				gasAfterConsume := (*gasMeter).GasConsumed()
-				logDebug("replayExecution", "Consumed remaining callback gas: callbackGas=%d localConsumed=%d remaining=%d",
-					trace.CallbackGas, localGasConsumed, remaining)
-				logDebug("replayExecution", "Gas before consume=%d after consume=%d (consumed %d multiplied units = %d SDK gas)",
-					gasBeforeConsume, gasAfterConsume, remaining, remaining/1000)
-			} else if trace.CallbackGas < localGasConsumed {
-				logWarn("replayExecution", "local gas (%d) > recorded callbackGas (%d), cannot reconcile",
-					localGasConsumed, trace.CallbackGas)
-			} else {
-				logDebug("replayExecution", "Callback gas matches: %d", trace.CallbackGas)
-			}
-		} else {
-			// callbackGas=0 means validator consumed 0 callback gas
-			// Since localConsumed=0 (infinite meter working), we match perfectly
-			// No need to consume additional gas
-			logDebug("replayExecution", "callbackGas=0 and localConsumed=0 - gas consumption matches validator")
-		}
-
-		// Note: We do NOT consume compute gas here. The keeper will call consumeGas(ctx, gasUsed)
-		// after we return, which will consume (gasUsed / GasMultiplier) + 1.
-		// We only reconcile callback gas here to match the DB operation gas.
+	// Consume callback gas via the MultipiedGasMeter.
+	// On the SGX node, DB callbacks charge gas on ctx.GasMeter() (the original SDK
+	// meter) during C.handle. callbackGas is measured as the MultipiedGasMeter
+	// difference (original_sdk_gas * 1000).
+	// MultipiedGasMeter.ConsumeGas(callbackGas) divides by 1000 internally,
+	// so the original meter increases by exactly callbackGas/1000 SDK gas — matching
+	// the SGX node's callback gas consumption.
+	if gasMeter != nil && trace.CallbackGas > 0 {
+		(*gasMeter).ConsumeGas(trace.CallbackGas, "replay callback")
 	}
 
+	// Return only compute gasUsed — the keeper's consumeGas will add (gasUsed/1000)+1,
+	// exactly matching the SGX node's second gas consumption step.
 	if trace.HasError {
-		logDebug("replayExecution", "Returning error: %s", trace.ErrorMsg)
+		logDebug("replayExecution", "Returning error (gasUsed=%d): %s", trace.GasUsed, trace.ErrorMsg)
 		return nil, trace.GasUsed, fmt.Errorf("%s", trace.ErrorMsg), true
 	}
 
-	// Return gasUsed as-is. If gasUsed=0, it means the validator consumed 0 compute gas.
-	// We've already consumed callbackGas above to match the validator's callback gas consumption.
-	// The keeper will call consumeGas(ctx, gasUsed), which will consume (gasUsed / 1000) + 1.
-	// If gasUsed=0, this will consume 1 SDK gas, which matches the validator's behavior.
-	gasToReturn := trace.GasUsed
-	if gasToReturn == 0 {
-		logDebug("replayExecution", "gasUsed=0: validator consumed 0 compute gas, returning 0 (keeper will consume 1 SDK gas minimum)")
-	}
-
-	// Return gasToReturn so the keeper can call consumeGas(ctx, gasUsed)
-	// The keeper's consumeGas will consume (gasUsed / GasMultiplier) + 1, matching SGX behavior.
-	// We've already reconciled callback gas above.
-	return trace.Result, gasToReturn, nil, true
+	return trace.Result, trace.GasUsed, nil, true
 }
 
 func HealthCheck() ([]byte, error) {
@@ -529,8 +473,6 @@ func Migrate(
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("Migrate", "Failed to record trace: %v", recordErr)
 		}
-		// Create error from the already-extracted message (errmsg buffer already freed by receiveVector)
-		// Check for OutOfGasError (errno == 2)
 		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
 			return nil, uint64(gasUsed), types.OutOfGasError{}
 		}
@@ -633,8 +575,6 @@ func UpdateAdmin(
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("UpdateAdmin", "Failed to record trace: %v", recordErr)
 		}
-		// Create error from the already-extracted message (errmsg buffer already freed by receiveVector)
-		// Check for OutOfGasError (errno == 2)
 		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
 			return nil, types.OutOfGasError{}
 		}
@@ -742,8 +682,6 @@ func Instantiate(
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("Instantiate", "Failed to record trace: %v", recordErr)
 		}
-		// Create error from the already-extracted message (errmsg buffer already freed by receiveVector)
-		// Check for OutOfGasError (errno == 2)
 		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
 			return nil, uint64(gasUsed), types.OutOfGasError{}
 		}
@@ -850,8 +788,6 @@ func Handle(
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("Handle", "Failed to record trace: %v", recordErr)
 		}
-		// Create error from the already-extracted message (errmsg buffer already freed by receiveVector)
-		// Check for OutOfGasError (errno == 2)
 		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
 			return nil, uint64(gasUsed), types.OutOfGasError{}
 		}
