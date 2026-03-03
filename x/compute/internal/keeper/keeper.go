@@ -1712,7 +1712,18 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 		return nil, err
 	}
 
-	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasForContract(ctx), ogSigInfo, wasmTypes.HandleTypeReply)
+	// In replay mode, use a gas-free store so ApplyOps doesn't charge
+	// native SDK gas on the real gas meter.
+	var replyStoreForExecution prefix.Store
+	if api.GetRecorder().IsReplayMode() {
+		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
+		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+		replyStoreForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
+	} else {
+		replyStoreForExecution = prefixStore
+	}
+
+	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, replyStoreForExecution, cosmwasmAPI, querier, ctx.GasMeter(), gasForContract(ctx), ogSigInfo, wasmTypes.HandleTypeReply)
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -1806,7 +1817,18 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 		Caller:  contractAddress,
 	}
 
-	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, currentAdminAddress, contractInfo.AdminProof, newAdmin)
+	// In replay mode, use a gas-free store so ApplyOps doesn't charge
+	// native SDK gas on the real gas meter.
+	var adminStoreForExecution prefix.Store
+	if api.GetRecorder().IsReplayMode() {
+		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
+		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+		adminStoreForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
+	} else {
+		adminStoreForExecution = prefixStore
+	}
+
+	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, adminStoreForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, currentAdminAddress, contractInfo.AdminProof, newAdmin)
 
 	if updateAdminErr != nil {
 		return updateAdminErr

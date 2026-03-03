@@ -6,9 +6,13 @@ import (
 	"time"
 
 	errorsmod "cosmossdk.io/errors"
+	"cosmossdk.io/store/prefix"
+	storetypes "cosmossdk.io/store/types"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
@@ -56,7 +60,19 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 	}
 
 	gas := gasForContract(ctx)
-	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, sigInfo, callType)
+
+	// In replay mode, use a gas-free store so ApplyOps doesn't charge
+	// native SDK gas on the real gas meter.
+	var storeForExecution prefix.Store
+	if api.GetRecorder().IsReplayMode() {
+		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
+		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+		storeForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
+	} else {
+		storeForExecution = prefixStore
+	}
+
+	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, storeForExecution, cosmwasmAPI, querier, ctx.GasMeter(), gas, sigInfo, callType)
 	consumeGas(ctx, gasUsed)
 
 	return res, err
