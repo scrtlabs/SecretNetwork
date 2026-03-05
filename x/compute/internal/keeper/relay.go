@@ -53,27 +53,31 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 		random,
 	)
 
+	activeCtx := ctx
+	if api.GetRecorder().IsReplayMode() {
+		activeCtx = activeCtx.WithGasMeter(storetypes.NewInfiniteGasMeter())
+	}
+
 	// prepare querier
 	querier := QueryHandler{
-		Ctx:     ctx,
+		Ctx:     activeCtx,
 		Plugins: k.queryPlugins,
 	}
 
 	gas := gasForContract(ctx)
 
-	// In replay mode, use a gas-free store so ApplyOps doesn't charge
-	// native SDK gas on the real gas meter.
-	var storeForExecution prefix.Store
+	ibcStore := prefixStore
 	if api.GetRecorder().IsReplayMode() {
-		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
 		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
-		storeForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
-	} else {
-		storeForExecution = prefixStore
+		ibcStore = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(activeCtx)), prefixStoreKey)
 	}
 
-	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, storeForExecution, cosmwasmAPI, querier, ctx.GasMeter(), gas, sigInfo, callType)
-	consumeGas(ctx, gasUsed)
+	res, wasmGasUsed, sdkGasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, ibcStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, sigInfo, callType)
+	if api.GetRecorder().IsReplayMode() {
+		ctx.GasMeter().ConsumeGas(sdkGasUsed, "wasm contract replay")
+	}
+	_ = sdkGasUsed
+	consumeGas(ctx, wasmGasUsed)
 
 	return res, err
 }

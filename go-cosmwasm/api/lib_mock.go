@@ -124,8 +124,8 @@ func Migrate(
 	sigInfo []byte,
 	admin []byte,
 	adminProof []byte,
-) ([]byte, uint64, error) {
-	return nil, 0, nil
+) ([]byte, uint64, uint64, error) {
+	return nil, 0, 0, nil
 }
 
 func UpdateAdmin(
@@ -157,7 +157,7 @@ func Instantiate(
 	gasLimit uint64,
 	sigInfo []byte,
 	admin []byte,
-) ([]byte, uint64, error) {
+) ([]byte, uint64, uint64, error) {
 	//id := sendSlice(code_id)
 	//defer freeAfterSend(id)
 	//p := sendSlice(params)
@@ -172,10 +172,10 @@ func Instantiate(
 	//res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	//if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 	//	// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-	//	return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	//	return nil, uint64(gasUsed), 0, errorWithMessage(err, errmsg)
 	//}
-	//return receiveVector(res), uint64(gasUsed), nil
-	return nil, 0, nil
+	//return receiveVector(res), uint64(gasUsed), 0, nil
+	return nil, 0, 0, nil
 }
 
 func Handle(
@@ -190,7 +190,7 @@ func Handle(
 	gasLimit uint64,
 	sigInfo []byte,
 	handleType types.HandleType,
-) ([]byte, uint64, error) {
+) ([]byte, uint64, uint64, error) {
 	//id := sendSlice(code_id)
 	//defer freeAfterSend(id)
 	//p := sendSlice(params)
@@ -205,10 +205,10 @@ func Handle(
 	//res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	//if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 	//	// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-	//	return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	//	return nil, uint64(gasUsed), 0, errorWithMessage(err, errmsg)
 	//}
-	//return receiveVector(res), uint64(gasUsed), nil
-	return nil, 0, nil
+	//return receiveVector(res), uint64(gasUsed), 0, nil
+	return nil, 0, 0, nil
 }
 
 func Query(

@@ -35,6 +35,10 @@ type (
 	cbool  = C.bool
 )
 
+// GasMultiplier matches the WASM VM gas multiplier used in callbacks.
+// 1 SDK gas = GasMultiplier WASM gas.
+const GasMultiplier uint64 = 1000
+
 type Cache struct {
 	ptr *C.cache_t
 }
@@ -74,7 +78,25 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 	if err != nil {
 		return nil, nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res.buf1), receiveVector(res.buf2), nil
+
+	random := receiveVector(res.buf1)
+	evidence := receiveVector(res.buf2)
+
+	// Record as ecall stream at index 0 (reserved for SubmitBlockSignatures)
+	height := recorder.GetCurrentBlockHeight()
+	streamWriter := NewOcallStreamWriter()
+	// No ocalls for SubmitBlockSignatures — just the result
+	packedResult := PackBlockSignaturesResult(random, evidence)
+	streamBytes := streamWriter.Finalize(EcallResult{
+		Result:   packedResult,
+		GasUsed:  0,
+		HasError: false,
+	})
+	if recordErr := recorder.RecordEcallStream(height, 0, streamBytes); recordErr != nil {
+		logError("SubmitBlockSignatures", "Failed to record stream: %v", recordErr)
+	}
+
+	return random, evidence, nil
 }
 
 func SubmitValidatorSetEvidence(evidence []byte) error {
@@ -310,6 +332,54 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return receiveVector(code), nil
 }
 
+// finalizeAndRecordStream builds the ecall result, finalizes the stream, records it, and returns the result/error
+func finalizeAndRecordStream(
+	funcName string,
+	streamWriter *OcallStreamWriter,
+	recorder *EcallRecorder,
+	height int64,
+	execIndex int64,
+	gasUsed uint64,
+	sdkGasUsed uint64,
+	res C.Buffer,
+	err error,
+	errmsg C.Buffer,
+) ([]byte, error) {
+	// Build ecall result
+	ecallResult := EcallResult{GasUsed: gasUsed, SDKGasUsed: sdkGasUsed}
+
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		errorMsgBytes := receiveVector(errmsg)
+		ecallResult.HasError = true
+		ecallResult.ErrorMsg = string(errorMsgBytes)
+		streamBytes := streamWriter.Finalize(ecallResult)
+
+		if recordErr := recorder.RecordEcallStream(height, execIndex, streamBytes); recordErr != nil {
+			logError(funcName, "Failed to record stream: %v", recordErr)
+		}
+
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			return nil, types.OutOfGasError{}
+		}
+		if errorMsgBytes == nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%s", string(errorMsgBytes))
+	}
+
+	ecallResult.Result = receiveVector(res)
+	streamBytes := streamWriter.Finalize(ecallResult)
+
+	if recordErr := recorder.RecordEcallStream(height, execIndex, streamBytes); recordErr != nil {
+		logError(funcName, "Failed to record stream: %v", recordErr)
+	} else {
+		logDebug(funcName, "SGX recorded stream: height=%d index=%d streamLen=%d resultLen=%d gasUsed=%d",
+			height, execIndex, len(streamBytes), len(ecallResult.Result), ecallResult.GasUsed)
+	}
+
+	return ecallResult.Result, nil
+}
+
 func Migrate(
 	cache Cache,
 	code_id []byte,
@@ -323,20 +393,23 @@ func Migrate(
 	sigInfo []byte,
 	admin []byte,
 	adminProof []byte,
-) ([]byte, uint64, error) {
+) ([]byte, uint64, uint64, error) {
 	recorder := GetRecorder()
 	height := recorder.GetCurrentBlockHeight()
 	execIndex := recorder.NextExecutionIndex()
 
 	if recorder.IsReplayMode() {
-		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
-			return result, gas, err
+		streamBytes, found := recorder.GetStreamFromMemory(execIndex)
+		if !found {
+			return nil, 0, 0, fmt.Errorf("Migrate replay failed: stream not found for height %d index %d", height, execIndex)
 		}
-		return nil, 0, fmt.Errorf("Migrate replay failed: trace not found for height %d index %d", height, execIndex)
+		result, wasmGasUsed, sdkGasUsed, err := ReplayStream(store, querier, streamBytes)
+		return result, wasmGasUsed, sdkGasUsed, err
 	}
 
-	// SGX mode: wrap store to record operations
-	recordingStore := NewRecordingKVStore(store)
+	// SGX mode: set up stream writer to record ocalls
+	streamWriter := NewOcallStreamWriter()
+	SetActiveStreamWriter(streamWriter)
 
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -349,7 +422,7 @@ func Migrate(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(recordingStore, counter)
+	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -365,51 +438,29 @@ func Migrate(
 	adminProofBuffer := sendSlice(adminProof)
 	defer freeAfterSend(adminProofBuffer)
 
-	// Capture gas before execution to measure callback gas
-	var gasBefore uint64
-	if gasMeter != nil {
-		gasBefore = (*gasMeter).GasConsumed()
+	// Capture exact SDK gas by extracting the underlying raw meter (bypasses 1000x multiplier)
+	var rawGasMeter GasMeter
+	if ogm, ok := (*gasMeter).(OriginalGasMeter); ok {
+		rawGasMeter = ogm.OriginalMeterAPI()
+	} else {
+		rawGasMeter = *gasMeter
 	}
+	gasBefore := rawGasMeter.GasConsumed()
 
 	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer, adminProofBuffer)
 
-	// Calculate callback gas consumed during execution
-	var callbackGas uint64
-	if gasMeter != nil {
-		gasAfter := (*gasMeter).GasConsumed()
-		callbackGas = gasAfter - gasBefore
-	}
+	// Clear stream writer immediately after ecall completes
+	ClearActiveStreamWriter()
 
-	// Record the execution trace
-	trace := &ExecutionTrace{
-		Index:       execIndex,
-		Ops:         recordingStore.GetOps(),
-		GasUsed:     uint64(gasUsed),
-		CallbackGas: callbackGas,
-	}
+	// Capture SDK gas consumed during the ecall (store ops)
+	gasAfter := rawGasMeter.GasConsumed()
+	storeOpsSDKGas := gasAfter - gasBefore
 
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		trace.HasError = true
-		errorMsgBytes := receiveVector(errmsg)
-		trace.ErrorMsg = string(errorMsgBytes)
-		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-			logError("Migrate", "Failed to record trace: %v", recordErr)
-		}
-		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
-			return nil, uint64(gasUsed), types.OutOfGasError{}
-		}
-		if errorMsgBytes == nil {
-			return nil, uint64(gasUsed), err
-		}
-		return nil, uint64(gasUsed), fmt.Errorf("%s", string(errorMsgBytes))
-	}
+	// Total SDK gas = store ops + (enclave WASM gas / 1000) + 1
+	totalSDKGas := storeOpsSDKGas + (uint64(gasUsed) / GasMultiplier) + 1
 
-	trace.Result = receiveVector(res)
-	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-		logError("Migrate", "Failed to record trace: %v", recordErr)
-	}
-
-	return trace.Result, uint64(gasUsed), nil
+	result, finalErr := finalizeAndRecordStream("Migrate", streamWriter, recorder, height, execIndex, uint64(gasUsed), totalSDKGas, res, err, errmsg)
+	return result, uint64(gasUsed), totalSDKGas, finalErr
 }
 
 func UpdateAdmin(
@@ -431,14 +482,17 @@ func UpdateAdmin(
 	execIndex := recorder.NextExecutionIndex()
 
 	if recorder.IsReplayMode() {
-		if result, _, err, found := replayExecution(store, gasMeter, execIndex); found {
-			return result, err
+		streamBytes, found := recorder.GetStreamFromMemory(execIndex)
+		if !found {
+			return nil, fmt.Errorf("UpdateAdmin replay failed: stream not found for height %d index %d", height, execIndex)
 		}
-		return nil, fmt.Errorf("UpdateAdmin replay failed: trace not found for height %d index %d", height, execIndex)
+		result, _, _, err := ReplayStream(store, querier, streamBytes)
+		return result, err
 	}
 
-	// SGX mode: wrap store to record operations
-	recordingStore := NewRecordingKVStore(store)
+	// SGX mode: set up stream writer to record ocalls
+	streamWriter := NewOcallStreamWriter()
+	SetActiveStreamWriter(streamWriter)
 
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -449,7 +503,7 @@ func UpdateAdmin(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(recordingStore, counter)
+	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -467,51 +521,13 @@ func UpdateAdmin(
 	newAdminBuffer := sendSlice(newAdmin)
 	defer freeAfterSend(newAdminBuffer)
 
-	// Capture gas before execution to measure callback gas
-	var gasBefore uint64
-	if gasMeter != nil {
-		gasBefore = (*gasMeter).GasConsumed()
-	}
-
 	res, err := C.update_admin(cache.ptr, id, p, db, a, q, u64(gasLimit), &errmsg, s, currentAdminBuffer, currentAdminProofBuffer, newAdminBuffer)
 
-	// Calculate callback gas consumed during execution
-	var callbackGas uint64
-	if gasMeter != nil {
-		gasAfter := (*gasMeter).GasConsumed()
-		callbackGas = gasAfter - gasBefore
-	}
+	// Clear stream writer immediately after ecall completes
+	ClearActiveStreamWriter()
 
-	// Record the execution trace
-	trace := &ExecutionTrace{
-		Index:       execIndex,
-		Ops:         recordingStore.GetOps(),
-		GasUsed:     0, // UpdateAdmin doesn't return gas used
-		CallbackGas: callbackGas,
-	}
-
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		trace.HasError = true
-		errorMsgBytes := receiveVector(errmsg)
-		trace.ErrorMsg = string(errorMsgBytes)
-		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-			logError("UpdateAdmin", "Failed to record trace: %v", recordErr)
-		}
-		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
-			return nil, types.OutOfGasError{}
-		}
-		if errorMsgBytes == nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("%s", string(errorMsgBytes))
-	}
-
-	trace.Result = receiveVector(res)
-	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-		logError("UpdateAdmin", "Failed to record trace: %v", recordErr)
-	}
-
-	return trace.Result, nil
+	result, finalErr := finalizeAndRecordStream("UpdateAdmin", streamWriter, recorder, height, execIndex, 0, 0, res, err, errmsg)
+	return result, finalErr
 }
 
 func Instantiate(
@@ -526,23 +542,25 @@ func Instantiate(
 	gasLimit uint64,
 	sigInfo []byte,
 	admin []byte,
-) ([]byte, uint64, error) {
+) ([]byte, uint64, uint64, error) {
 	recorder := GetRecorder()
 	height := recorder.GetCurrentBlockHeight()
 	execIndex := recorder.NextExecutionIndex()
 
 	if recorder.IsReplayMode() {
 		logDebug("Instantiate", "REPLAY mode: height=%d execIndex=%d", height, execIndex)
-		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
-			logDebug("Instantiate", "REPLAY success: resultLen=%d gas=%d err=%v", len(result), gas, err)
-			return result, gas, err
+		streamBytes, found := recorder.GetStreamFromMemory(execIndex)
+		if !found {
+			logWarn("Instantiate", "REPLAY FAILED: stream not found!")
+			return nil, 0, 0, fmt.Errorf("Instantiate replay failed: stream not found for height %d index %d", height, execIndex)
 		}
-		logWarn("Instantiate", "REPLAY FAILED: trace not found!")
-		return nil, 0, fmt.Errorf("Instantiate replay failed: trace not found for height %d index %d", height, execIndex)
+		result, wasmGasUsed, sdkGasUsed, err := ReplayStream(store, querier, streamBytes)
+		return result, wasmGasUsed, sdkGasUsed, err
 	}
 
-	// SGX mode: wrap store to record operations
-	recordingStore := NewRecordingKVStore(store)
+	// SGX mode: set up stream writer to record ocalls
+	streamWriter := NewOcallStreamWriter()
+	SetActiveStreamWriter(streamWriter)
 
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -555,7 +573,7 @@ func Instantiate(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(recordingStore, counter)
+	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -568,60 +586,29 @@ func Instantiate(
 	adminBuffer := sendSlice(admin)
 	defer freeAfterSend(adminBuffer)
 
-	// Capture gas before execution to measure callback gas
-	var gasBefore uint64
-	if gasMeter != nil {
-		gasBefore = (*gasMeter).GasConsumed()
-		logDebug("Instantiate", "SGX gasBefore=%d", gasBefore)
+	// Capture exact SDK gas by extracting the underlying raw meter
+	var rawGasMeter GasMeter
+	if ogm, ok := (*gasMeter).(OriginalGasMeter); ok {
+		rawGasMeter = ogm.OriginalMeterAPI()
+	} else {
+		rawGasMeter = *gasMeter
 	}
+	gasBefore := rawGasMeter.GasConsumed()
 
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer)
 
-	// Calculate callback gas consumed during execution
-	var callbackGas uint64
-	if gasMeter != nil {
-		gasAfter := (*gasMeter).GasConsumed()
-		callbackGas = gasAfter - gasBefore
-		logDebug("Instantiate", "SGX gasAfter=%d callbackGas=%d (gasAfter - gasBefore)", gasAfter, callbackGas)
-	} else {
-		logWarn("Instantiate", "SGX WARNING: gasMeter is nil, cannot measure callbackGas")
-	}
+	// Clear stream writer immediately after ecall completes
+	ClearActiveStreamWriter()
 
-	logDebug("Instantiate", "SGX C.instantiate returned: gasUsed=%d callbackGas=%d", gasUsed, callbackGas)
+	// Capture SDK gas consumed during the ecall (store ops)
+	gasAfter := rawGasMeter.GasConsumed()
+	storeOpsSDKGas := gasAfter - gasBefore
 
-	// Record the execution trace
-	trace := &ExecutionTrace{
-		Index:       execIndex,
-		Ops:         recordingStore.GetOps(),
-		GasUsed:     uint64(gasUsed),
-		CallbackGas: callbackGas,
-	}
+	// Total SDK gas = store ops + (enclave WASM gas / 1000) + 1
+	totalSDKGas := storeOpsSDKGas + (uint64(gasUsed) / GasMultiplier) + 1
 
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		trace.HasError = true
-		errorMsgBytes := receiveVector(errmsg)
-		trace.ErrorMsg = string(errorMsgBytes)
-		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-			logError("Instantiate", "Failed to record trace: %v", recordErr)
-		}
-		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
-			return nil, uint64(gasUsed), types.OutOfGasError{}
-		}
-		if errorMsgBytes == nil {
-			return nil, uint64(gasUsed), err
-		}
-		return nil, uint64(gasUsed), fmt.Errorf("%s", string(errorMsgBytes))
-	}
-
-	trace.Result = receiveVector(res)
-	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-		logError("Instantiate", "Failed to record trace: %v", recordErr)
-	} else {
-		logDebug("Instantiate", "SGX recorded trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d",
-			height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas)
-	}
-
-	return trace.Result, uint64(gasUsed), nil
+	result, finalErr := finalizeAndRecordStream("Instantiate", streamWriter, recorder, height, execIndex, uint64(gasUsed), totalSDKGas, res, err, errmsg)
+	return result, uint64(gasUsed), totalSDKGas, finalErr
 }
 
 func Handle(
@@ -636,23 +623,25 @@ func Handle(
 	gasLimit uint64,
 	sigInfo []byte,
 	handleType types.HandleType,
-) ([]byte, uint64, error) {
+) ([]byte, uint64, uint64, error) {
 	recorder := GetRecorder()
 	height := recorder.GetCurrentBlockHeight()
 	execIndex := recorder.NextExecutionIndex()
 
 	if recorder.IsReplayMode() {
 		logDebug("Handle", "REPLAY mode: height=%d execIndex=%d", height, execIndex)
-		if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
-			logDebug("Handle", "REPLAY success: resultLen=%d gas=%d err=%v", len(result), gas, err)
-			return result, gas, err
+		streamBytes, found := recorder.GetStreamFromMemory(execIndex)
+		if !found {
+			logWarn("Handle", "REPLAY FAILED: stream not found!")
+			return nil, 0, 0, fmt.Errorf("Handle replay failed: stream not found for height %d index %d", height, execIndex)
 		}
-		logWarn("Handle", "REPLAY FAILED: trace not found!")
-		return nil, 0, fmt.Errorf("Handle replay failed: trace not found for height %d index %d", height, execIndex)
+		result, wasmGasUsed, sdkGasUsed, err := ReplayStream(store, querier, streamBytes)
+		return result, wasmGasUsed, sdkGasUsed, err
 	}
 
-	// SGX mode: wrap store to record operations
-	recordingStore := NewRecordingKVStore(store)
+	// SGX mode: set up stream writer to record ocalls
+	streamWriter := NewOcallStreamWriter()
+	SetActiveStreamWriter(streamWriter)
 
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -665,7 +654,7 @@ func Handle(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(recordingStore, counter)
+	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
 	s := sendSlice(sigInfo)
 	defer freeAfterSend(s)
@@ -674,60 +663,29 @@ func Handle(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// Capture gas before execution to measure callback gas
-	var gasBefore uint64
-	if gasMeter != nil {
-		gasBefore = (*gasMeter).GasConsumed()
-		logDebug("Handle", "SGX gasBefore=%d", gasBefore)
+	// Capture exact SDK gas by extracting the underlying raw meter
+	var rawGasMeter GasMeter
+	if ogm, ok := (*gasMeter).(OriginalGasMeter); ok {
+		rawGasMeter = ogm.OriginalMeterAPI()
+	} else {
+		rawGasMeter = *gasMeter
 	}
+	gasBefore := rawGasMeter.GasConsumed()
 
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, u8(handleType))
 
-	// Calculate callback gas consumed during execution
-	var callbackGas uint64
-	if gasMeter != nil {
-		gasAfter := (*gasMeter).GasConsumed()
-		callbackGas = gasAfter - gasBefore
-		logDebug("Handle", "SGX gasAfter=%d callbackGas=%d (gasAfter - gasBefore)", gasAfter, callbackGas)
-	} else {
-		logWarn("Handle", "SGX WARNING: gasMeter is nil, cannot measure callbackGas")
-	}
+	// Clear stream writer immediately after ecall completes
+	ClearActiveStreamWriter()
 
-	logDebug("Handle", "SGX C.handle returned: gasUsed=%d callbackGas=%d", gasUsed, callbackGas)
+	// Capture SDK gas consumed during the ecall (store ops)
+	gasAfter := rawGasMeter.GasConsumed()
+	storeOpsSDKGas := gasAfter - gasBefore
 
-	// Record the execution trace
-	trace := &ExecutionTrace{
-		Index:       execIndex,
-		Ops:         recordingStore.GetOps(),
-		GasUsed:     uint64(gasUsed),
-		CallbackGas: callbackGas,
-	}
+	// Total SDK gas = store ops + (enclave WASM gas / 1000) + 1
+	totalSDKGas := storeOpsSDKGas + (uint64(gasUsed) / GasMultiplier) + 1
 
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		trace.HasError = true
-		errorMsgBytes := receiveVector(errmsg)
-		trace.ErrorMsg = string(errorMsgBytes)
-		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-			logError("Handle", "Failed to record trace: %v", recordErr)
-		}
-		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
-			return nil, uint64(gasUsed), types.OutOfGasError{}
-		}
-		if errorMsgBytes == nil {
-			return nil, uint64(gasUsed), err
-		}
-		return nil, uint64(gasUsed), fmt.Errorf("%s", string(errorMsgBytes))
-	}
-
-	trace.Result = receiveVector(res)
-	if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
-		logError("Handle", "Failed to record trace: %v", recordErr)
-	} else {
-		logDebug("Handle", "SGX recorded trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d",
-			height, execIndex, len(trace.Ops), len(trace.Result), trace.GasUsed, trace.CallbackGas)
-	}
-
-	return trace.Result, uint64(gasUsed), nil
+	result, finalErr := finalizeAndRecordStream("Handle", streamWriter, recorder, height, execIndex, uint64(gasUsed), totalSDKGas, res, err, errmsg)
+	return result, uint64(gasUsed), totalSDKGas, finalErr
 }
 
 func Query(

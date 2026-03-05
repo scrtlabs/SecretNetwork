@@ -36,16 +36,49 @@ GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_g
 import "C"
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
+	"sync"
 	"unsafe"
 
 	dbm "github.com/cosmos/cosmos-db"
 
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 )
+
+// activeStreamWriter is set by ecall wrapper functions (Handle, Instantiate, etc.)
+// before calling the enclave, and cleared after. It records Set/Delete ocalls.
+var (
+	activeStreamWriter   *OcallStreamWriter
+	activeStreamWriterMu sync.Mutex
+)
+
+// SetActiveStreamWriter sets the stream writer for recording ocalls during an ecall.
+// Must be called before C.handle/C.instantiate/etc. and cleared after with ClearActiveStreamWriter.
+func SetActiveStreamWriter(w *OcallStreamWriter) {
+	activeStreamWriterMu.Lock()
+	activeStreamWriter = w
+	activeStreamWriterMu.Unlock()
+}
+
+// ClearActiveStreamWriter clears the active stream writer.
+func ClearActiveStreamWriter() {
+	activeStreamWriterMu.Lock()
+	activeStreamWriter = nil
+	activeStreamWriterMu.Unlock()
+}
+
+// getActiveStreamWriter returns the current active stream writer (nil if none).
+func getActiveStreamWriter() *OcallStreamWriter {
+	activeStreamWriterMu.Lock()
+	w := activeStreamWriter
+	activeStreamWriterMu.Unlock()
+	return w
+}
 
 // Note: we have to include all exports in the same file (at least since they both import bindings.h),
 // or get odd cgo build errors about duplicate definitions
@@ -91,7 +124,7 @@ type GasMeter interface {
 // This allows us to access the underlying meter for accurate callback gas measurement
 type OriginalGasMeter interface {
 	GasMeter
-	OriginalMeter() GasMeter
+	OriginalMeterAPI() GasMeter
 }
 
 /****** DB ********/
@@ -177,6 +210,13 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val 
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 
+	// Record to stream if active (SGX mode recording) to force Replay Memory Cache to sync
+	if w := getActiveStreamWriter(); w != nil {
+		keyCopy := make([]byte, len(k))
+		copy(keyCopy, k)
+		w.WriteGet(keyCopy)
+	}
+
 	gasBefore := gm.GasConsumed()
 	v := kv.Get(k)
 	gasAfter := gm.GasConsumed()
@@ -208,9 +248,30 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 	v := receiveSlice(val)
 
 	gasBefore := gm.GasConsumed()
+
+	keyHash := sha256.Sum256(k)
+	valHash := sha256.Sum256(v)
+	log.Printf("[STATE-MUTATION SGX] SET KeyHash:%s ValHash:%s KeyLen:%d ValLen:%d", hex.EncodeToString(keyHash[:]), hex.EncodeToString(valHash[:]), len(k), len(v))
+
 	kv.Set(k, v)
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+
+	// Record to stream if active (SGX mode recording)
+	if w := getActiveStreamWriter(); w != nil {
+		// Copy key/value since CGo memory may be reused
+		var keyCopy []byte
+		if k != nil {
+			keyCopy = make([]byte, len(k))
+			copy(keyCopy, k)
+		}
+		var valCopy []byte
+		if v != nil {
+			valCopy = make([]byte, len(v))
+			copy(valCopy, v)
+		}
+		w.WriteSet(keyCopy, valCopy)
+	}
 
 	return C.GoResult_Ok
 }
@@ -228,9 +289,20 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Bu
 	k := receiveSlice(key)
 
 	gasBefore := gm.GasConsumed()
+
+	keyHash := sha256.Sum256(k)
+	log.Printf("[STATE-MUTATION SGX] DEL KeyHash:%s KeyLen:%d", hex.EncodeToString(keyHash[:]), len(k))
+
 	kv.Delete(k)
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+
+	// Record to stream if active (SGX mode recording)
+	if w := getActiveStreamWriter(); w != nil {
+		keyCopy := make([]byte, len(k))
+		copy(keyCopy, k)
+		w.WriteDelete(keyCopy)
+	}
 
 	return C.GoResult_Ok
 }
@@ -412,6 +484,13 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 	// query the data
 	querier := *(*Querier)(unsafe.Pointer(ptr))
 	req := receiveSlice(request)
+
+	// In SGX mode, record the Query operation so the replay node can execute it and populate its own cache
+	if writer := getActiveStreamWriter(); writer != nil {
+		reqCopy := make([]byte, len(req))
+		copy(reqCopy, req)
+		writer.WriteQuery(reqCopy)
+	}
 
 	gasBefore := querier.GasConsumed()
 	res := types.RustQuery(querier, req, uint32(queryDepth), uint64(gasLimit))

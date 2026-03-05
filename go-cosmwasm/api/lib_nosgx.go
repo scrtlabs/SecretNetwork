@@ -22,7 +22,16 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 }
 
 func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte, cronMsgs []byte) ([]byte, []byte, error) {
-	return nil, nil, errors.New("submit block signatures not supported on non-SGX node")
+	// In non-SGX mode, retrieve the stream for SubmitBlockSignatures (recorded at index 0)
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+
+	streamBytes, found := recorder.GetStreamFromMemory(0)
+	if !found {
+		return nil, nil, fmt.Errorf("SubmitBlockSignatures replay failed: stream not found for height %d", height)
+	}
+
+	return ReplayStreamForBlockSignatures(streamBytes)
 }
 
 func SubmitValidatorSetEvidence(evidence []byte) error {
@@ -67,6 +76,21 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return nil, errors.New("GetCode is not supported on non-SGX node")
 }
 
+// replayFromStream is a helper to fetch a stream from memory and replay it
+func replayFromStream(funcName string, store KVStore, querier *Querier) ([]byte, uint64, uint64, error) {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	execIndex := recorder.NextExecutionIndex()
+
+	logDebug(funcName, "REPLAY mode: height=%d execIndex=%d", height, execIndex)
+	streamBytes, found := recorder.GetStreamFromMemory(execIndex)
+	if !found {
+		logWarn(funcName, "REPLAY FAILED: stream not found!")
+		return nil, 0, 0, fmt.Errorf("%s replay failed: stream not found for height %d index %d", funcName, height, execIndex)
+	}
+	return ReplayStream(store, querier, streamBytes)
+}
+
 func Migrate(
 	cache Cache,
 	code_id []byte,
@@ -80,18 +104,8 @@ func Migrate(
 	sigInfo []byte,
 	admin []byte,
 	adminProof []byte,
-) ([]byte, uint64, error) {
-	recorder := GetRecorder()
-	height := recorder.GetCurrentBlockHeight()
-	execIndex := recorder.NextExecutionIndex()
-
-	logDebug("Migrate", "REPLAY mode: height=%d execIndex=%d", height, execIndex)
-	if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
-		logDebug("Migrate", "REPLAY success: resultLen=%d gas=%d err=%v", len(result), gas, err)
-		return result, gas, err
-	}
-	logWarn("Migrate", "REPLAY FAILED: trace not found!")
-	return nil, 0, fmt.Errorf("Migrate replay failed: trace not found for height %d index %d", height, execIndex)
+) ([]byte, uint64, uint64, error) {
+	return replayFromStream("Migrate", store, querier)
 }
 
 func UpdateAdmin(
@@ -108,17 +122,8 @@ func UpdateAdmin(
 	currentAdminProof []byte,
 	newAdmin []byte,
 ) ([]byte, error) {
-	recorder := GetRecorder()
-	height := recorder.GetCurrentBlockHeight()
-	execIndex := recorder.NextExecutionIndex()
-
-	logDebug("UpdateAdmin", "REPLAY mode: height=%d execIndex=%d", height, execIndex)
-	if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
-		logDebug("UpdateAdmin", "REPLAY success: resultLen=%d gas=%d err=%v", len(result), gas, err)
-		return result, err
-	}
-	logWarn("UpdateAdmin", "REPLAY FAILED: trace not found!")
-	return nil, fmt.Errorf("UpdateAdmin replay failed: trace not found for height %d index %d", height, execIndex)
+	result, _, _, err := replayFromStream("UpdateAdmin", store, querier)
+	return result, err
 }
 
 func Instantiate(
@@ -133,18 +138,8 @@ func Instantiate(
 	gasLimit uint64,
 	sigInfo []byte,
 	admin []byte,
-) ([]byte, uint64, error) {
-	recorder := GetRecorder()
-	height := recorder.GetCurrentBlockHeight()
-	execIndex := recorder.NextExecutionIndex()
-
-	logDebug("Instantiate", "REPLAY mode: height=%d execIndex=%d", height, execIndex)
-	if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
-		logDebug("Instantiate", "REPLAY success: resultLen=%d gas=%d err=%v", len(result), gas, err)
-		return result, gas, err
-	}
-	logWarn("Instantiate", "REPLAY FAILED: trace not found!")
-	return nil, 0, fmt.Errorf("Instantiate replay failed: trace not found for height %d index %d", height, execIndex)
+) ([]byte, uint64, uint64, error) {
+	return replayFromStream("Instantiate", store, querier)
 }
 
 func Handle(
@@ -159,18 +154,8 @@ func Handle(
 	gasLimit uint64,
 	sigInfo []byte,
 	handleType types.HandleType,
-) ([]byte, uint64, error) {
-	recorder := GetRecorder()
-	height := recorder.GetCurrentBlockHeight()
-	execIndex := recorder.NextExecutionIndex()
-
-	logDebug("Handle", "REPLAY mode: height=%d execIndex=%d", height, execIndex)
-	if result, gas, err, found := replayExecution(store, gasMeter, execIndex); found {
-		logDebug("Handle", "REPLAY success: resultLen=%d gas=%d err=%v", len(result), gas, err)
-		return result, gas, err
-	}
-	logWarn("Handle", "REPLAY FAILED: trace not found!")
-	return nil, 0, fmt.Errorf("Handle replay failed: trace not found for height %d index %d", height, execIndex)
+) ([]byte, uint64, uint64, error) {
+	return replayFromStream("Handle", store, querier)
 }
 
 func Query(

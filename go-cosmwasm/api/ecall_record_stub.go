@@ -12,24 +12,6 @@ const (
 	NodeModeReplay NodeMode = "replay"
 )
 
-// StorageOp represents a single storage operation (Set or Delete)
-type StorageOp struct {
-	Key      []byte
-	Value    []byte
-	IsDelete bool
-}
-
-// ExecutionTrace stores all storage operations from a contract execution
-type ExecutionTrace struct {
-	Index       int64
-	Ops         []StorageOp
-	Result      []byte
-	GasUsed     uint64
-	CallbackGas uint64
-	HasError    bool
-	ErrorMsg    string
-}
-
 // EcallRecorder stub for secretcli
 type EcallRecorder struct {
 	mode NodeMode
@@ -51,26 +33,7 @@ func (r *EcallRecorder) IsReplayMode() bool    { return r.mode == NodeModeReplay
 func (r *EcallRecorder) Close() error          { return nil }
 func (r *EcallRecorder) PruneOldRecords(int64) {}
 
-func (r *EcallRecorder) RecordSubmitBlockSignatures(height int64, random []byte, evidence []byte) error {
-	return nil
-}
-
-func (r *EcallRecorder) ReplaySubmitBlockSignatures(height int64) (random []byte, evidence []byte, found bool) {
-	return nil, nil, false
-}
-
-func (r *EcallRecorder) HasRecordForHeight(height int64) bool {
-	return false
-}
-
-func (r *EcallRecorder) GetLatestRecordedHeight() int64 {
-	return 0
-}
-
-func (r *EcallRecorder) DeleteRecordsBeforeHeight(height int64) error {
-	return nil
-}
-
+// Encrypted seed stubs
 func (r *EcallRecorder) RecordGetEncryptedSeed(certHash []byte, output []byte) error {
 	return nil
 }
@@ -79,21 +42,23 @@ func (r *EcallRecorder) ReplayGetEncryptedSeed(certHash []byte) (output []byte, 
 	return nil, false
 }
 
-func (r *EcallRecorder) RecordExecutionTrace(height int64, index int64, trace *ExecutionTrace) error {
+// Utility stubs
+func (r *EcallRecorder) HasRecordForHeight(height int64) bool  { return false }
+func (r *EcallRecorder) GetLatestRecordedHeight() int64        { return 0 }
+func (r *EcallRecorder) DeleteRecordsBeforeHeight(int64) error { return nil }
+
+// Block-scoped execution tracking stubs
+func (r *EcallRecorder) StartBlock(height int64)      {}
+func (r *EcallRecorder) NextExecutionIndex() int64    { return 0 }
+func (r *EcallRecorder) GetCurrentBlockHeight() int64 { return 0 }
+
+// Stream-based methods (new)
+func (r *EcallRecorder) SetBlockStreams(streams map[int64][]byte)       {}
+func (r *EcallRecorder) GetStreamFromMemory(index int64) ([]byte, bool) { return nil, false }
+func (r *EcallRecorder) RecordEcallStream(height int64, index int64, streamBytes []byte) error {
 	return nil
 }
 
-func (r *EcallRecorder) ReplayExecutionTrace(height int64, index int64) (*ExecutionTrace, bool) {
-	return nil, false
-}
-
-func (r *EcallRecorder) GetAllTracesForBlock(height int64) ([]*ExecutionTrace, error) {
+func (r *EcallRecorder) GetAllStreamsForBlock(height int64) (map[int64][]byte, error) {
 	return nil, nil
 }
-
-// Block-scoped execution tracking stubs
-func (r *EcallRecorder) StartBlock(height int64)                                {}
-func (r *EcallRecorder) NextExecutionIndex() int64                              { return 0 }
-func (r *EcallRecorder) GetCurrentBlockHeight() int64                           { return 0 }
-func (r *EcallRecorder) SetBlockTraces(traces []*ExecutionTrace)                {}
-func (r *EcallRecorder) GetTraceFromMemory(index int64) (*ExecutionTrace, bool) { return nil, false }

@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 
 	dbm "github.com/cosmos/cosmos-db"
-	"github.com/gogo/protobuf/proto"
 )
 
 // NodeMode determines how the node handles SGX enclave calls
@@ -35,9 +34,9 @@ type EcallRecorder struct {
 	currentBlockHeight int64
 	executionIndex     int64
 
-	// In-memory cache for current block's traces (replay mode)
-	blockTracesMu sync.RWMutex
-	blockTraces   map[int64]*ExecutionTrace // key: execution index
+	// In-memory cache for current block's streams (replay mode)
+	blockStreamsMu sync.RWMutex
+	blockStreams   map[int64][]byte // key: execution index, value: raw stream bytes
 }
 
 var (
@@ -49,19 +48,8 @@ var (
 var (
 	prefixSubmitBlockSignatures = []byte{0x01}
 	prefixGetEncryptedSeed      = []byte{0x02}
-	prefixExecutionTrace        = []byte{0x03} // For contract execution: prefix | height | index
+	prefixEcallStream           = []byte{0x04} // For ecall streams: prefix | height | index
 )
-
-// ExecutionTrace stores all storage operations from a contract execution
-type ExecutionTrace struct {
-	Index       int64 // Execution index within the block
-	Ops         []StorageOp
-	Result      []byte // The return value from the ecall
-	GasUsed     uint64 // Gas reported by the enclave
-	CallbackGas uint64 // Total gas consumed by callbacks (store ops) during execution
-	HasError    bool
-	ErrorMsg    string
-}
 
 // DefaultRetentionBlocks is the default number of blocks to retain (~90 days at 6s blocks)
 const DefaultRetentionBlocks int64 = 1296000
@@ -96,9 +84,9 @@ func GetRecorder() *EcallRecorder {
 
 	if mode == NodeModeReplay || (mode == NodeModeSGX && !storeSGXData) {
 		globalRecorder = &EcallRecorder{
-			mode:        mode,
-			db:          nil,
-			blockTraces: make(map[int64]*ExecutionTrace),
+			mode:         mode,
+			db:           nil,
+			blockStreams: make(map[int64][]byte),
 		}
 		if mode == NodeModeReplay {
 			logInfo("EcallRecorder", "Initialized in replay mode (no local DB, fetches from remote)")
@@ -132,17 +120,17 @@ func GetRecorder() *EcallRecorder {
 		logError("EcallRecorder", "Error opening database: %v", err)
 		// Create a nil recorder that will skip recording
 		globalRecorder = &EcallRecorder{
-			mode:        mode,
-			db:          nil,
-			blockTraces: make(map[int64]*ExecutionTrace),
+			mode:         mode,
+			db:           nil,
+			blockStreams: make(map[int64][]byte),
 		}
 		return globalRecorder
 	}
 
 	globalRecorder = &EcallRecorder{
-		mode:        mode,
-		db:          db,
-		blockTraces: make(map[int64]*ExecutionTrace),
+		mode:         mode,
+		db:           db,
+		blockStreams: make(map[int64][]byte),
 	}
 
 	if storeSGXData {
@@ -161,10 +149,10 @@ func (r *EcallRecorder) StartBlock(height int64) {
 	atomic.StoreInt64(&r.currentBlockHeight, height)
 	atomic.StoreInt64(&r.executionIndex, 0)
 
-	// Clear previous block's traces from memory
-	r.blockTracesMu.Lock()
-	r.blockTraces = make(map[int64]*ExecutionTrace)
-	r.blockTracesMu.Unlock()
+	// Clear previous block's streams from memory
+	r.blockStreamsMu.Lock()
+	r.blockStreams = make(map[int64][]byte)
+	r.blockStreamsMu.Unlock()
 }
 
 // NextExecutionIndex returns the next execution index and increments the counter
@@ -177,25 +165,90 @@ func (r *EcallRecorder) GetCurrentBlockHeight() int64 {
 	return atomic.LoadInt64(&r.currentBlockHeight)
 }
 
-// SetBlockTraces sets all traces for the current block (used in replay mode after batch fetch)
-func (r *EcallRecorder) SetBlockTraces(traces []*ExecutionTrace) {
-	r.blockTracesMu.Lock()
-	defer r.blockTracesMu.Unlock()
+// SetBlockStreams sets all streams for the current block (used in replay mode after batch fetch)
+func (r *EcallRecorder) SetBlockStreams(streams map[int64][]byte) {
+	r.blockStreamsMu.Lock()
+	defer r.blockStreamsMu.Unlock()
 
-	r.blockTraces = make(map[int64]*ExecutionTrace)
-	for _, trace := range traces {
-		r.blockTraces[trace.Index] = trace
-		logDebug("SetBlockTraces", "Stored trace at index=%d", trace.Index)
+	r.blockStreams = streams
+	for idx := range streams {
+		logDebug("SetBlockStreams", "Stored stream at index=%d len=%d", idx, len(streams[idx]))
 	}
 }
 
-// GetTraceFromMemory retrieves a trace from the in-memory cache
-func (r *EcallRecorder) GetTraceFromMemory(index int64) (*ExecutionTrace, bool) {
-	r.blockTracesMu.RLock()
-	defer r.blockTracesMu.RUnlock()
+// GetStreamFromMemory retrieves a stream from the in-memory cache
+func (r *EcallRecorder) GetStreamFromMemory(index int64) ([]byte, bool) {
+	r.blockStreamsMu.RLock()
+	defer r.blockStreamsMu.RUnlock()
 
-	trace, found := r.blockTraces[index]
-	return trace, found
+	streamBytes, found := r.blockStreams[index]
+	return streamBytes, found
+}
+
+// --- Ecall stream recording / retrieval ---
+
+// makeStreamKey creates a key for height+index indexed ecall streams
+// Key format: prefix (1 byte) | height (8 bytes) | index (8 bytes)
+func makeStreamKey(height int64, index int64) []byte {
+	key := make([]byte, 1+8+8)
+	key[0] = prefixEcallStream[0]
+	binary.BigEndian.PutUint64(key[1:9], uint64(height))
+	binary.BigEndian.PutUint64(key[9:17], uint64(index))
+	return key
+}
+
+// RecordEcallStream records raw ecall stream bytes by height and execution index.
+// In SGX mode, this persists the stream to LevelDB for serving to non-SGX nodes.
+func (r *EcallRecorder) RecordEcallStream(height int64, index int64, streamBytes []byte) error {
+	if r.db == nil {
+		// Storing is disabled (opt-in feature) - silently skip
+		return nil
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	key := makeStreamKey(height, index)
+	if err := r.db.Set(key, streamBytes); err != nil {
+		return fmt.Errorf("failed to write ecall stream to db: %w", err)
+	}
+
+	logDebug("RecordEcallStream", "Stored stream height=%d index=%d len=%d", height, index, len(streamBytes))
+	return nil
+}
+
+// GetAllStreamsForBlock retrieves all ecall streams for a given block height.
+// Used by the gRPC server to serve streams to non-SGX nodes.
+func (r *EcallRecorder) GetAllStreamsForBlock(height int64) (map[int64][]byte, error) {
+	if r.db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	startKey := makeStreamKey(height, 0)
+	endKey := makeStreamKey(height+1, 0)
+
+	iter, err := r.db.Iterator(startKey, endKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create iterator: %w", err)
+	}
+	defer iter.Close()
+
+	streams := make(map[int64][]byte)
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		if len(key) == 17 {
+			idx := int64(binary.BigEndian.Uint64(key[9:17]))
+			value := iter.Value()
+			streamCopy := make([]byte, len(value))
+			copy(streamCopy, value)
+			streams[idx] = streamCopy
+		}
+	}
+
+	return streams, nil
 }
 
 // Mode returns the current node mode
@@ -229,62 +282,6 @@ func makeBlockKey(prefix []byte, height int64) []byte {
 	copy(key, prefix)
 	binary.BigEndian.PutUint64(key[len(prefix):], uint64(height))
 	return key
-}
-
-// --- SubmitBlockSignatures recording ---
-
-// RecordSubmitBlockSignatures records the output of SubmitBlockSignatures by block height
-func (r *EcallRecorder) RecordSubmitBlockSignatures(height int64, random []byte, evidence []byte) error {
-	if r.db == nil {
-		// Storing is disabled (opt-in feature) - silently skip
-		return nil
-	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Combine random (32 bytes) and evidence (32 bytes) into 64 bytes
-	value := make([]byte, 64)
-	copy(value[:32], random)
-	copy(value[32:], evidence)
-
-	key := makeBlockKey(prefixSubmitBlockSignatures, height)
-	if err := r.db.Set(key, value); err != nil {
-		return fmt.Errorf("failed to write to db: %w", err)
-	}
-
-	// Only log every 1000 blocks to reduce noise
-	if height%1000 == 0 {
-		logInfo("EcallRecorder", "Recorded SubmitBlockSignatures for height %d", height)
-	}
-	return nil
-}
-
-// ReplaySubmitBlockSignatures retrieves recorded SubmitBlockSignatures data by block height
-func (r *EcallRecorder) ReplaySubmitBlockSignatures(height int64) (random []byte, evidence []byte, found bool) {
-	if r.db == nil {
-		return nil, nil, false
-	}
-
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	key := makeBlockKey(prefixSubmitBlockSignatures, height)
-	value, err := r.db.Get(key)
-	if err != nil || value == nil || len(value) != 64 {
-		return nil, nil, false
-	}
-
-	random = make([]byte, 32)
-	evidence = make([]byte, 32)
-	copy(random, value[:32])
-	copy(evidence, value[32:])
-
-	// Only log every 1000 blocks to reduce noise
-	if height%1000 == 0 {
-		logInfo("EcallRecorder", "Replayed SubmitBlockSignatures for height %d", height)
-	}
-	return random, evidence, true
 }
 
 // --- GetEncryptedSeed recording (by cert hash) ---
@@ -325,169 +322,6 @@ func (r *EcallRecorder) ReplayGetEncryptedSeed(certHash []byte) (output []byte, 
 
 	logInfo("EcallRecorder", "Replayed GetEncryptedSeed (%d bytes)", len(value))
 	return value, true
-}
-
-// --- ExecutionTrace recording (for contract executions) ---
-
-// makeExecutionKey creates a key for height+index indexed execution traces
-// Key format: prefix (1 byte) | height (8 bytes) | index (8 bytes)
-func makeExecutionKey(height int64, index int64) []byte {
-	key := make([]byte, 1+8+8)
-	key[0] = prefixExecutionTrace[0]
-	binary.BigEndian.PutUint64(key[1:9], uint64(height))
-	binary.BigEndian.PutUint64(key[9:17], uint64(index))
-	return key
-}
-
-// RecordExecutionTrace records contract execution storage ops and result
-// Uses current block height and the provided execution index
-func (r *EcallRecorder) RecordExecutionTrace(height int64, index int64, trace *ExecutionTrace) error {
-	if r.db == nil {
-		// Storing is disabled (opt-in feature) - silently skip
-		return nil
-	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	trace.Index = index
-
-	logDebug("RecordExecutionTrace", "Storing trace height=%d index=%d callbackGas=%d", height, index, trace.CallbackGas)
-
-	// Convert to protobuf and serialize
-	protoTrace := executionTraceToProto(trace)
-	data, err := proto.Marshal(protoTrace)
-	if err != nil {
-		return fmt.Errorf("failed to marshal trace: %w", err)
-	}
-
-	logDebug("RecordExecutionTrace", "Serialized data length=%d", len(data))
-
-	key := makeExecutionKey(height, index)
-	if err := r.db.Set(key, data); err != nil {
-		return fmt.Errorf("failed to write to db: %w", err)
-	}
-
-	// Verify we can read it back
-	readBack, err := r.db.Get(key)
-	if err == nil && readBack != nil {
-		var verifyProto ExecutionTraceProto
-		if err := proto.Unmarshal(readBack, &verifyProto); err == nil {
-			verifyTrace := protoToExecutionTrace(&verifyProto)
-			logDebug("RecordExecutionTrace", "Verified readback callbackGas=%d", verifyTrace.CallbackGas)
-		}
-	}
-
-	return nil
-}
-
-// ReplayExecutionTrace retrieves recorded execution trace by height and index
-func (r *EcallRecorder) ReplayExecutionTrace(height int64, index int64) (*ExecutionTrace, bool) {
-	if r.db == nil {
-		return nil, false
-	}
-
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	key := makeExecutionKey(height, index)
-	value, err := r.db.Get(key)
-	if err != nil || value == nil {
-		return nil, false
-	}
-
-	// Deserialize protobuf
-	var protoTrace ExecutionTraceProto
-	if err := proto.Unmarshal(value, &protoTrace); err != nil {
-		logError("EcallRecorder", "Failed to deserialize trace: %v", err)
-		return nil, false
-	}
-
-	trace := protoToExecutionTrace(&protoTrace)
-	return trace, true
-}
-
-// GetAllTracesForBlock retrieves all execution traces for a given block height
-func (r *EcallRecorder) GetAllTracesForBlock(height int64) ([]*ExecutionTrace, error) {
-	if r.db == nil {
-		return nil, fmt.Errorf("database not initialized")
-	}
-
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	// Create range for this block: [prefix|height|0, prefix|height|maxUint64]
-	startKey := makeExecutionKey(height, 0)
-	endKey := makeExecutionKey(height+1, 0) // Next block's start is this block's end
-
-	iter, err := r.db.Iterator(startKey, endKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create iterator: %w", err)
-	}
-	defer iter.Close()
-
-	var traces []*ExecutionTrace
-	for ; iter.Valid(); iter.Next() {
-		rawData := iter.Value()
-		logDebug("GetAllTracesForBlock", "Raw trace data length=%d", len(rawData))
-
-		// Deserialize protobuf
-		var protoTrace ExecutionTraceProto
-		if err := proto.Unmarshal(rawData, &protoTrace); err != nil {
-			logError("EcallRecorder", "Failed to deserialize trace: %v", err)
-			continue
-		}
-
-		trace := protoToExecutionTrace(&protoTrace)
-
-		logDebug("GetAllTracesForBlock", "Deserialized trace index=%d callbackGas=%d gasUsed=%d ops=%d",
-			trace.Index, trace.CallbackGas, trace.GasUsed, len(trace.Ops))
-		traces = append(traces, trace)
-	}
-
-	return traces, nil
-}
-
-// executionTraceToProto converts ExecutionTrace to ExecutionTraceProto
-func executionTraceToProto(trace *ExecutionTrace) *ExecutionTraceProto {
-	ops := make([]*StorageOpProto, len(trace.Ops))
-	for i, op := range trace.Ops {
-		ops[i] = &StorageOpProto{
-			IsDelete: op.IsDelete,
-			Key:      op.Key,
-			Value:    op.Value,
-		}
-	}
-	return &ExecutionTraceProto{
-		Index:       trace.Index,
-		Ops:         ops,
-		Result:      trace.Result,
-		GasUsed:     trace.GasUsed,
-		CallbackGas: trace.CallbackGas,
-		HasError:    trace.HasError,
-		ErrorMsg:    trace.ErrorMsg,
-	}
-}
-
-// protoToExecutionTrace converts ExecutionTraceProto to ExecutionTrace
-func protoToExecutionTrace(proto *ExecutionTraceProto) *ExecutionTrace {
-	ops := make([]StorageOp, len(proto.Ops))
-	for i, op := range proto.Ops {
-		ops[i] = StorageOp{
-			IsDelete: op.IsDelete,
-			Key:      op.Key,
-			Value:    op.Value,
-		}
-	}
-	return &ExecutionTrace{
-		Index:       proto.Index,
-		Ops:         ops,
-		Result:      proto.Result,
-		GasUsed:     proto.GasUsed,
-		CallbackGas: proto.CallbackGas,
-		HasError:    proto.HasError,
-		ErrorMsg:    proto.ErrorMsg,
-	}
 }
 
 // --- Utility functions ---

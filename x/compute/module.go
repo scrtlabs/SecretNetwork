@@ -164,8 +164,6 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	// Initialize block-scoped execution tracking
 	recorder := api.GetRecorder()
 	recorder.StartBlock(height)
-	// Note: Traces are fetched on-demand in replayExecution when needed,
-	// since they are created during execution on the SGX node
 
 	x2_data := scrt.UnFlatten(ctx.TxBytes())
 
@@ -173,43 +171,40 @@ func (am AppModule) BeginBlock(c context.Context) error {
 		var random, validator_set_evidence []byte
 
 		if recorder.IsReplayMode() {
-			// REPLAY MODE: Try to get from local DB first, then fetch from remote SGX node
-			var found bool
-			random, validator_set_evidence, found = recorder.ReplaySubmitBlockSignatures(height)
-			if !found {
-				// Try to fetch from remote SGX node.
-				// When non-SGX is in consensus processing the same block as SGX validators,
-				// the SGX node rejects with "height must be less than current height" until
-				// it commits the block. Wait and retry indefinitely — the data will eventually
-				// become available once the SGX node commits.
-				client := api.GetEcallClient()
-				const retryInterval = 2 * time.Second
-				var record *api.EcallRecordData
-				var err error
-				for {
-					record, err = client.FetchEcallRecord(height)
-					if err == nil {
-						break
-					}
-					if !strings.Contains(err.Error(), "must be less than current height") {
-						// Not the "block not ready" error — fail immediately
-						ctx.Logger().Error("Failed to fetch ecall record from remote", "height", height, "error", err)
-						return fmt.Errorf("no ecall record found for height %d: %w", height, err)
-					}
-					ctx.Logger().Info("Waiting for SGX node to commit block, retrying ecall record fetch", "height", height)
-					time.Sleep(retryInterval)
+			// REPLAY MODE: Fetch all ecall streams for this block from the remote SGX node.
+			// This includes SubmitBlockSignatures (index 0) and all contract executions (index 1+).
+			// When non-SGX is in consensus processing the same block as SGX validators,
+			// the SGX node may not have committed yet. Wait and retry indefinitely.
+			client := api.GetEcallClient()
+			const retryInterval = 2 * time.Second
+			var streams map[int64][]byte
+			var err error
+			for {
+				streams, err = client.FetchBlockStreams(height)
+				if err == nil {
+					break
 				}
-				random = record.RandomSeed
-				validator_set_evidence = record.ValidatorSetEvidence
+				if !strings.Contains(err.Error(), "must be less than current height") {
+					// Not the "block not ready" error — fail immediately
+					ctx.Logger().Error("Failed to fetch block streams from remote", "height", height, "error", err)
+					return fmt.Errorf("no block streams found for height %d: %w", height, err)
+				}
+				ctx.Logger().Info("Waiting for SGX node to commit block, retrying stream fetch", "height", height)
+				time.Sleep(retryInterval)
 			}
-			// else: found in local DB
+
+			// Store all streams in memory for replay during transaction execution
+			recorder.SetBlockStreams(streams)
+
+			// Replay SubmitBlockSignatures from stream at index 0
+			random, validator_set_evidence, err = api.SubmitBlockSignatures(nil, nil, nil, nil, nil)
+			if err != nil {
+				ctx.Logger().Error("Failed to replay SubmitBlockSignatures from stream", "error", err)
+				return err
+			}
 		} else {
 			// SGX MODE: Call enclave and record the result
-			// execCronMsgs, bytesCronMsgs, err := am.keeper.GetScheduledMsgs(ctx, crontypes.ExecutionStage_EXECUTION_STAGE_BEGIN_BLOCKER)
-			// if err != nil {
-			// 	ctx.Logger().Error("Failed to get scheduled cron msgs")
-			// 	return err
-			// }
+			// The stream is recorded internally by api.SubmitBlockSignatures at index 0.
 
 			cron_msgs := tm_type.Data{Txs: [][]byte{}}
 			cron_data, err := cron_msgs.Marshal()
@@ -243,12 +238,6 @@ func (am AppModule) BeginBlock(c context.Context) error {
 			if err != nil {
 				ctx.Logger().Error("Failed to submit block signatures")
 				return err
-			}
-
-			// Record the result for non-SGX nodes
-			if err := recorder.RecordSubmitBlockSignatures(height, random, validator_set_evidence); err != nil {
-				ctx.Logger().Error("Failed to record SubmitBlockSignatures", "error", err)
-				// Don't fail the block for recording errors
 			}
 		}
 

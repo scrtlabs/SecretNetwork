@@ -1098,13 +1098,13 @@ func fakeMigrate(ctx sdk.Context,
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, sigInfo, adminToSend, adminProof)
+	response, newContractKey, newContractKeyProof, gasUsed, _, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, sigInfo, adminToSend, adminProof)
 	consumeGas(ctx, gasUsed)
 
 	if migrateErr != nil {
 		var result []byte
 		var jsonError error
-		switch res := response.(type) { 
+		switch res := response.(type) {
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result, jsonError = json.Marshal(res)
 			if jsonError != nil {

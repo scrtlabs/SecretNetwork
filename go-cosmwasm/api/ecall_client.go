@@ -140,6 +140,7 @@ const (
 	methodEcallRecord   = "/secret.compute.v1beta1.Query/EcallRecord"
 	methodEncryptedSeed = "/secret.compute.v1beta1.Query/EncryptedSeed"
 	methodBlockTraces   = "/secret.compute.v1beta1.Query/BlockTraces"
+	methodBlockStreams  = "/secret.compute.v1beta1.Query/BlockStreams"
 )
 
 var (
@@ -412,52 +413,66 @@ func (c *EcallClient) FetchEncryptedSeed(certHashHex string) ([]byte, error) {
 	return resp.EncryptedSeed, nil
 }
 
-// FetchBlockTraces fetches all execution traces for a block from a random SGX node
-func (c *EcallClient) FetchBlockTraces(height int64) ([]*ExecutionTrace, error) {
-	req := &QueryBlockTracesRequest{Height: height}
-	resp := &QueryBlockTracesResponse{}
+// --- Stream-based fetch (new protocol) ---
 
-	if err := c.invokeWithRetry(methodBlockTraces, req, resp); err != nil {
-		return nil, fmt.Errorf("gRPC BlockTraces failed for height %d: %w", height, err)
+// EcallStreamEntry is a single ecall stream in a block, identified by index
+type EcallStreamEntry struct {
+	Index int64  `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
+	Data  []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (m *EcallStreamEntry) Reset() { *m = EcallStreamEntry{} }
+func (m *EcallStreamEntry) String() string {
+	return fmt.Sprintf("{Index:%d Len:%d}", m.Index, len(m.Data))
+}
+func (m *EcallStreamEntry) ProtoMessage() {}
+
+// QueryBlockStreamsRequest requests all ecall streams for a block
+type QueryBlockStreamsRequest struct {
+	Height int64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+}
+
+func (m *QueryBlockStreamsRequest) Reset()         { *m = QueryBlockStreamsRequest{} }
+func (m *QueryBlockStreamsRequest) String() string { return fmt.Sprintf("{Height:%d}", m.Height) }
+func (m *QueryBlockStreamsRequest) ProtoMessage()  {}
+
+// QueryBlockStreamsResponse returns all ecall streams for a block
+type QueryBlockStreamsResponse struct {
+	Streams []*EcallStreamEntry `protobuf:"bytes,1,rep,name=streams,proto3" json:"streams,omitempty"`
+}
+
+func (m *QueryBlockStreamsResponse) Reset() { *m = QueryBlockStreamsResponse{} }
+func (m *QueryBlockStreamsResponse) String() string {
+	return fmt.Sprintf("{NumStreams:%d}", len(m.Streams))
+}
+func (m *QueryBlockStreamsResponse) ProtoMessage() {}
+
+var (
+	_ proto.Message = (*EcallStreamEntry)(nil)
+	_ proto.Message = (*QueryBlockStreamsRequest)(nil)
+	_ proto.Message = (*QueryBlockStreamsResponse)(nil)
+)
+
+// FetchBlockStreams fetches all ecall streams for a block from a random SGX node.
+// Returns a map of execution index → raw stream bytes.
+func (c *EcallClient) FetchBlockStreams(height int64) (map[int64][]byte, error) {
+	req := &QueryBlockStreamsRequest{Height: height}
+	resp := &QueryBlockStreamsResponse{}
+
+	if err := c.invokeWithRetry(methodBlockStreams, req, resp); err != nil {
+		return nil, fmt.Errorf("gRPC BlockStreams failed for height %d: %w", height, err)
 	}
 
-	// Convert proto response to ExecutionTrace slice
-	traces := make([]*ExecutionTrace, len(resp.Traces))
-	for i, t := range resp.Traces {
-		logDebug("EcallClient", "Proto trace callbackGas=%d (from gRPC response)", t.CallbackGas)
-		ops := make([]StorageOp, len(t.Ops))
-		for j, op := range t.Ops {
-			value := op.Value
-			if !op.IsDelete && value == nil {
-				value = []byte{}
-			}
-			ops[j] = StorageOp{
-				IsDelete: op.IsDelete,
-				Key:      op.Key,
-				Value:    value,
-			}
-		}
-		traces[i] = &ExecutionTrace{
-			Index:       t.Index,
-			Ops:         ops,
-			Result:      t.Result,
-			GasUsed:     t.GasUsed,
-			CallbackGas: t.CallbackGas,
-			HasError:    t.HasError,
-			ErrorMsg:    t.ErrorMsg,
-		}
-		logDebug("EcallClient", "Converted trace callbackGas=%d", traces[i].CallbackGas)
+	streams := make(map[int64][]byte, len(resp.Streams))
+	for _, entry := range resp.Streams {
+		streams[entry.Index] = entry.Data
+		logDebug("EcallClient", "Fetched stream: height=%d index=%d len=%d", height, entry.Index, len(entry.Data))
 	}
 
-	if len(traces) > 0 {
-		for _, t := range traces {
-			logDebug("EcallClient", "Fetched trace: height=%d index=%d ops=%d resultLen=%d gasUsed=%d callbackGas=%d hasError=%v",
-				height, t.Index, len(t.Ops), len(t.Result), t.GasUsed, t.CallbackGas, t.HasError)
-		}
-	} else if height%1000 == 0 {
-		logInfo("EcallClient", "Fetched %d traces for block %d", len(traces), height)
+	if height%1000 == 0 {
+		logInfo("EcallClient", "Fetched %d streams for block %d", len(streams), height)
 	}
-	return traces, nil
+	return streams, nil
 }
 
 // IsConnected returns true if at least one node is connected

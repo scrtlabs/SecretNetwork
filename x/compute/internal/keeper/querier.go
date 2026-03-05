@@ -279,92 +279,6 @@ func (q GrpcQuerier) AuthorizedAdminUpdate(c context.Context, req *types.QueryAu
 	return response, nil
 }
 
-// EcallRecord returns the ecall record for a specific block height
-// This is used by non-SGX nodes to sync with the network
-// SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)
-func (q GrpcQuerier) EcallRecord(c context.Context, req *types.QueryEcallRecordRequest) (*types.QueryEcallRecordResponse, error) {
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid request")
-	}
-
-	if req.Height <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "height must be positive")
-	}
-
-	// SECURITY: Enforce height restriction - only allow querying heights < current height
-	// This prevents non-SGX nodes from getting data for the current block and participating in consensus
-	ctx := sdk.UnwrapSDKContext(c)
-	currentHeight := ctx.BlockHeight()
-	if req.Height >= currentHeight {
-		return nil, status.Errorf(codes.FailedPrecondition, "cannot query ecall record for height %d: must be less than current height %d", req.Height, currentHeight)
-	}
-
-	recorder := api.GetRecorder()
-	random, evidence, found := recorder.ReplaySubmitBlockSignatures(req.Height)
-	if !found {
-		return nil, status.Error(codes.NotFound, "no ecall record found for the given height")
-	}
-
-	return &types.QueryEcallRecordResponse{
-		Height:               req.Height,
-		RandomSeed:           random,
-		ValidatorSetEvidence: evidence,
-	}, nil
-}
-
-// EcallRecords returns ecall records for a range of block heights
-// This is used by non-SGX nodes to batch sync with the network
-// SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)
-func (q GrpcQuerier) EcallRecords(c context.Context, req *types.QueryEcallRecordsRequest) (*types.QueryEcallRecordsResponse, error) {
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid request")
-	}
-
-	if req.StartHeight <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "start_height must be positive")
-	}
-
-	if req.EndHeight < req.StartHeight {
-		return nil, status.Error(codes.InvalidArgument, "end_height must be >= start_height")
-	}
-
-	// Limit the range to prevent abuse (max 1000 blocks per request)
-	maxRange := int64(1000)
-	if req.EndHeight-req.StartHeight > maxRange {
-		return nil, status.Errorf(codes.InvalidArgument, "range too large, max %d blocks per request", maxRange)
-	}
-
-	// SECURITY: Enforce height restriction - only allow querying heights < current height
-	// This prevents non-SGX nodes from getting data for the current block and participating in consensus
-	ctx := sdk.UnwrapSDKContext(c)
-	currentHeight := ctx.BlockHeight()
-	if req.EndHeight >= currentHeight {
-		// Clamp end height to currentHeight - 1
-		req.EndHeight = currentHeight - 1
-	}
-	if req.StartHeight >= currentHeight {
-		return nil, status.Errorf(codes.FailedPrecondition, "cannot query ecall records for height %d: must be less than current height %d", req.StartHeight, currentHeight)
-	}
-
-	recorder := api.GetRecorder()
-	var records []types.QueryEcallRecordResponse
-
-	for height := req.StartHeight; height <= req.EndHeight; height++ {
-		random, evidence, found := recorder.ReplaySubmitBlockSignatures(height)
-		if found {
-			records = append(records, types.QueryEcallRecordResponse{
-				Height:               height,
-				RandomSeed:           random,
-				ValidatorSetEvidence: evidence,
-			})
-		}
-	}
-
-	return &types.QueryEcallRecordsResponse{
-		Records: records,
-	}, nil
-}
-
 // EncryptedSeed returns the encrypted seed for a specific certificate hash
 // This is used by non-SGX nodes to sync with the network
 func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedSeedRequest) (*types.QueryEncryptedSeedResponse, error) {
@@ -393,10 +307,10 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 	}, nil
 }
 
-// BlockTraces returns all execution traces for a specific block height
-// This is used by non-SGX nodes to batch fetch all traces for a block
+// BlockStreams returns all ecall streams for a specific block height (new stream-based protocol).
+// This is used by non-SGX nodes to fetch all data needed for block replay in a single request.
 // SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)
-func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesRequest) (*types.QueryBlockTracesResponse, error) {
+func (q GrpcQuerier) BlockStreams(c context.Context, req *types.QueryBlockStreamsRequest) (*types.QueryBlockStreamsResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
@@ -405,55 +319,31 @@ func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesR
 		return nil, status.Error(codes.InvalidArgument, "height must be positive")
 	}
 
-	// SECURITY: Enforce height restriction - only allow querying heights < current height
-	// This prevents non-SGX nodes from getting data for the current block and participating in consensus
+	// SECURITY: Enforce height restriction
 	ctx := sdk.UnwrapSDKContext(c)
 	currentHeight := ctx.BlockHeight()
 	if req.Height >= currentHeight {
-		return nil, status.Errorf(codes.FailedPrecondition, "cannot query block traces for height %d: must be less than current height %d", req.Height, currentHeight)
+		return nil, status.Errorf(codes.FailedPrecondition, "cannot query block streams for height %d: must be less than current height %d", req.Height, currentHeight)
 	}
 
-	ctx.Logger().Debug("BlockTraces query received", "height", req.Height)
 	recorder := api.GetRecorder()
-	traces, err := recorder.GetAllTracesForBlock(req.Height)
+	streams, err := recorder.GetAllStreamsForBlock(req.Height)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get traces: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to get streams: %v", err)
 	}
 
-	ctx.Logger().Debug("Retrieved traces from database", "count", len(traces))
-
-	// Convert api.ExecutionTrace to types.ExecutionTraceData
-	protoTraces := make([]types.ExecutionTraceData, len(traces))
-	for i, trace := range traces {
-		ctx.Logger().Debug("Converting trace", "index", trace.Index, "callbackGas", trace.CallbackGas)
-		ops := make([]types.StorageOp, len(trace.Ops))
-		for j, op := range trace.Ops {
-			ops[j] = types.StorageOp{
-				IsDelete: op.IsDelete,
-				Key:      op.Key,
-				Value:    op.Value,
-			}
-		}
-		protoTraces[i] = types.ExecutionTraceData{
-			Index:       trace.Index,
-			Ops:         ops,
-			Result:      trace.Result,
-			GasUsed:     trace.GasUsed,
-			CallbackGas: trace.CallbackGas,
-			HasError:    trace.HasError,
-			ErrorMsg:    trace.ErrorMsg,
-		}
-		ctx.Logger().Debug("Proto trace converted", "callbackGas", protoTraces[i].CallbackGas)
+	entries := make([]types.EcallStreamEntry, 0, len(streams))
+	for idx, data := range streams {
+		entries = append(entries, types.EcallStreamEntry{
+			Index: idx,
+			Data:  data,
+		})
 	}
 
-	firstTraceCallbackGas := uint64(0)
-	if len(protoTraces) > 0 {
-		firstTraceCallbackGas = protoTraces[0].CallbackGas
-	}
-	ctx.Logger().Debug("Returning traces", "count", len(protoTraces), "firstTraceCallbackGas", firstTraceCallbackGas)
+	ctx.Logger().Debug("BlockStreams query", "height", req.Height, "count", len(entries))
 
-	return &types.QueryBlockTracesResponse{
-		Traces: protoTraces,
+	return &types.QueryBlockStreamsResponse{
+		Streams: entries,
 	}, nil
 }
 
