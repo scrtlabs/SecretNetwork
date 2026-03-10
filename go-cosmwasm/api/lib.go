@@ -384,6 +384,7 @@ func Migrate(
 	trace := &ExecutionTrace{
 		Index:       execIndex,
 		Ops:         recordingStore.GetOps(),
+		CrossOps:    recorder.GetAndClearPendingCrossModuleOps(),
 		GasUsed:     uint64(gasUsed),
 		CallbackGas: callbackGas,
 	}
@@ -486,6 +487,7 @@ func UpdateAdmin(
 	trace := &ExecutionTrace{
 		Index:       execIndex,
 		Ops:         recordingStore.GetOps(),
+		CrossOps:    recorder.GetAndClearPendingCrossModuleOps(),
 		GasUsed:     0, // UpdateAdmin doesn't return gas used
 		CallbackGas: callbackGas,
 	}
@@ -593,6 +595,7 @@ func Instantiate(
 	trace := &ExecutionTrace{
 		Index:       execIndex,
 		Ops:         recordingStore.GetOps(),
+		CrossOps:    recorder.GetAndClearPendingCrossModuleOps(),
 		GasUsed:     uint64(gasUsed),
 		CallbackGas: callbackGas,
 	}
@@ -699,6 +702,7 @@ func Handle(
 	trace := &ExecutionTrace{
 		Index:       execIndex,
 		Ops:         recordingStore.GetOps(),
+		CrossOps:    recorder.GetAndClearPendingCrossModuleOps(),
 		GasUsed:     uint64(gasUsed),
 		CallbackGas: callbackGas,
 	}

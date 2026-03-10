@@ -65,6 +65,14 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 	replayer := NewReplayingKVStore(store)
 	replayer.ApplyOps(trace.Ops)
 
+	// Stash cross-module ops for the keeper to apply on the real ctx.MultiStore().
+	// These are mutations that query handlers made to other modules' stores
+	// (e.g., distribution rewards withdrawal during a staking query).
+	if len(trace.CrossOps) > 0 {
+		logDebug("replayExecution", "Stashing %d cross-module ops for keeper", len(trace.CrossOps))
+		recorder.SetPendingCrossModuleOps(trace.CrossOps)
+	}
+
 	// Consume exactly the CallbackGas recorded by the SGX node.
 	// Since the store is gas-free, we don't need to reconcile with opsGas.
 	// This makes the replay node's gas meter match the SGX node exactly.

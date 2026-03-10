@@ -38,6 +38,12 @@ type EcallRecorder struct {
 	// In-memory cache for current block's traces (replay mode)
 	blockTracesMu sync.RWMutex
 	blockTraces   map[int64]*ExecutionTrace // key: execution index
+
+	// Pending cross-module ops collected during the current execution.
+	// Set by keeper (via SetPendingCrossModuleOps) before wasmer.Execute,
+	// consumed by lib.go (via GetAndClearPendingCrossModuleOps) when building the trace.
+	pendingCrossOpsMu sync.Mutex
+	pendingCrossOps   []CrossModuleOp
 }
 
 var (
@@ -52,13 +58,24 @@ var (
 	prefixExecutionTrace        = []byte{0x03} // For contract execution: prefix | height | index
 )
 
+// CrossModuleOp represents a write to a module store other than the contract's
+// own prefixed store. These happen as side-effects of Go querier callbacks
+// (e.g. distribution's initializeDelegation during DelegationTotalRewards).
+type CrossModuleOp struct {
+	StoreKey string // Module store key name (e.g. "distribution")
+	Key      []byte
+	Value    []byte // nil means delete
+	IsDelete bool
+}
+
 // ExecutionTrace stores all storage operations from a contract execution
 type ExecutionTrace struct {
 	Index       int64 // Execution index within the block
 	Ops         []StorageOp
-	Result      []byte // The return value from the ecall
-	GasUsed     uint64 // Gas reported by the enclave
-	CallbackGas uint64 // Total gas consumed by callbacks (store ops) during execution
+	CrossOps    []CrossModuleOp // Cross-module mutations from query side-effects
+	Result      []byte          // The return value from the ecall
+	GasUsed     uint64          // Gas reported by the enclave
+	CallbackGas uint64          // Total gas consumed by callbacks (store ops) during execution
 	HasError    bool
 	ErrorMsg    string
 }
@@ -196,6 +213,33 @@ func (r *EcallRecorder) GetTraceFromMemory(index int64) (*ExecutionTrace, bool) 
 
 	trace, found := r.blockTraces[index]
 	return trace, found
+}
+
+// SetPendingCrossModuleOps replaces the pending cross-module ops list.
+// Called by the keeper to initialize the list before a WASM execution.
+func (r *EcallRecorder) SetPendingCrossModuleOps(ops []CrossModuleOp) {
+	r.pendingCrossOpsMu.Lock()
+	defer r.pendingCrossOpsMu.Unlock()
+	r.pendingCrossOps = ops
+}
+
+// AppendCrossModuleOp adds a single cross-module op to the pending list.
+// Called by the RecordingMultiStore when a cross-module write is observed.
+func (r *EcallRecorder) AppendCrossModuleOp(op CrossModuleOp) {
+	r.pendingCrossOpsMu.Lock()
+	defer r.pendingCrossOpsMu.Unlock()
+	r.pendingCrossOps = append(r.pendingCrossOps, op)
+}
+
+// GetAndClearPendingCrossModuleOps returns the accumulated cross-module ops
+// and clears the pending list. Called by lib.go after wasmer.Execute to
+// include the ops in the execution trace.
+func (r *EcallRecorder) GetAndClearPendingCrossModuleOps() []CrossModuleOp {
+	r.pendingCrossOpsMu.Lock()
+	defer r.pendingCrossOpsMu.Unlock()
+	ops := r.pendingCrossOps
+	r.pendingCrossOps = nil
+	return ops
 }
 
 // Mode returns the current node mode
@@ -458,6 +502,15 @@ func executionTraceToProto(trace *ExecutionTrace) *ExecutionTraceProto {
 			Value:    op.Value,
 		}
 	}
+	crossOps := make([]*CrossModuleOpProto, len(trace.CrossOps))
+	for i, cop := range trace.CrossOps {
+		crossOps[i] = &CrossModuleOpProto{
+			StoreKey: cop.StoreKey,
+			Key:      cop.Key,
+			Value:    cop.Value,
+			IsDelete: cop.IsDelete,
+		}
+	}
 	return &ExecutionTraceProto{
 		Index:       trace.Index,
 		Ops:         ops,
@@ -466,6 +519,7 @@ func executionTraceToProto(trace *ExecutionTrace) *ExecutionTraceProto {
 		CallbackGas: trace.CallbackGas,
 		HasError:    trace.HasError,
 		ErrorMsg:    trace.ErrorMsg,
+		CrossOps:    crossOps,
 	}
 }
 
@@ -479,9 +533,19 @@ func protoToExecutionTrace(proto *ExecutionTraceProto) *ExecutionTrace {
 			Value:    op.Value,
 		}
 	}
+	crossOps := make([]CrossModuleOp, len(proto.CrossOps))
+	for i, cop := range proto.CrossOps {
+		crossOps[i] = CrossModuleOp{
+			StoreKey: cop.StoreKey,
+			Key:      cop.Key,
+			Value:    cop.Value,
+			IsDelete: cop.IsDelete,
+		}
+	}
 	return &ExecutionTrace{
 		Index:       proto.Index,
 		Ops:         ops,
+		CrossOps:    crossOps,
 		Result:      proto.Result,
 		GasUsed:     proto.GasUsed,
 		CallbackGas: proto.CallbackGas,

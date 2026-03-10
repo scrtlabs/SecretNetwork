@@ -731,8 +731,9 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
 	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+	recorder := api.GetRecorder()
 	var storeForExecution prefix.Store
-	if api.GetRecorder().IsReplayMode() {
+	if recorder.IsReplayMode() {
 		// In replay mode, use a gas-free store so ApplyOps doesn't charge
 		// native SDK gas. The real gas meter is charged exactly with
 		// trace.CallbackGas by replayExecution instead.
@@ -743,13 +744,27 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	}
 
 	// prepare querier
+	querierCtx := ctx
+	if recorder.IsSGXMode() {
+		recordingMS := NewRecordingMultiStore(ctx.MultiStore(), recorder, nil)
+		querierCtx = ctx.WithMultiStore(recordingMS)
+	}
 	querier := QueryHandler{
-		Ctx:     ctx,
+		Ctx:     querierCtx,
 		Plugins: k.queryPlugins,
 		Caller:  contractAddress,
 	}
 
 	response, ogContractKey, adminProof, gasUsed, initError := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, storeForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, admin)
+
+	// In replay mode, apply any cross-module ops stashed by replayExecution.
+	if recorder.IsReplayMode() {
+		crossOps := recorder.GetAndClearPendingCrossModuleOps()
+		if len(crossOps) > 0 {
+			ApplyCrossModuleOps(ctx.MultiStore(), crossOps)
+		}
+	}
+
 	consumeGas(ctx, gasUsed)
 
 	if initError != nil {
@@ -920,8 +935,17 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, random)
 
 	// prepare querier
+	recorder := api.GetRecorder()
+	querierCtx := ctx
+	if recorder.IsSGXMode() {
+		// In SGX (recording) mode, wrap the querier's ctx with RecordingMultiStore
+		// so that cross-module writes during queries (e.g., distribution reward
+		// withdrawals) are captured and included in the execution trace.
+		recordingMS := NewRecordingMultiStore(ctx.MultiStore(), recorder, nil)
+		querierCtx = ctx.WithMultiStore(recordingMS)
+	}
 	querier := QueryHandler{
-		Ctx:     ctx,
+		Ctx:     querierCtx,
 		Plugins: k.queryPlugins,
 		Caller:  contractAddress,
 	}
@@ -930,7 +954,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// native SDK gas on the real gas meter. replayExecution will charge
 	// exactly trace.CallbackGas instead.
 	var storeForExecution prefix.Store
-	if api.GetRecorder().IsReplayMode() {
+	if recorder.IsReplayMode() {
 		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
 		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
 		storeForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
@@ -939,6 +963,17 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, msg, storeForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, handleType)
+
+	// In replay mode, apply any cross-module ops that were stashed by replayExecution.
+	// These are writes to other modules' stores (e.g., distribution, staking) that
+	// happened during query callbacks on the SGX node.
+	if recorder.IsReplayMode() {
+		crossOps := recorder.GetAndClearPendingCrossModuleOps()
+		if len(crossOps) > 0 {
+			ApplyCrossModuleOps(ctx.MultiStore(), crossOps)
+		}
+	}
+
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -1699,8 +1734,14 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, contractKey, random)
 
 	// prepare querier
+	recorder := api.GetRecorder()
+	querierCtx := ctx
+	if recorder.IsSGXMode() {
+		recordingMS := NewRecordingMultiStore(ctx.MultiStore(), recorder, nil)
+		querierCtx = ctx.WithMultiStore(recordingMS)
+	}
 	querier := QueryHandler{
-		Ctx:     ctx,
+		Ctx:     querierCtx,
 		Plugins: k.queryPlugins,
 		Caller:  contractAddress,
 	}
@@ -1715,7 +1756,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	// In replay mode, use a gas-free store so ApplyOps doesn't charge
 	// native SDK gas on the real gas meter.
 	var replyStoreForExecution prefix.Store
-	if api.GetRecorder().IsReplayMode() {
+	if recorder.IsReplayMode() {
 		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
 		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
 		replyStoreForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
@@ -1724,6 +1765,15 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	}
 
 	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, replyStoreForExecution, cosmwasmAPI, querier, ctx.GasMeter(), gasForContract(ctx), ogSigInfo, wasmTypes.HandleTypeReply)
+
+	// In replay mode, apply any cross-module ops stashed by replayExecution.
+	if recorder.IsReplayMode() {
+		crossOps := recorder.GetAndClearPendingCrossModuleOps()
+		if len(crossOps) > 0 {
+			ApplyCrossModuleOps(ctx.MultiStore(), crossOps)
+		}
+	}
+
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -1810,9 +1860,14 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 	}
 
 	// prepare querier
-	// TODO: this is unnecessary, get rid of this
+	recorder := api.GetRecorder()
+	querierCtx := ctx
+	if recorder.IsSGXMode() {
+		recordingMS := NewRecordingMultiStore(ctx.MultiStore(), recorder, nil)
+		querierCtx = ctx.WithMultiStore(recordingMS)
+	}
 	querier := QueryHandler{
-		Ctx:     ctx,
+		Ctx:     querierCtx,
 		Plugins: k.queryPlugins,
 		Caller:  contractAddress,
 	}
@@ -1820,7 +1875,7 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 	// In replay mode, use a gas-free store so ApplyOps doesn't charge
 	// native SDK gas on the real gas meter.
 	var adminStoreForExecution prefix.Store
-	if api.GetRecorder().IsReplayMode() {
+	if recorder.IsReplayMode() {
 		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
 		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
 		adminStoreForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
@@ -1829,6 +1884,14 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 	}
 
 	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, adminStoreForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, currentAdminAddress, contractInfo.AdminProof, newAdmin)
+
+	// In replay mode, apply any cross-module ops stashed by replayExecution.
+	if recorder.IsReplayMode() {
+		crossOps := recorder.GetAndClearPendingCrossModuleOps()
+		if len(crossOps) > 0 {
+			ApplyCrossModuleOps(ctx.MultiStore(), crossOps)
+		}
+	}
 
 	if updateAdminErr != nil {
 		return updateAdminErr
@@ -1939,8 +2002,14 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	// prepare querier
+	recorder := api.GetRecorder()
+	querierCtx := ctx
+	if recorder.IsSGXMode() {
+		recordingMS := NewRecordingMultiStore(ctx.MultiStore(), recorder, nil)
+		querierCtx = ctx.WithMultiStore(recordingMS)
+	}
 	querier := QueryHandler{
-		Ctx:     ctx,
+		Ctx:     querierCtx,
 		Plugins: k.queryPlugins,
 		Caller:  contractAddress,
 	}
@@ -1948,7 +2017,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// In replay mode, use a gas-free store so ApplyOps doesn't charge
 	// native SDK gas on the real gas meter.
 	var storeForExecution prefix.Store
-	if api.GetRecorder().IsReplayMode() {
+	if recorder.IsReplayMode() {
 		replayCtx := ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
 		prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
 		storeForExecution = prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(replayCtx)), prefixStoreKey)
@@ -1957,6 +2026,15 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, storeForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, adminAddr, adminProof)
+
+	// In replay mode, apply any cross-module ops stashed by replayExecution.
+	if recorder.IsReplayMode() {
+		crossOps := recorder.GetAndClearPendingCrossModuleOps()
+		if len(crossOps) > 0 {
+			ApplyCrossModuleOps(ctx.MultiStore(), crossOps)
+		}
+	}
+
 	consumeGas(ctx, gasUsed)
 
 	if migrateErr != nil {

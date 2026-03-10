@@ -101,6 +101,18 @@ func (m *StorageOpProto) Reset()         { *m = StorageOpProto{} }
 func (m *StorageOpProto) String() string { return fmt.Sprintf("{IsDelete:%v}", m.IsDelete) }
 func (m *StorageOpProto) ProtoMessage()  {}
 
+// CrossModuleOpProto matches the proto definition for cross-module storage operation
+type CrossModuleOpProto struct {
+	StoreKey string `protobuf:"bytes,1,opt,name=store_key,json=storeKey,proto3" json:"store_key,omitempty"`
+	Key      []byte `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Value    []byte `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	IsDelete bool   `protobuf:"varint,4,opt,name=is_delete,json=isDelete,proto3" json:"is_delete,omitempty"`
+}
+
+func (m *CrossModuleOpProto) Reset()         { *m = CrossModuleOpProto{} }
+func (m *CrossModuleOpProto) String() string { return fmt.Sprintf("{StoreKey:%s}", m.StoreKey) }
+func (m *CrossModuleOpProto) ProtoMessage()  {}
+
 // QueryBlockTracesRequest matches QueryBlockTracesRequest proto
 type QueryBlockTracesRequest struct {
 	Height int64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
@@ -112,13 +124,14 @@ func (m *QueryBlockTracesRequest) ProtoMessage()  {}
 
 // ExecutionTraceProto matches the proto definition
 type ExecutionTraceProto struct {
-	Index       int64             `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
-	Ops         []*StorageOpProto `protobuf:"bytes,2,rep,name=ops,proto3" json:"ops,omitempty"`
-	Result      []byte            `protobuf:"bytes,3,opt,name=result,proto3" json:"result,omitempty"`
-	GasUsed     uint64            `protobuf:"varint,4,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty"`
-	CallbackGas uint64            `protobuf:"varint,7,opt,name=callback_gas,json=callbackGas,proto3" json:"callback_gas,omitempty"`
-	HasError    bool              `protobuf:"varint,5,opt,name=has_error,json=hasError,proto3" json:"has_error,omitempty"`
-	ErrorMsg    string            `protobuf:"bytes,6,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"`
+	Index       int64                 `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
+	Ops         []*StorageOpProto     `protobuf:"bytes,2,rep,name=ops,proto3" json:"ops,omitempty"`
+	Result      []byte                `protobuf:"bytes,3,opt,name=result,proto3" json:"result,omitempty"`
+	GasUsed     uint64                `protobuf:"varint,4,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty"`
+	CallbackGas uint64                `protobuf:"varint,7,opt,name=callback_gas,json=callbackGas,proto3" json:"callback_gas,omitempty"`
+	HasError    bool                  `protobuf:"varint,5,opt,name=has_error,json=hasError,proto3" json:"has_error,omitempty"`
+	ErrorMsg    string                `protobuf:"bytes,6,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"`
+	CrossOps    []*CrossModuleOpProto `protobuf:"bytes,8,rep,name=cross_ops,json=crossOps,proto3" json:"cross_ops,omitempty"`
 }
 
 func (m *ExecutionTraceProto) Reset()         { *m = ExecutionTraceProto{} }
@@ -154,6 +167,7 @@ var (
 	_ proto.Message = (*QueryEncryptedSeedRequest)(nil)
 	_ proto.Message = (*QueryEncryptedSeedResponse)(nil)
 	_ proto.Message = (*StorageOpProto)(nil)
+	_ proto.Message = (*CrossModuleOpProto)(nil)
 	_ proto.Message = (*QueryBlockTracesRequest)(nil)
 	_ proto.Message = (*QueryBlockTracesResponse)(nil)
 	_ proto.Message = (*ExecutionTraceProto)(nil)

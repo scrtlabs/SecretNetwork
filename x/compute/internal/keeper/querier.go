@@ -434,6 +434,15 @@ func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesR
 				Value:    op.Value,
 			}
 		}
+		crossOps := make([]types.CrossModuleOp, len(trace.CrossOps))
+		for j, cop := range trace.CrossOps {
+			crossOps[j] = types.CrossModuleOp{
+				StoreKey: cop.StoreKey,
+				Key:      cop.Key,
+				Value:    cop.Value,
+				IsDelete: cop.IsDelete,
+			}
+		}
 		protoTraces[i] = types.ExecutionTraceData{
 			Index:       trace.Index,
 			Ops:         ops,
@@ -442,6 +451,7 @@ func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesR
 			CallbackGas: trace.CallbackGas,
 			HasError:    trace.HasError,
 			ErrorMsg:    trace.ErrorMsg,
+			CrossOps:    crossOps,
 		}
 		ctx.Logger().Debug("Proto trace converted", "callbackGas", protoTraces[i].CallbackGas)
 	}
