@@ -194,7 +194,15 @@ func AnalyzeCode(
 	cache Cache,
 	codeHash []byte,
 ) (*v1types.AnalysisReport, error) {
-	return nil, errors.New("AnalyzeCode not supported on non-SGX node")
+	// In replay mode, we don't have the enclave to analyze WASM bytecode.
+	// Return a conservative default: most contracts don't have IBC entry points.
+	// If a contract does have IBC entry points, the missing IBC port will surface
+	// as a separate AppHash divergence that can be addressed.
+	logDebug("AnalyzeCode", "Returning default report (no IBC) for code hash %s", hex.EncodeToString(codeHash))
+	return &v1types.AnalysisReport{
+		HasIBCEntryPoints: false,
+		RequiredFeatures:  "",
+	}, nil
 }
 
 func KeyGen() ([]byte, error) {
