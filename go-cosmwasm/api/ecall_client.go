@@ -168,11 +168,31 @@ func (m *QueryAnalyzeCodeResponse) Reset()         { *m = QueryAnalyzeCodeRespon
 func (m *QueryAnalyzeCodeResponse) String() string { return fmt.Sprintf("{HasIBC:%v}", m.HasIBCEntryPoints) }
 func (m *QueryAnalyzeCodeResponse) ProtoMessage()  {}
 
+// QueryMachineIDProofRequest matches QueryMachineIDProofRequest proto
+type QueryMachineIDProofRequest struct {
+	Height    int64  `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	MachineId string `protobuf:"bytes,2,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
+}
+
+func (m *QueryMachineIDProofRequest) Reset()         { *m = QueryMachineIDProofRequest{} }
+func (m *QueryMachineIDProofRequest) String() string { return fmt.Sprintf("{Height:%d,MachineId:%s}", m.Height, m.MachineId) }
+func (m *QueryMachineIDProofRequest) ProtoMessage()  {}
+
+// QueryMachineIDProofResponse matches QueryMachineIDProofResponse proto
+type QueryMachineIDProofResponse struct {
+	Proof []byte `protobuf:"bytes,1,opt,name=proof,proto3" json:"proof,omitempty"`
+}
+
+func (m *QueryMachineIDProofResponse) Reset()         { *m = QueryMachineIDProofResponse{} }
+func (m *QueryMachineIDProofResponse) String() string { return fmt.Sprintf("{len:%d}", len(m.Proof)) }
+func (m *QueryMachineIDProofResponse) ProtoMessage()  {}
+
 const (
-	methodEcallRecord   = "/secret.compute.v1beta1.Query/EcallRecord"
-	methodEncryptedSeed = "/secret.compute.v1beta1.Query/EncryptedSeed"
-	methodBlockTraces   = "/secret.compute.v1beta1.Query/BlockTraces"
-	methodAnalyzeCode   = "/secret.compute.v1beta1.Query/AnalyzeCode"
+	methodEcallRecord     = "/secret.compute.v1beta1.Query/EcallRecord"
+	methodEncryptedSeed   = "/secret.compute.v1beta1.Query/EncryptedSeed"
+	methodBlockTraces     = "/secret.compute.v1beta1.Query/BlockTraces"
+	methodAnalyzeCode     = "/secret.compute.v1beta1.Query/AnalyzeCode"
+	methodMachineIDProof  = "/secret.compute.v1beta1.Query/MachineIDProof"
 )
 
 var (
@@ -446,6 +466,19 @@ func (c *EcallClient) FetchEncryptedSeed(certHashHex string) ([]byte, error) {
 
 	logInfo("EcallClient", "Fetched encrypted seed (%d bytes)", len(resp.EncryptedSeed))
 	return resp.EncryptedSeed, nil
+}
+
+// FetchMachineIDProof fetches a machine ID proof for a given height and machine ID from a random SGX node
+func (c *EcallClient) FetchMachineIDProof(height int64, machineIDHex string) ([]byte, error) {
+	req := &QueryMachineIDProofRequest{Height: height, MachineId: machineIDHex}
+	resp := &QueryMachineIDProofResponse{}
+
+	if err := c.invokeWithRetry(methodMachineIDProof, req, resp); err != nil {
+		return nil, fmt.Errorf("gRPC MachineIDProof failed for height %d: %w", height, err)
+	}
+
+	logInfo("EcallClient", "Fetched machine ID proof (%d bytes) for height %d", len(resp.Proof), height)
+	return resp.Proof, nil
 }
 
 // FetchBlockTraces fetches all execution traces for a block from a random SGX node

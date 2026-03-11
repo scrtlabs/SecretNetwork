@@ -269,8 +269,15 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
-		// In replay mode, skip machine ID approval (no SGX)
-		logInfo("OnApproveMachineID", "Skipped in replay mode")
+		// In replay mode, retrieve the recorded proof
+		height := recorder.GetCurrentBlockHeight()
+		proofData, found := recorder.ReplayMachineIDProof(height, machineID)
+		if !found {
+			logWarn("OnApproveMachineID", "No recorded proof found for height=%d, machineID len=%d", height, len(machineID))
+			return fmt.Errorf("no recorded machine ID proof for height %d", height)
+		}
+		copy(proof[:], proofData)
+		logInfo("OnApproveMachineID", "Replayed proof from record for height=%d", height)
 		return nil
 	}
 
@@ -283,6 +290,12 @@ func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) err
 	}
 	if !ret {
 		return errors.New("onchain_approve_machine_id failed")
+	}
+
+	// Record the proof for non-SGX/replay nodes
+	height := recorder.GetCurrentBlockHeight()
+	if err := recorder.RecordMachineIDProof(height, machineID, proof[:]); err != nil {
+		logWarn("OnApproveMachineID", "Failed to record proof: %v", err)
 	}
 
 	return nil

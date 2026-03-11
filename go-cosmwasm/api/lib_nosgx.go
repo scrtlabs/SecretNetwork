@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
@@ -261,5 +262,43 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 }
 
 func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+	machineIDHex := fmt.Sprintf("%x", machineID)
+
+	// Non-SGX nodes always fetch from the SGX node via gRPC
+	client := GetEcallClient()
+	maxRetries := 20
+	retryDelay := 50 * time.Millisecond
+	maxDelay := 2 * time.Second
+
+	var proofData []byte
+	var lastErr error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		data, err := client.FetchMachineIDProof(height, machineIDHex)
+		if err == nil && len(data) > 0 {
+			proofData = data
+			logInfo("OnApproveMachineID", "Fetched proof from SGX node: height=%d (attempt %d)", height, attempt+1)
+			break
+		}
+		lastErr = err
+
+		if attempt < maxRetries-1 {
+			delay := retryDelay * time.Duration(1<<uint(attempt))
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+			logDebug("OnApproveMachineID", "Waiting for SGX node proof: height=%d attempt=%d delay=%v", height, attempt+1, delay)
+			time.Sleep(delay)
+		}
+	}
+
+	if proofData == nil {
+		logWarn("OnApproveMachineID", "No proof from SGX node after retries: height=%d, machineID=%s, lastErr=%v", height, machineIDHex, lastErr)
+		return fmt.Errorf("no machine ID proof from SGX node for height %d: %v", height, lastErr)
+	}
+
+	copy(proof[:], proofData)
 	return nil
 }

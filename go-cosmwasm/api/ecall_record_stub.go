@@ -88,6 +88,14 @@ func (r *EcallRecorder) ReplayGetEncryptedSeed(certHash []byte) (output []byte, 
 	return nil, false
 }
 
+func (r *EcallRecorder) RecordMachineIDProof(height int64, machineID []byte, proof []byte) error {
+	return nil
+}
+
+func (r *EcallRecorder) ReplayMachineIDProof(height int64, machineID []byte) (proof []byte, found bool) {
+	return nil, false
+}
+
 func (r *EcallRecorder) RecordExecutionTrace(height int64, index int64, trace *ExecutionTrace) error {
 	return nil
 }

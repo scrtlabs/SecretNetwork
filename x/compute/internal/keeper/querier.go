@@ -393,6 +393,38 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 	}, nil
 }
 
+// MachineIDProof returns the recorded proof bytes for a specific machine ID at a given height
+// This is used by non-SGX nodes to replay machine ID approval ecalls
+func (q GrpcQuerier) MachineIDProof(c context.Context, req *types.QueryMachineIDProofRequest) (*types.QueryMachineIDProofResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.Height <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "height must be positive")
+	}
+
+	if req.MachineId == "" {
+		return nil, status.Error(codes.InvalidArgument, "machine_id is required")
+	}
+
+	// Decode hex string to bytes
+	machineID, err := hex.DecodeString(req.MachineId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid machine_id: must be hex encoded")
+	}
+
+	recorder := api.GetRecorder()
+	proof, found := recorder.ReplayMachineIDProof(req.Height, machineID)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "no machine ID proof found for height %d", req.Height)
+	}
+
+	return &types.QueryMachineIDProofResponse{
+		Proof: proof,
+	}, nil
+}
+
 // BlockTraces returns all execution traces for a specific block height
 // This is used by non-SGX nodes to batch fetch all traces for a block
 // SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)

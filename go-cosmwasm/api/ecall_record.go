@@ -56,6 +56,7 @@ var (
 	prefixSubmitBlockSignatures = []byte{0x01}
 	prefixGetEncryptedSeed      = []byte{0x02}
 	prefixExecutionTrace        = []byte{0x03} // For contract execution: prefix | height | index
+	prefixMachineIDProof        = []byte{0x04} // For MachineID approval: prefix | height | machineID
 )
 
 // CrossModuleOp represents a write to a module store other than the contract's
@@ -329,6 +330,55 @@ func (r *EcallRecorder) ReplaySubmitBlockSignatures(height int64) (random []byte
 		logInfo("EcallRecorder", "Replayed SubmitBlockSignatures for height %d", height)
 	}
 	return random, evidence, true
+}
+
+// --- MachineID proof recording ---
+
+// makeMachineIDProofKey creates a key: prefix | height (8 bytes) | machineID
+func makeMachineIDProofKey(height int64, machineID []byte) []byte {
+	key := make([]byte, len(prefixMachineIDProof)+8+len(machineID))
+	copy(key, prefixMachineIDProof)
+	binary.BigEndian.PutUint64(key[len(prefixMachineIDProof):], uint64(height))
+	copy(key[len(prefixMachineIDProof)+8:], machineID)
+	return key
+}
+
+// RecordMachineIDProof records the proof output from OnApproveMachineID
+func (r *EcallRecorder) RecordMachineIDProof(height int64, machineID []byte, proof []byte) error {
+	if r.db == nil {
+		// Storing is disabled - silently skip
+		return nil
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	key := makeMachineIDProofKey(height, machineID)
+	if err := r.db.Set(key, proof); err != nil {
+		return fmt.Errorf("failed to write machine ID proof to db: %w", err)
+	}
+
+	logInfo("EcallRecorder", "Recorded MachineIDProof for height %d, machineID len=%d", height, len(machineID))
+	return nil
+}
+
+// ReplayMachineIDProof retrieves the recorded proof for a machine ID approval
+func (r *EcallRecorder) ReplayMachineIDProof(height int64, machineID []byte) (proof []byte, found bool) {
+	if r.db == nil {
+		return nil, false
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	key := makeMachineIDProofKey(height, machineID)
+	value, err := r.db.Get(key)
+	if err != nil || value == nil {
+		return nil, false
+	}
+
+	logInfo("EcallRecorder", "Replayed MachineIDProof for height %d (%d bytes)", height, len(value))
+	return value, true
 }
 
 // --- GetEncryptedSeed recording (by cert hash) ---
