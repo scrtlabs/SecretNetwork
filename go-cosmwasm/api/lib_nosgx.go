@@ -264,6 +264,15 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
 	recorder := GetRecorder()
 	height := recorder.GetCurrentBlockHeight()
+
+	// During node init (height=0), keeper loads stored proofs from state.
+	// On SGX nodes this loads them into the enclave; on non-SGX there's
+	// no enclave, so just skip — the proof already lives in the KV store.
+	if height == 0 {
+		logInfo("OnApproveMachineID", "Skipping at init (height=0, no enclave on non-SGX)")
+		return nil
+	}
+
 	machineIDHex := fmt.Sprintf("%x", machineID)
 
 	// Non-SGX nodes always fetch from the SGX node via gRPC
