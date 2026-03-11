@@ -97,6 +97,16 @@ type Keeper struct {
 	// paramSpace    subspace.Subspace
 	LastMsgManager *baseapp.LastMsgMarkerContainer
 	authority      string
+	// storeKeys maps store key names to the app's registered StoreKey
+	// instances so ApplyCrossModuleOps resolves correct pointers.
+	storeKeys map[string]storetypes.StoreKey
+}
+
+// SetStoreKeys provides the keeper with the app's registered store key
+// instances so ApplyCrossModuleOps can resolve string names to the exact
+// pointers that CacheMultiStore expects.
+func (k *Keeper) SetStoreKeys(keys map[string]storetypes.StoreKey) {
+	k.storeKeys = keys
 }
 
 func moduleLogger(ctx sdk.Context) log.Logger {
@@ -761,7 +771,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	if recorder.IsReplayMode() {
 		crossOps := recorder.GetAndClearPendingCrossModuleOps()
 		if len(crossOps) > 0 {
-			ApplyCrossModuleOps(ctx.MultiStore(), crossOps)
+			ApplyCrossModuleOps(ctx.MultiStore(), k.storeKeys, crossOps)
 		}
 	}
 
@@ -970,7 +980,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if recorder.IsReplayMode() {
 		crossOps := recorder.GetAndClearPendingCrossModuleOps()
 		if len(crossOps) > 0 {
-			ApplyCrossModuleOps(ctx.MultiStore(), crossOps)
+			ApplyCrossModuleOps(ctx.MultiStore(), k.storeKeys, crossOps)
 		}
 	}
 
@@ -1770,7 +1780,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	if recorder.IsReplayMode() {
 		crossOps := recorder.GetAndClearPendingCrossModuleOps()
 		if len(crossOps) > 0 {
-			ApplyCrossModuleOps(ctx.MultiStore(), crossOps)
+			ApplyCrossModuleOps(ctx.MultiStore(), k.storeKeys, crossOps)
 		}
 	}
 
@@ -1889,7 +1899,7 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 	if recorder.IsReplayMode() {
 		crossOps := recorder.GetAndClearPendingCrossModuleOps()
 		if len(crossOps) > 0 {
-			ApplyCrossModuleOps(ctx.MultiStore(), crossOps)
+			ApplyCrossModuleOps(ctx.MultiStore(), k.storeKeys, crossOps)
 		}
 	}
 
@@ -2031,7 +2041,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if recorder.IsReplayMode() {
 		crossOps := recorder.GetAndClearPendingCrossModuleOps()
 		if len(crossOps) > 0 {
-			ApplyCrossModuleOps(ctx.MultiStore(), crossOps)
+			ApplyCrossModuleOps(ctx.MultiStore(), k.storeKeys, crossOps)
 		}
 	}
 

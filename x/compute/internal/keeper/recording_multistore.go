@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	"io"
 
 	storetypes "cosmossdk.io/store/types"
@@ -161,9 +162,18 @@ func cloneBytes(b []byte) []byte {
 // Called by the keeper after wasmer.Execute() in replay mode to apply mutations that
 // query handlers made to other modules' stores during the SGX execution (e.g.,
 // distribution reward withdrawals triggered by staking queries).
-func ApplyCrossModuleOps(ms storetypes.MultiStore, ops []api.CrossModuleOp) {
+//
+// storeKeys maps store key names (e.g. "distribution") to the app's registered
+// StoreKey instances.  CacheMultiStore uses pointer identity for its internal map
+// lookups, so we MUST pass the exact registered pointer — creating a new
+// *KVStoreKey with the same name will silently write to an orphan store.
+func ApplyCrossModuleOps(ms storetypes.MultiStore, storeKeys map[string]storetypes.StoreKey, ops []api.CrossModuleOp) {
 	for _, op := range ops {
-		store := ms.GetKVStore(storetypes.NewKVStoreKey(op.StoreKey))
+		sk, ok := storeKeys[op.StoreKey]
+		if !ok {
+			panic(fmt.Sprintf("ApplyCrossModuleOps: unknown store key %q in cross-module op", op.StoreKey))
+		}
+		store := ms.GetKVStore(sk)
 		if op.IsDelete {
 			store.Delete(op.Key)
 		} else {
