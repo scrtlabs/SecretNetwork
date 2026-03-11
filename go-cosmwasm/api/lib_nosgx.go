@@ -194,14 +194,23 @@ func AnalyzeCode(
 	cache Cache,
 	codeHash []byte,
 ) (*v1types.AnalysisReport, error) {
-	// In replay mode, we don't have the enclave to analyze WASM bytecode.
-	// Return a conservative default: most contracts don't have IBC entry points.
-	// If a contract does have IBC entry points, the missing IBC port will surface
-	// as a separate AppHash divergence that can be addressed.
-	logDebug("AnalyzeCode", "Returning default report (no IBC) for code hash %s", hex.EncodeToString(codeHash))
+	// Fetch the AnalyzeCode result from the SGX node via gRPC.
+	// This is needed because non-SGX nodes don't have the enclave to analyze WASM bytecode,
+	// but must know whether a contract has IBC entry points to register the correct IBC port.
+	client := GetEcallClient()
+	hasIBC, features, err := client.FetchAnalyzeCode(codeHash)
+	if err != nil {
+		logWarn("AnalyzeCode", "Failed to fetch from SGX node for code hash %s: %v, returning default (no IBC)", hex.EncodeToString(codeHash), err)
+		return &v1types.AnalysisReport{
+			HasIBCEntryPoints: false,
+			RequiredFeatures:  "",
+		}, nil
+	}
+
+	logDebug("AnalyzeCode", "Fetched AnalyzeCode for %s: hasIBC=%v features=%s", hex.EncodeToString(codeHash), hasIBC, features)
 	return &v1types.AnalysisReport{
-		HasIBCEntryPoints: false,
-		RequiredFeatures:  "",
+		HasIBCEntryPoints: hasIBC,
+		RequiredFeatures:  features,
 	}, nil
 }
 

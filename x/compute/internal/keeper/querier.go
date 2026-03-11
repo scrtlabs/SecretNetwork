@@ -467,6 +467,28 @@ func (q GrpcQuerier) BlockTraces(c context.Context, req *types.QueryBlockTracesR
 	}, nil
 }
 
+// AnalyzeCode returns the static analysis of a contract's code
+// This is used by non-SGX nodes to determine IBC entry points and required features
+func (q GrpcQuerier) AnalyzeCode(c context.Context, req *types.QueryAnalyzeCodeRequest) (*types.QueryAnalyzeCodeResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if len(req.CodeHash) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "code hash is required")
+	}
+
+	report, err := q.keeper.wasmer.AnalyzeCode(req.CodeHash)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to analyze code: %v", err)
+	}
+
+	return &types.QueryAnalyzeCodeResponse{
+		HasIbcEntryPoints: report.HasIBCEntryPoints,
+		RequiredFeatures:  report.RequiredFeatures,
+	}, nil
+}
+
 func queryContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, keeper Keeper) (*types.ContractInfoWithAddress, error) {
 	info := keeper.GetContractInfo(ctx, contractAddress)
 	if info == nil {

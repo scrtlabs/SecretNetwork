@@ -149,10 +149,30 @@ func (m *QueryBlockTracesResponse) String() string {
 }
 func (m *QueryBlockTracesResponse) ProtoMessage() {}
 
+// QueryAnalyzeCodeRequest matches QueryAnalyzeCodeRequest proto
+type QueryAnalyzeCodeRequest struct {
+	CodeHash []byte `protobuf:"bytes,1,opt,name=code_hash,json=codeHash,proto3" json:"code_hash,omitempty"`
+}
+
+func (m *QueryAnalyzeCodeRequest) Reset()         { *m = QueryAnalyzeCodeRequest{} }
+func (m *QueryAnalyzeCodeRequest) String() string { return fmt.Sprintf("{CodeHash:%x}", m.CodeHash) }
+func (m *QueryAnalyzeCodeRequest) ProtoMessage()  {}
+
+// QueryAnalyzeCodeResponse matches QueryAnalyzeCodeResponse proto
+type QueryAnalyzeCodeResponse struct {
+	HasIBCEntryPoints bool   `protobuf:"varint,1,opt,name=has_ibc_entry_points,json=hasIbcEntryPoints,proto3" json:"has_ibc_entry_points,omitempty"`
+	RequiredFeatures  string `protobuf:"bytes,2,opt,name=required_features,json=requiredFeatures,proto3" json:"required_features,omitempty"`
+}
+
+func (m *QueryAnalyzeCodeResponse) Reset()         { *m = QueryAnalyzeCodeResponse{} }
+func (m *QueryAnalyzeCodeResponse) String() string { return fmt.Sprintf("{HasIBC:%v}", m.HasIBCEntryPoints) }
+func (m *QueryAnalyzeCodeResponse) ProtoMessage()  {}
+
 const (
 	methodEcallRecord   = "/secret.compute.v1beta1.Query/EcallRecord"
 	methodEncryptedSeed = "/secret.compute.v1beta1.Query/EncryptedSeed"
 	methodBlockTraces   = "/secret.compute.v1beta1.Query/BlockTraces"
+	methodAnalyzeCode   = "/secret.compute.v1beta1.Query/AnalyzeCode"
 )
 
 var (
@@ -171,6 +191,8 @@ var (
 	_ proto.Message = (*QueryBlockTracesRequest)(nil)
 	_ proto.Message = (*QueryBlockTracesResponse)(nil)
 	_ proto.Message = (*ExecutionTraceProto)(nil)
+	_ proto.Message = (*QueryAnalyzeCodeRequest)(nil)
+	_ proto.Message = (*QueryAnalyzeCodeResponse)(nil)
 )
 
 // GetEcallClient returns the global ecall client instance
@@ -483,6 +505,19 @@ func (c *EcallClient) FetchBlockTraces(height int64) ([]*ExecutionTrace, error) 
 		logInfo("EcallClient", "Fetched %d traces for block %d", len(traces), height)
 	}
 	return traces, nil
+}
+
+// FetchAnalyzeCode fetches the AnalyzeCode result for a code hash from a random SGX node
+func (c *EcallClient) FetchAnalyzeCode(codeHash []byte) (bool, string, error) {
+	req := &QueryAnalyzeCodeRequest{CodeHash: codeHash}
+	resp := &QueryAnalyzeCodeResponse{}
+
+	if err := c.invokeWithRetry(methodAnalyzeCode, req, resp); err != nil {
+		return false, "", fmt.Errorf("gRPC AnalyzeCode failed for code hash %x: %w", codeHash, err)
+	}
+
+	logInfo("EcallClient", "Fetched AnalyzeCode for %x: hasIBC=%v features=%s", codeHash, resp.HasIBCEntryPoints, resp.RequiredFeatures)
+	return resp.HasIBCEntryPoints, resp.RequiredFeatures, nil
 }
 
 // IsConnected returns true if at least one node is connected
