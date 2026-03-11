@@ -451,16 +451,27 @@ func (c *EcallClient) FetchBlockTraces(height int64) ([]*ExecutionTrace, error) 
 				Value:    value,
 			}
 		}
+		// Convert cross-module ops (e.g., distribution store writes from staking queries)
+		crossOps := make([]CrossModuleOp, len(t.CrossOps))
+		for j, cop := range t.CrossOps {
+			crossOps[j] = CrossModuleOp{
+				StoreKey: cop.StoreKey,
+				Key:      cop.Key,
+				Value:    cop.Value,
+				IsDelete: cop.IsDelete,
+			}
+		}
 		traces[i] = &ExecutionTrace{
 			Index:       t.Index,
 			Ops:         ops,
+			CrossOps:    crossOps,
 			Result:      t.Result,
 			GasUsed:     t.GasUsed,
 			CallbackGas: t.CallbackGas,
 			HasError:    t.HasError,
 			ErrorMsg:    t.ErrorMsg,
 		}
-		logDebug("EcallClient", "Converted trace callbackGas=%d", traces[i].CallbackGas)
+		logDebug("EcallClient", "Converted trace callbackGas=%d crossOps=%d", traces[i].CallbackGas, len(crossOps))
 	}
 
 	if len(traces) > 0 {
