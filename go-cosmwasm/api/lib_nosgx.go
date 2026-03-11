@@ -4,6 +4,7 @@ package api
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -26,7 +27,8 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 }
 
 func SubmitValidatorSetEvidence(evidence []byte) error {
-	return errors.New("submit validator set evidence not supported on non-SGX node")
+	logInfo("SubmitValidatorSetEvidence", "Skipped in replay mode")
+	return nil
 }
 
 func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
@@ -36,7 +38,8 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 type Querier = types.Querier
 
 func MigrationOp(op uint32) (bool, error) {
-	return false, errors.New("MigrationOp not supported on non-SGX node")
+	logInfo("MigrationOp", "Skipped in replay mode")
+	return true, nil // no-op success so upgrade handlers don't fail
 }
 
 func RotateStore(kvs []byte) (bool, error) {
@@ -209,7 +212,27 @@ func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
 }
 
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
-	return nil, errors.New("GetEncryptedSeed not supported on non-SGX node")
+	recorder := GetRecorder()
+	certHash := sha256.Sum256(cert)
+	certHashHex := hex.EncodeToString(certHash[:])
+
+	// Try local DB first
+	if output, found := recorder.ReplayGetEncryptedSeed(certHash[:]); found {
+		return output, nil
+	}
+
+	// Fetch from remote SGX node
+	client := GetEcallClient()
+	output, err := client.FetchEncryptedSeed(certHashHex)
+	if err != nil {
+		return nil, fmt.Errorf("GetEncryptedSeed replay failed: %w", err)
+	}
+
+	// Cache locally
+	if cacheErr := recorder.RecordGetEncryptedSeed(certHash[:], output); cacheErr != nil {
+		logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
+	}
+	return output, nil
 }
 
 func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
