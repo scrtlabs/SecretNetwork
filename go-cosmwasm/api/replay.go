@@ -76,9 +76,24 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 	// Consume exactly the CallbackGas recorded by the SGX node.
 	// Since the store is gas-free, we don't need to reconcile with opsGas.
 	// This makes the replay node's gas meter match the SGX node exactly.
+	//
+	// We wrap this in a deferred recovery because the consumption may panic
+	// with ErrorOutOfGas. On the SGX node, the equivalent panic is caught by
+	// recoverPanic (callbacks.go) inside the CGo boundary and converted to
+	// GoResult_OutOfGas, so Handle returns normally with types.OutOfGasError.
+	// Without this recovery, the panic would propagate directly to runTx,
+	// producing a different ResponseDeliverTx and LastResultsHash mismatch.
 	if gasMeter != nil && trace.CallbackGas > 0 {
 		logDebug("replayExecution", "Consuming exact CallbackGas=%d on real gas meter", trace.CallbackGas)
-		(*gasMeter).ConsumeGas(trace.CallbackGas, "replay callback gas (matching SGX trace)")
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logDebug("replayExecution",
+						"Caught out-of-gas panic during CallbackGas consumption (expected for failed traces)")
+				}
+			}()
+			(*gasMeter).ConsumeGas(trace.CallbackGas, "replay callback gas (matching SGX trace)")
+		}()
 	}
 
 	// Return only compute gasUsed — the keeper's consumeGas will add (gasUsed/1000)+1,
