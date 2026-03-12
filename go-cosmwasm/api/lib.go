@@ -306,10 +306,27 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	defer freeAfterSend(code)
 	errmsg := C.Buffer{}
 	id, err := C.create(cache.ptr, code, &errmsg)
+
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		createErr := errorWithMessage(err, errmsg)
+		// Record the failure so non-SGX nodes can replay it
+		wasmHash := sha256.Sum256(wasm)
+		if recErr := recorder.RecordCreateResult(height, wasmHash[:], nil, createErr.Error()); recErr != nil {
+			logError("Create", "Failed to record Create error: %v", recErr)
+		}
+		return nil, createErr
 	}
-	return receiveVector(id), nil
+
+	codeHash := receiveVector(id)
+	// Record the success
+	wasmHash := sha256.Sum256(wasm)
+	if recErr := recorder.RecordCreateResult(height, wasmHash[:], codeHash, ""); recErr != nil {
+		logError("Create", "Failed to record Create result: %v", recErr)
+	}
+	return codeHash, nil
 }
 
 func GetCode(cache Cache, code_id []byte) ([]byte, error) {

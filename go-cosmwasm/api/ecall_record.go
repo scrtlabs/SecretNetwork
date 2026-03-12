@@ -57,6 +57,7 @@ var (
 	prefixGetEncryptedSeed      = []byte{0x02}
 	prefixExecutionTrace        = []byte{0x03} // For contract execution: prefix | height | index
 	prefixMachineIDProof        = []byte{0x04} // For MachineID approval: prefix | height | machineID
+	prefixCreateResult          = []byte{0x05} // For Create (store code): prefix | height | sha256(wasm)
 )
 
 // CrossModuleOp represents a write to a module store other than the contract's
@@ -711,4 +712,146 @@ func (r *EcallRecorder) PruneOldRecords(currentHeight int64) {
 			logError("EcallRecorder", "Pruning error: %v", err)
 		}
 	}()
+}
+
+// --- Create result recording ---
+
+// CreateResult stores the outcome of an SGX Create call
+type CreateResult struct {
+	CodeHash []byte // The hash returned by the enclave (empty on error)
+	HasError bool
+	ErrorMsg string
+}
+
+// makeCreateResultKey creates a key: prefix | height (8 bytes) | wasmHash (32 bytes)
+func makeCreateResultKey(height int64, wasmHash []byte) []byte {
+	key := make([]byte, len(prefixCreateResult)+8+len(wasmHash))
+	copy(key, prefixCreateResult)
+	binary.BigEndian.PutUint64(key[len(prefixCreateResult):], uint64(height))
+	copy(key[len(prefixCreateResult)+8:], wasmHash)
+	return key
+}
+
+// RecordCreateResult records the result of an SGX Create call
+func (r *EcallRecorder) RecordCreateResult(height int64, wasmHash []byte, codeHash []byte, errMsg string) error {
+	if r.db == nil {
+		return nil
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	result := &CreateResult{
+		CodeHash: codeHash,
+		HasError: errMsg != "",
+		ErrorMsg: errMsg,
+	}
+
+	// Simple encoding: hasError (1 byte) | errMsgLen (4 bytes) | errMsg | codeHash
+	var value []byte
+	if result.HasError {
+		errBytes := []byte(result.ErrorMsg)
+		value = make([]byte, 1+4+len(errBytes))
+		value[0] = 1
+		binary.BigEndian.PutUint32(value[1:5], uint32(len(errBytes)))
+		copy(value[5:], errBytes)
+	} else {
+		value = make([]byte, 1+len(codeHash))
+		value[0] = 0
+		copy(value[1:], codeHash)
+	}
+
+	key := makeCreateResultKey(height, wasmHash)
+	if err := r.db.Set(key, value); err != nil {
+		return fmt.Errorf("failed to write Create result to db: %w", err)
+	}
+
+	logInfo("EcallRecorder", "Recorded Create result for height %d, hasError=%v", height, result.HasError)
+	return nil
+}
+
+// ReplayCreateResult retrieves the recorded Create result
+func (r *EcallRecorder) ReplayCreateResult(height int64, wasmHash []byte) (codeHash []byte, errMsg string, found bool) {
+	if r.db == nil {
+		return nil, "", false
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	key := makeCreateResultKey(height, wasmHash)
+	value, err := r.db.Get(key)
+	if err != nil || value == nil {
+		return nil, "", false
+	}
+
+	if len(value) < 1 {
+		return nil, "", false
+	}
+
+	hasError := value[0] == 1
+	if hasError {
+		if len(value) < 5 {
+			return nil, "", false
+		}
+		errLen := binary.BigEndian.Uint32(value[1:5])
+		if len(value) < 5+int(errLen) {
+			return nil, "", false
+		}
+		return nil, string(value[5 : 5+errLen]), true
+	}
+
+	return value[1:], "", true
+}
+
+// GetAllCreateResultsForBlock returns all Create results recorded for a given block height
+func (r *EcallRecorder) GetAllCreateResultsForBlock(height int64) ([]*CreateResult, [][]byte, error) {
+	if r.db == nil {
+		return nil, nil, nil
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Build prefix for iteration: prefix | height
+	iterPrefix := make([]byte, len(prefixCreateResult)+8)
+	copy(iterPrefix, prefixCreateResult)
+	binary.BigEndian.PutUint64(iterPrefix[len(prefixCreateResult):], uint64(height))
+
+	var results []*CreateResult
+	var wasmHashes [][]byte
+
+	iter, err := r.db.Iterator(iterPrefix, append(iterPrefix[:len(iterPrefix)-1], iterPrefix[len(iterPrefix)-1]+1))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create iterator: %w", err)
+	}
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		value := iter.Value()
+
+		// Extract wasmHash from key (after prefix + height)
+		wasmHash := key[len(prefixCreateResult)+8:]
+		wasmHashCopy := make([]byte, len(wasmHash))
+		copy(wasmHashCopy, wasmHash)
+		wasmHashes = append(wasmHashes, wasmHashCopy)
+
+		result := &CreateResult{}
+		if len(value) >= 1 && value[0] == 1 {
+			result.HasError = true
+			if len(value) >= 5 {
+				errLen := binary.BigEndian.Uint32(value[1:5])
+				if len(value) >= 5+int(errLen) {
+					result.ErrorMsg = string(value[5 : 5+errLen])
+				}
+			}
+		} else if len(value) >= 1 {
+			result.CodeHash = make([]byte, len(value)-1)
+			copy(result.CodeHash, value[1:])
+		}
+		results = append(results, result)
+	}
+
+	return results, wasmHashes, nil
 }

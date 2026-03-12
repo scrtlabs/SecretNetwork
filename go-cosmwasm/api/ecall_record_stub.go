@@ -120,3 +120,21 @@ func (r *EcallRecorder) SetPendingCrossModuleOps(ops []CrossModuleOp)    {}
 func (r *EcallRecorder) AppendCrossModuleOp(op CrossModuleOp)            {}
 func (r *EcallRecorder) GetAndClearPendingCrossModuleOps() []CrossModuleOp { return nil }
 
+// CreateResult stores the outcome of an SGX Create call
+type CreateResult struct {
+	CodeHash []byte
+	HasError bool
+	ErrorMsg string
+}
+
+// Create result recording stubs
+func (r *EcallRecorder) RecordCreateResult(height int64, wasmHash []byte, codeHash []byte, errMsg string) error {
+	return nil
+}
+func (r *EcallRecorder) ReplayCreateResult(height int64, wasmHash []byte) (codeHash []byte, errMsg string, found bool) {
+	return nil, "", false
+}
+func (r *EcallRecorder) GetAllCreateResultsForBlock(height int64) ([]*CreateResult, [][]byte, error) {
+	return nil, nil, nil
+}
+
