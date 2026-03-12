@@ -19,6 +19,7 @@ func GetEcallClient() *EcallClient                                       { retur
 func (c *EcallClient) FetchEcallRecord(int64) (*EcallRecordData, error)  { return nil, nil }
 func (c *EcallClient) FetchEncryptedSeed(string) ([]byte, error)         { return nil, nil }
 func (c *EcallClient) FetchBlockTraces(int64) ([]*ExecutionTrace, error) { return nil, nil }
+func (c *EcallClient) FetchBlockCreateResults(int64) ([]*CreateResult, [][]byte, error) { return nil, nil, nil }
 func (c *EcallClient) Close() error                                      { return nil }
 func (c *EcallClient) SetGrpcAddr(string) error                          { return nil }
 func (c *EcallClient) IsConnected() bool                                 { return false }

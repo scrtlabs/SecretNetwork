@@ -187,12 +187,45 @@ func (m *QueryMachineIDProofResponse) Reset()         { *m = QueryMachineIDProof
 func (m *QueryMachineIDProofResponse) String() string { return fmt.Sprintf("{len:%d}", len(m.Proof)) }
 func (m *QueryMachineIDProofResponse) ProtoMessage()  {}
 
+// CreateResultDataProto matches the proto definition for a Create (MsgStoreCode) result
+type CreateResultDataProto struct {
+	WasmHash []byte `protobuf:"bytes,1,opt,name=wasm_hash,json=wasmHash,proto3" json:"wasm_hash,omitempty"`
+	CodeHash []byte `protobuf:"bytes,2,opt,name=code_hash,json=codeHash,proto3" json:"code_hash,omitempty"`
+	HasError bool   `protobuf:"varint,3,opt,name=has_error,json=hasError,proto3" json:"has_error,omitempty"`
+	ErrorMsg string `protobuf:"bytes,4,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"`
+}
+
+func (m *CreateResultDataProto) Reset()         { *m = CreateResultDataProto{} }
+func (m *CreateResultDataProto) String() string { return fmt.Sprintf("{WasmHash:%x}", m.WasmHash) }
+func (m *CreateResultDataProto) ProtoMessage()  {}
+
+// QueryBlockCreateResultsRequest matches QueryBlockCreateResultsRequest proto
+type QueryBlockCreateResultsRequest struct {
+	Height int64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+}
+
+func (m *QueryBlockCreateResultsRequest) Reset()         { *m = QueryBlockCreateResultsRequest{} }
+func (m *QueryBlockCreateResultsRequest) String() string { return fmt.Sprintf("{Height:%d}", m.Height) }
+func (m *QueryBlockCreateResultsRequest) ProtoMessage()  {}
+
+// QueryBlockCreateResultsResponse matches QueryBlockCreateResultsResponse proto
+type QueryBlockCreateResultsResponse struct {
+	Results []*CreateResultDataProto `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+}
+
+func (m *QueryBlockCreateResultsResponse) Reset() { *m = QueryBlockCreateResultsResponse{} }
+func (m *QueryBlockCreateResultsResponse) String() string {
+	return fmt.Sprintf("{NumResults:%d}", len(m.Results))
+}
+func (m *QueryBlockCreateResultsResponse) ProtoMessage() {}
+
 const (
-	methodEcallRecord     = "/secret.compute.v1beta1.Query/EcallRecord"
-	methodEncryptedSeed   = "/secret.compute.v1beta1.Query/EncryptedSeed"
-	methodBlockTraces     = "/secret.compute.v1beta1.Query/BlockTraces"
-	methodAnalyzeCode     = "/secret.compute.v1beta1.Query/AnalyzeCode"
-	methodMachineIDProof  = "/secret.compute.v1beta1.Query/MachineIDProof"
+	methodEcallRecord          = "/secret.compute.v1beta1.Query/EcallRecord"
+	methodEncryptedSeed        = "/secret.compute.v1beta1.Query/EncryptedSeed"
+	methodBlockTraces          = "/secret.compute.v1beta1.Query/BlockTraces"
+	methodAnalyzeCode          = "/secret.compute.v1beta1.Query/AnalyzeCode"
+	methodMachineIDProof       = "/secret.compute.v1beta1.Query/MachineIDProof"
+	methodBlockCreateResults   = "/secret.compute.v1beta1.Query/BlockCreateResults"
 )
 
 var (
@@ -213,6 +246,9 @@ var (
 	_ proto.Message = (*ExecutionTraceProto)(nil)
 	_ proto.Message = (*QueryAnalyzeCodeRequest)(nil)
 	_ proto.Message = (*QueryAnalyzeCodeResponse)(nil)
+	_ proto.Message = (*CreateResultDataProto)(nil)
+	_ proto.Message = (*QueryBlockCreateResultsRequest)(nil)
+	_ proto.Message = (*QueryBlockCreateResultsResponse)(nil)
 )
 
 // GetEcallClient returns the global ecall client instance
@@ -567,4 +603,30 @@ func (c *EcallClient) IsConnected() bool {
 		}
 	}
 	return false
+}
+
+// FetchBlockCreateResults fetches all Create (MsgStoreCode) results for a block from a random SGX node
+func (c *EcallClient) FetchBlockCreateResults(height int64) ([]*CreateResult, [][]byte, error) {
+	req := &QueryBlockCreateResultsRequest{Height: height}
+	resp := &QueryBlockCreateResultsResponse{}
+
+	if err := c.invokeWithRetry(methodBlockCreateResults, req, resp); err != nil {
+		return nil, nil, fmt.Errorf("gRPC BlockCreateResults failed for height %d: %w", height, err)
+	}
+
+	results := make([]*CreateResult, len(resp.Results))
+	wasmHashes := make([][]byte, len(resp.Results))
+	for i, r := range resp.Results {
+		wasmHashes[i] = r.WasmHash
+		results[i] = &CreateResult{
+			CodeHash: r.CodeHash,
+			HasError: r.HasError,
+			ErrorMsg: r.ErrorMsg,
+		}
+	}
+
+	if len(results) > 0 {
+		logInfo("EcallClient", "Fetched %d Create results for block %d", len(results), height)
+	}
+	return results, wasmHashes, nil
 }

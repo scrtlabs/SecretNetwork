@@ -521,6 +521,45 @@ func (q GrpcQuerier) AnalyzeCode(c context.Context, req *types.QueryAnalyzeCodeR
 	}, nil
 }
 
+// BlockCreateResults returns all Create (MsgStoreCode) results for a block
+// This is used by non-SGX nodes to fetch Create outcomes during sync
+func (q GrpcQuerier) BlockCreateResults(c context.Context, req *types.QueryBlockCreateResultsRequest) (*types.QueryBlockCreateResultsResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.Height <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "height must be positive")
+	}
+
+	// SECURITY: Enforce height restriction - only allow querying heights < current height
+	ctx := sdk.UnwrapSDKContext(c)
+	currentHeight := ctx.BlockHeight()
+	if req.Height >= currentHeight {
+		return nil, status.Errorf(codes.FailedPrecondition, "cannot query block create results for height %d: must be less than current height %d", req.Height, currentHeight)
+	}
+
+	recorder := api.GetRecorder()
+	results, wasmHashes, err := recorder.GetAllCreateResultsForBlock(req.Height)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get create results: %v", err)
+	}
+
+	protoResults := make([]types.CreateResultData, len(results))
+	for i, r := range results {
+		protoResults[i] = types.CreateResultData{
+			WasmHash: wasmHashes[i],
+			CodeHash: r.CodeHash,
+			HasError: r.HasError,
+			ErrorMsg: r.ErrorMsg,
+		}
+	}
+
+	return &types.QueryBlockCreateResultsResponse{
+		Results: protoResults,
+	}, nil
+}
+
 func queryContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, keeper Keeper) (*types.ContractInfoWithAddress, error) {
 	info := keeper.GetContractInfo(ctx, contractAddress)
 	if info == nil {

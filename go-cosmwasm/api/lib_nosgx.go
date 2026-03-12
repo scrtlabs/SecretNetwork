@@ -76,6 +76,42 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 			}
 			return codeHash, nil
 		}
+
+		// Not found locally — fetch all Create results for this block from remote SGX node
+		client := GetEcallClient()
+		if client != nil && client.IsConnected() {
+			maxRetries := 20
+			retryDelay := 50 * time.Millisecond
+			maxDelay := 2 * time.Second
+
+			for attempt := 0; attempt < maxRetries; attempt++ {
+				results, wasmHashes, err := client.FetchBlockCreateResults(height)
+				if err == nil && len(results) > 0 {
+					// Store all fetched results locally
+					for i, r := range results {
+						recorder.RecordCreateResult(height, wasmHashes[i], r.CodeHash, r.ErrorMsg)
+					}
+					// Re-try local lookup
+					codeHash, errMsg, found = recorder.ReplayCreateResult(height, wasmHash[:])
+					if found {
+						logInfo("Create", "Fetched Create result from SGX node: height=%d (attempt %d)", height, attempt+1)
+						if errMsg != "" {
+							return nil, fmt.Errorf("%s", errMsg)
+						}
+						return codeHash, nil
+					}
+				}
+
+				if attempt < maxRetries-1 {
+					delay := retryDelay * time.Duration(1<<uint(attempt))
+					if delay > maxDelay {
+						delay = maxDelay
+					}
+					time.Sleep(delay)
+				}
+			}
+			logWarn("Create", "Create result NOT FOUND after retries: height=%d wasmHash=%x", height, wasmHash[:8])
+		}
 	}
 
 	// Known failed MsgStoreCode transactions (SGX rejected these).
