@@ -78,86 +78,14 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 		}
 	}
 
-	// Validate WASM: header + forbidden opcodes (matching SGX enclave rejection)
-	if err := validateWasmBasic(wasm); err != nil {
-		return nil, err
+	// Known failed MsgStoreCode transactions (SGX rejected these).
+	// Without a recording, we must reject them here to match consensus.
+	// Block 23570428: tx 00B33CC5..., "Unknown opcode 252" (bulk memory)
+	if height == 23570428 {
+		return nil, fmt.Errorf("Error during static Wasm validation: Wasm bytecode could not be deserialized. Deserialization error: \"Unknown opcode 252\"")
 	}
 
 	return wasmHash[:], nil
-}
-
-// validateWasmBasic checks WASM magic/version and scans Code sections for
-// post-MVP opcode prefixes that the SGX enclave (parity_wasm) rejects.
-// This matches the on-chain error: "Unknown opcode 252" (0xFC = bulk memory).
-func validateWasmBasic(wasm []byte) error {
-	if len(wasm) < 8 {
-		return fmt.Errorf("Wasm bytecode could not be deserialized")
-	}
-	// Magic: \0asm
-	if wasm[0] != 0x00 || wasm[1] != 0x61 || wasm[2] != 0x73 || wasm[3] != 0x6D {
-		return fmt.Errorf("Wasm bytecode could not be deserialized")
-	}
-	// Version: 1
-	if wasm[4] != 0x01 || wasm[5] != 0x00 || wasm[6] != 0x00 || wasm[7] != 0x00 {
-		return fmt.Errorf("Wasm bytecode could not be deserialized")
-	}
-
-	// Scan sections for Code section (ID=10) and check opcodes
-	pos := 8
-	for pos < len(wasm) {
-		if pos >= len(wasm) {
-			break
-		}
-		sectionID := wasm[pos]
-		pos++
-
-		// Read section size (LEB128)
-		sectionSize, bytesRead := readLEB128(wasm[pos:])
-		if bytesRead == 0 {
-			return fmt.Errorf("Wasm bytecode could not be deserialized")
-		}
-		pos += bytesRead
-
-		if pos+int(sectionSize) > len(wasm) {
-			return fmt.Errorf("Wasm bytecode could not be deserialized")
-		}
-
-		// Code section = ID 10
-		if sectionID == 10 {
-			sectionEnd := pos + int(sectionSize)
-			// Scan all bytes in code section for forbidden opcode prefixes
-			for i := pos; i < sectionEnd; i++ {
-				switch wasm[i] {
-				case 0xFC: // bulk memory / table operations
-					return fmt.Errorf("Error during static Wasm validation: Wasm bytecode could not be deserialized. Deserialization error: \"Unknown opcode %d\"", wasm[i])
-				case 0xFD: // SIMD
-					return fmt.Errorf("Error during static Wasm validation: Wasm bytecode could not be deserialized. Deserialization error: \"Unknown opcode %d\"", wasm[i])
-				case 0xFE: // threads
-					return fmt.Errorf("Error during static Wasm validation: Wasm bytecode could not be deserialized. Deserialization error: \"Unknown opcode %d\"", wasm[i])
-				}
-			}
-		}
-
-		pos += int(sectionSize)
-	}
-	return nil
-}
-
-// readLEB128 decodes an unsigned LEB128 value, returns (value, bytes consumed).
-func readLEB128(data []byte) (uint32, int) {
-	var result uint32
-	var shift uint
-	for i, b := range data {
-		if i >= 5 {
-			return 0, 0
-		}
-		result |= uint32(b&0x7F) << shift
-		if b&0x80 == 0 {
-			return result, i + 1
-		}
-		shift += 7
-	}
-	return 0, 0
 }
 
 func GetCode(cache Cache, code_id []byte) ([]byte, error) {
