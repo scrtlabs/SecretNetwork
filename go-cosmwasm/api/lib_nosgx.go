@@ -3,6 +3,7 @@
 package api
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -87,18 +88,16 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 			for attempt := 0; attempt < maxRetries; attempt++ {
 				results, wasmHashes, err := client.FetchBlockCreateResults(height)
 				if err == nil && len(results) > 0 {
-					// Store all fetched results locally
-					for i, r := range results {
-						recorder.RecordCreateResult(height, wasmHashes[i], r.CodeHash, r.ErrorMsg)
-					}
-					// Re-try local lookup
-					codeHash, errMsg, found = recorder.ReplayCreateResult(height, wasmHash[:])
-					if found {
-						logInfo("Create", "Fetched Create result from SGX node: height=%d (attempt %d)", height, attempt+1)
-						if errMsg != "" {
-							return nil, fmt.Errorf("%s", errMsg)
+					// Match wasmHash directly from fetched results (no DB round-trip needed)
+					for i, fetchedHash := range wasmHashes {
+						if bytes.Equal(fetchedHash, wasmHash[:]) {
+							r := results[i]
+							logInfo("Create", "Matched Create result from SGX node: height=%d hasError=%v (attempt %d)", height, r.HasError, attempt+1)
+							if r.HasError {
+								return nil, fmt.Errorf("%s", r.ErrorMsg)
+							}
+							return r.CodeHash, nil
 						}
-						return codeHash, nil
 					}
 				}
 
