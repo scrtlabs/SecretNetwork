@@ -383,9 +383,13 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 	}
 
 	recorder := api.GetRecorder()
-	encryptedSeed, found := recorder.ReplayGetEncryptedSeed(certHash)
+	encryptedSeed, errMsg, found := recorder.ReplayGetEncryptedSeed(certHash)
 	if !found {
 		return nil, status.Error(codes.NotFound, "no encrypted seed found for the given certificate hash")
+	}
+	if errMsg != "" {
+		// Return the recorded error message so non-SGX nodes can replay the exact same error
+		return nil, status.Error(codes.FailedPrecondition, errMsg)
 	}
 
 	return &types.QueryEncryptedSeedResponse{

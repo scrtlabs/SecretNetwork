@@ -58,6 +58,7 @@ var (
 	prefixExecutionTrace        = []byte{0x03} // For contract execution: prefix | height | index
 	prefixMachineIDProof        = []byte{0x04} // For MachineID approval: prefix | height | machineID
 	prefixCreateResult          = []byte{0x05} // For Create (store code): prefix | height | sha256(wasm)
+	prefixGetEncryptedSeedErr   = []byte{0x06} // For GetEncryptedSeed errors: prefix | certHash
 )
 
 // CrossModuleOp represents a write to a module store other than the contract's
@@ -384,10 +385,10 @@ func (r *EcallRecorder) ReplayMachineIDProof(height int64, machineID []byte) (pr
 
 // --- GetEncryptedSeed recording (by cert hash) ---
 
-// RecordGetEncryptedSeed records the GetEncryptedSeed ecall output
+// RecordGetEncryptedSeed records the GetEncryptedSeed ecall output (success case)
+// Value format: raw output bytes (backward compatible with old entries)
 func (r *EcallRecorder) RecordGetEncryptedSeed(certHash []byte, output []byte) error {
 	if r.db == nil {
-		// Storing is disabled (opt-in feature) - silently skip
 		return nil
 	}
 
@@ -399,27 +400,56 @@ func (r *EcallRecorder) RecordGetEncryptedSeed(certHash []byte, output []byte) e
 		return fmt.Errorf("failed to write to db: %w", err)
 	}
 
-	logInfo("EcallRecorder", "Recorded GetEncryptedSeed (%d bytes)", len(output))
+	logInfo("EcallRecorder", "Recorded GetEncryptedSeed success (%d bytes)", len(output))
+	return nil
+}
+
+// RecordGetEncryptedSeedError records a failed GetEncryptedSeed ecall with its error message
+// Uses a separate key prefix (0x06) so it doesn't conflict with success entries
+func (r *EcallRecorder) RecordGetEncryptedSeedError(certHash []byte, errMsg string) error {
+	if r.db == nil {
+		return nil
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	key := append(prefixGetEncryptedSeedErr, certHash...)
+	if err := r.db.Set(key, []byte(errMsg)); err != nil {
+		return fmt.Errorf("failed to write error to db: %w", err)
+	}
+
+	logInfo("EcallRecorder", "Recorded GetEncryptedSeed error: %s", errMsg)
 	return nil
 }
 
 // ReplayGetEncryptedSeed retrieves recorded GetEncryptedSeed data
-func (r *EcallRecorder) ReplayGetEncryptedSeed(certHash []byte) (output []byte, found bool) {
+// Returns (output, "", true) on recorded success, (nil, errMsg, true) on recorded error, (nil, "", false) if not found
+func (r *EcallRecorder) ReplayGetEncryptedSeed(certHash []byte) (output []byte, errMsg string, found bool) {
 	if r.db == nil {
-		return nil, false
+		return nil, "", false
 	}
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
+	// Check for error entry first (separate key prefix)
+	errKey := append(prefixGetEncryptedSeedErr, certHash...)
+	errVal, err := r.db.Get(errKey)
+	if err == nil && errVal != nil && len(errVal) > 0 {
+		logInfo("EcallRecorder", "Replayed GetEncryptedSeed error")
+		return nil, string(errVal), true
+	}
+
+	// Check for success entry
 	key := append(prefixGetEncryptedSeed, certHash...)
 	value, err := r.db.Get(key)
 	if err != nil || value == nil {
-		return nil, false
+		return nil, "", false
 	}
 
-	logInfo("EcallRecorder", "Replayed GetEncryptedSeed (%d bytes)", len(value))
-	return value, true
+	logInfo("EcallRecorder", "Replayed GetEncryptedSeed success (%d bytes)", len(value))
+	return value, "", true
 }
 
 // --- ExecutionTrace recording (for contract executions) ---

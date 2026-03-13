@@ -15,7 +15,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 // EcallClient fetches ecall records from remote SGX nodes via gRPC
@@ -463,6 +465,14 @@ func (c *EcallClient) invokeWithRetry(method string, req, resp proto.Message) er
 			return nil
 		}
 
+		// Don't retry on non-transient gRPC errors
+		if st, ok := status.FromError(err); ok {
+			switch st.Code() {
+			case codes.FailedPrecondition, codes.NotFound, codes.InvalidArgument, codes.PermissionDenied:
+				return err // Return immediately, don't retry semantic errors
+			}
+		}
+
 		lastErr = err
 		c.markNodeFailed(nodeAddr)
 		logWarn("EcallClient", "Request to %s failed (attempt %d/%d): %v", nodeAddr, attempt+1, maxRetries, err)
@@ -497,7 +507,7 @@ func (c *EcallClient) FetchEncryptedSeed(certHashHex string) ([]byte, error) {
 	resp := &QueryEncryptedSeedResponse{}
 
 	if err := c.invokeWithRetry(methodEncryptedSeed, req, resp); err != nil {
-		return nil, fmt.Errorf("gRPC EncryptedSeed failed: %w", err)
+		return nil, err // Return raw error to preserve gRPC status codes
 	}
 
 	logInfo("EcallClient", "Fetched encrypted seed (%d bytes)", len(resp.EncryptedSeed))

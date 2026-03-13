@@ -12,6 +12,9 @@ import (
 
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Cache struct{}
@@ -295,7 +298,11 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	certHashHex := hex.EncodeToString(certHash[:])
 
 	// Try local DB first
-	if output, found := recorder.ReplayGetEncryptedSeed(certHash[:]); found {
+	if output, errMsg, found := recorder.ReplayGetEncryptedSeed(certHash[:]); found {
+		if errMsg != "" {
+			// Replay the exact same error the SGX enclave produced
+			return nil, fmt.Errorf("%s", errMsg)
+		}
 		return output, nil
 	}
 
@@ -303,6 +310,15 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	client := GetEcallClient()
 	output, err := client.FetchEncryptedSeed(certHashHex)
 	if err != nil {
+		// Check if this is a FailedPrecondition error (recorded error from SGX node)
+		if st, ok := status.FromError(err); ok && st.Code() == codes.FailedPrecondition {
+			// The SGX node recorded the enclave error - cache and replay it
+			enclaveErrMsg := st.Message()
+			if cacheErr := recorder.RecordGetEncryptedSeedError(certHash[:], enclaveErrMsg); cacheErr != nil {
+				logError("GetEncryptedSeed", "Failed to cache error: %v", cacheErr)
+			}
+			return nil, fmt.Errorf("%s", enclaveErrMsg)
+		}
 		return nil, fmt.Errorf("GetEncryptedSeed replay failed: %w", err)
 	}
 
