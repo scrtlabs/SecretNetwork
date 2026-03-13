@@ -821,7 +821,13 @@ func (r *EcallRecorder) GetAllCreateResultsForBlock(height int64) ([]*CreateResu
 	var results []*CreateResult
 	var wasmHashes [][]byte
 
-	iter, err := r.db.Iterator(iterPrefix, append(iterPrefix[:len(iterPrefix)-1], iterPrefix[len(iterPrefix)-1]+1))
+	// Build end key: increment the last byte of the height to get next height prefix
+	// IMPORTANT: Must copy to avoid mutating iterPrefix via shared backing array
+	iterEnd := make([]byte, len(iterPrefix))
+	copy(iterEnd, iterPrefix)
+	iterEnd[len(iterEnd)-1]++
+
+	iter, err := r.db.Iterator(iterPrefix, iterEnd)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create iterator: %w", err)
 	}
