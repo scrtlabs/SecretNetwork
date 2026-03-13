@@ -116,17 +116,6 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 		}
 	}
 
-	// Known failed MsgStoreCode transactions (SGX rejected these).
-	// Without a recording, we must reject them here to match consensus.
-	switch height {
-	case 23570428, // tx 00B33CC5..., "Unknown opcode 252"
-		23570538,  // tx FDD8213C...
-		23570819,  // tx C0F65C56...
-		23571940,  // tx 30043C55...
-		23572126:  // tx ACCDBCFA...
-		return nil, fmt.Errorf("Error during static Wasm validation: Wasm bytecode could not be deserialized. Deserialization error: \"Unknown opcode 252\"")
-	}
-
 	return wasmHash[:], nil
 }
 
