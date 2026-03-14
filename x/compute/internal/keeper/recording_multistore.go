@@ -55,11 +55,60 @@ func (rms *RecordingMultiStore) GetStore(key storetypes.StoreKey) storetypes.Sto
 }
 
 func (rms *RecordingMultiStore) CacheMultiStore() storetypes.CacheMultiStore {
-	return rms.MultiStore.CacheMultiStore()
+	inner := rms.MultiStore.CacheMultiStore()
+	return &RecordingCacheMultiStore{
+		MultiStore:   inner,
+		inner:        inner,
+		recorder:        rms.recorder,
+		excludedKeys:    rms.excludedKeys,
+	}
 }
 
 func (rms *RecordingMultiStore) CacheMultiStoreWithVersion(version int64) (storetypes.CacheMultiStore, error) {
-	return rms.MultiStore.CacheMultiStoreWithVersion(version)
+	inner, err := rms.MultiStore.CacheMultiStoreWithVersion(version)
+	if err != nil {
+		return nil, err
+	}
+	return &RecordingCacheMultiStore{
+		MultiStore:   inner,
+		inner:        inner,
+		recorder:        rms.recorder,
+		excludedKeys:    rms.excludedKeys,
+	}, nil
+}
+
+// RecordingCacheMultiStore wraps a CacheMultiStore with recording, so that
+// writes through branched contexts (e.g. bank module SendCoins) are captured
+// by the cross-module recording.
+type RecordingCacheMultiStore struct {
+	storetypes.MultiStore // embed MultiStore interface for read-through
+	inner        storetypes.CacheMultiStore
+	recorder     *api.EcallRecorder
+	excludedKeys map[string]bool
+}
+
+func (rcms *RecordingCacheMultiStore) Write() {
+	rcms.inner.Write()
+}
+
+func (rcms *RecordingCacheMultiStore) GetKVStore(key storetypes.StoreKey) storetypes.KVStore {
+	inner := rcms.inner.GetKVStore(key)
+	if rcms.excludedKeys[key.Name()] {
+		return inner
+	}
+	return &RecordingKVStore{
+		KVStore:  inner,
+		storeKey: key.Name(),
+		recorder: rcms.recorder,
+	}
+}
+
+func (rcms *RecordingCacheMultiStore) CacheMultiStore() storetypes.CacheMultiStore {
+	return rcms.inner.CacheMultiStore()
+}
+
+func (rcms *RecordingCacheMultiStore) CacheMultiStoreWithVersion(version int64) (storetypes.CacheMultiStore, error) {
+	return rcms.inner.CacheMultiStoreWithVersion(version)
 }
 
 func (rms *RecordingMultiStore) CacheWrap() storetypes.CacheWrap {

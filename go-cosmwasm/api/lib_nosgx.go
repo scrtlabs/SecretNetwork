@@ -112,10 +112,12 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 					time.Sleep(delay)
 				}
 			}
-			logWarn("Create", "Create result NOT FOUND after retries: height=%d wasmHash=%x", height, wasmHash[:8])
+ 			return nil, fmt.Errorf("Create replay FAILED: could not fetch code hash from SGX node after retries (height=%d, wasmHash=%x)", height, wasmHash[:8])
 		}
+		return nil, fmt.Errorf("Create replay FAILED: no EcallClient connection (height=%d, wasmHash=%x)", height, wasmHash[:8])
 	}
 
+	// Non-replay mode (e.g. secretcli): no enclave available, use sha256 of wasm
 	return wasmHash[:], nil
 }
 
@@ -125,7 +127,7 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 
 func Migrate(
 	cache Cache,
-	code_id []byte,
+	code_id []byte,RaAuthenticate
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
@@ -250,21 +252,32 @@ func AnalyzeCode(
 	// Fetch the AnalyzeCode result from the SGX node via gRPC.
 	// This is needed because non-SGX nodes don't have the enclave to analyze WASM bytecode,
 	// but must know whether a contract has IBC entry points to register the correct IBC port.
+	// This flag directly affects state (IBC port creation), so we MUST retry and fail loudly.
 	client := GetEcallClient()
-	hasIBC, features, err := client.FetchAnalyzeCode(codeHash)
-	if err != nil {
-		logWarn("AnalyzeCode", "Failed to fetch from SGX node for code hash %s: %v, returning default (no IBC)", hex.EncodeToString(codeHash), err)
-		return &v1types.AnalysisReport{
-			HasIBCEntryPoints: false,
-			RequiredFeatures:  "",
-		}, nil
-	}
+	maxRetries := 20
+	retryDelay := 50 * time.Millisecond
+	maxDelay := 2 * time.Second
+	var lastErr error
 
-	logDebug("AnalyzeCode", "Fetched AnalyzeCode for %s: hasIBC=%v features=%s", hex.EncodeToString(codeHash), hasIBC, features)
-	return &v1types.AnalysisReport{
-		HasIBCEntryPoints: hasIBC,
-		RequiredFeatures:  features,
-	}, nil
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		hasIBC, features, err := client.FetchAnalyzeCode(codeHash)
+		if err == nil {
+			logDebug("AnalyzeCode", "Fetched AnalyzeCode for %s: hasIBC=%v features=%s", hex.EncodeToString(codeHash), hasIBC, features)
+			return &v1types.AnalysisReport{
+				HasIBCEntryPoints: hasIBC,
+				RequiredFeatures:  features,
+			}, nil
+		}
+		lastErr = err
+		if attempt < maxRetries-1 {
+			delay := retryDelay * time.Duration(1<<uint(attempt))
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+			time.Sleep(delay)
+		}
+	}
+	return nil, fmt.Errorf("AnalyzeCode: failed after %d retries for code hash %s: %v", maxRetries, hex.EncodeToString(codeHash), lastErr)
 }
 
 func KeyGen() ([]byte, error) {
@@ -282,6 +295,7 @@ func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
 }
 
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
+	logDebug("GetEncryptedSeed", "REPLAY mode: certHash=%s", hex.EncodeToString(cert))
 	recorder := GetRecorder()
 	certHash := sha256.Sum256(cert)
 	certHashHex := hex.EncodeToString(certHash[:])
@@ -295,10 +309,25 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 		return output, nil
 	}
 
-	// Fetch from remote SGX node
+	// Fetch from remote SGX node with retries (the SGX node may still be
+	// processing the same block and recording the seed when we query)
 	client := GetEcallClient()
-	output, err := client.FetchEncryptedSeed(certHashHex)
-	if err != nil {
+	maxRetries := 20
+	retryDelay := 50 * time.Millisecond
+	maxDelay := 2 * time.Second
+
+	var lastErr error
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		output, err := client.FetchEncryptedSeed(certHashHex)
+		if err == nil {
+			logInfo("GetEncryptedSeed", "Fetched seed from SGX node (attempt %d)", attempt+1)
+			// Cache locally
+			if cacheErr := recorder.RecordGetEncryptedSeed(certHash[:], output); cacheErr != nil {
+				logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
+			}
+			return output, nil
+		}
+
 		// Check if this is a FailedPrecondition error (recorded error from SGX node)
 		if st, ok := status.FromError(err); ok && st.Code() == codes.FailedPrecondition {
 			// The SGX node recorded the enclave error - cache and replay it
@@ -308,14 +337,32 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 			}
 			return nil, fmt.Errorf("%s", enclaveErrMsg)
 		}
-		return nil, fmt.Errorf("GetEncryptedSeed replay failed: %w", err)
+
+		lastErr = err
+
+		// For NotFound, the SGX node may not have recorded yet — retry
+		if st, ok := status.FromError(err); ok && st.Code() == codes.NotFound {
+			if attempt < maxRetries-1 {
+				time.Sleep(retryDelay)
+				retryDelay *= 2
+				if retryDelay > maxDelay {
+					retryDelay = maxDelay
+				}
+			}
+			continue
+		}
+
+		// For other errors (connection issues etc.), also retry
+		if attempt < maxRetries-1 {
+			time.Sleep(retryDelay)
+			retryDelay *= 2
+			if retryDelay > maxDelay {
+				retryDelay = maxDelay
+			}
+		}
 	}
 
-	// Cache locally
-	if cacheErr := recorder.RecordGetEncryptedSeed(certHash[:], output); cacheErr != nil {
-		logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
-	}
-	return output, nil
+	return nil, fmt.Errorf("GetEncryptedSeed: failed after %d retries for cert hash %s: %v", maxRetries, certHashHex, lastErr)
 }
 
 func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
