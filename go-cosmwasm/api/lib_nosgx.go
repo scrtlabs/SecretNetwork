@@ -112,7 +112,7 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 					time.Sleep(delay)
 				}
 			}
- 			return nil, fmt.Errorf("Create replay FAILED: could not fetch code hash from SGX node after retries (height=%d, wasmHash=%x)", height, wasmHash[:8])
+			return nil, fmt.Errorf("Create replay FAILED: could not fetch code hash from SGX node after retries (height=%d, wasmHash=%x)", height, wasmHash[:8])
 		}
 		return nil, fmt.Errorf("Create replay FAILED: no EcallClient connection (height=%d, wasmHash=%x)", height, wasmHash[:8])
 	}
@@ -127,7 +127,7 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 
 func Migrate(
 	cache Cache,
-	code_id []byte,RaAuthenticate
+	code_id []byte,
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
