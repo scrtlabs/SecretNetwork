@@ -880,6 +880,9 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	certHash := sha256.Sum256(cert)
 	certHashHex := hex.EncodeToString(certHash[:])
 
+	logInfo("GetEncryptedSeed", "SGX called: certHashHex=%s certLen=%d replayMode=%v",
+		certHashHex, len(cert), recorder.IsReplayMode())
+
 	if recorder.IsReplayMode() {
 		// Try local DB first
 		if output, errMsg, found := recorder.ReplayGetEncryptedSeed(certHash[:]); found {
@@ -911,6 +914,7 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	res, err := C.get_encrypted_seed(certSlice, &errmsg)
 	if err != nil {
 		enclaveErr := errorWithMessage(err, errmsg)
+		logInfo("GetEncryptedSeed", "SGX enclave FAILED for %s: %v", certHashHex, enclaveErr)
 		// Record the error so non-SGX nodes can replay the exact same message
 		if recErr := recorder.RecordGetEncryptedSeedError(certHash[:], enclaveErr.Error()); recErr != nil {
 			logError("GetEncryptedSeed", "Failed to record error: %v", recErr)
@@ -919,8 +923,11 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	}
 
 	output := receiveVector(res)
+	logInfo("GetEncryptedSeed", "SGX enclave SUCCESS for %s (%d bytes), recording...", certHashHex, len(output))
 	if err := recorder.RecordGetEncryptedSeed(certHash[:], output); err != nil {
 		logError("GetEncryptedSeed", "Failed to record: %v", err)
+	} else {
+		logInfo("GetEncryptedSeed", "Recorded GetEncryptedSeed for %s OK", certHashHex)
 	}
 	return output, nil
 }

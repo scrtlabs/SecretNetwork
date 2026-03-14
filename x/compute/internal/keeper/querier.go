@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sort"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -376,6 +377,8 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 		return nil, status.Error(codes.InvalidArgument, "cert_hash is required")
 	}
 
+	fmt.Printf("[INFO] gRPC EncryptedSeed query: certHash=%s\n", req.CertHash)
+
 	// Decode hex string to bytes
 	certHash, err := hex.DecodeString(req.CertHash)
 	if err != nil {
@@ -385,12 +388,16 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 	recorder := api.GetRecorder()
 	encryptedSeed, errMsg, found := recorder.ReplayGetEncryptedSeed(certHash)
 	if !found {
+		fmt.Printf("[INFO] gRPC EncryptedSeed: NOT FOUND in DB for certHash=%s\n", req.CertHash)
 		return nil, status.Error(codes.NotFound, "no encrypted seed found for the given certificate hash")
 	}
 	if errMsg != "" {
+		fmt.Printf("[INFO] gRPC EncryptedSeed: found recorded ERROR for certHash=%s: %s\n", req.CertHash, errMsg)
 		// Return the recorded error message so non-SGX nodes can replay the exact same error
 		return nil, status.Error(codes.FailedPrecondition, errMsg)
 	}
+
+	fmt.Printf("[INFO] gRPC EncryptedSeed: found SUCCESS for certHash=%s seedLen=%d\n", req.CertHash, len(encryptedSeed))
 
 	return &types.QueryEncryptedSeedResponse{
 		EncryptedSeed: encryptedSeed,
