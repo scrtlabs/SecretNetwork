@@ -383,11 +383,29 @@ func (r *EcallRecorder) ReplayMachineIDProof(height int64, machineID []byte) (pr
 	return value, true
 }
 
-// --- GetEncryptedSeed recording (by cert hash) ---
+// --- GetEncryptedSeed recording (by height + cert hash) ---
+
+// makeSeedKey creates a key: prefix(1) | height(8) | certHash
+func makeSeedKey(height int64, certHash []byte) []byte {
+	key := make([]byte, 1+8+len(certHash))
+	key[0] = prefixGetEncryptedSeed[0]
+	binary.BigEndian.PutUint64(key[1:9], uint64(height))
+	copy(key[9:], certHash)
+	return key
+}
+
+// makeSeedErrKey creates a key: prefix(1) | height(8) | certHash
+func makeSeedErrKey(height int64, certHash []byte) []byte {
+	key := make([]byte, 1+8+len(certHash))
+	key[0] = prefixGetEncryptedSeedErr[0]
+	binary.BigEndian.PutUint64(key[1:9], uint64(height))
+	copy(key[9:], certHash)
+	return key
+}
 
 // RecordGetEncryptedSeed records the GetEncryptedSeed ecall output (success case)
-// Value format: raw output bytes (backward compatible with old entries)
-func (r *EcallRecorder) RecordGetEncryptedSeed(certHash []byte, output []byte) error {
+// Key format: prefix(1) | height(8) | certHash
+func (r *EcallRecorder) RecordGetEncryptedSeed(height int64, certHash []byte, output []byte) error {
 	if r.db == nil {
 		return nil
 	}
@@ -395,18 +413,18 @@ func (r *EcallRecorder) RecordGetEncryptedSeed(certHash []byte, output []byte) e
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	key := append(prefixGetEncryptedSeed, certHash...)
+	key := makeSeedKey(height, certHash)
 	if err := r.db.Set(key, output); err != nil {
 		return fmt.Errorf("failed to write to db: %w", err)
 	}
 
-	logInfo("EcallRecorder", "Recorded GetEncryptedSeed success (%d bytes)", len(output))
+	logInfo("EcallRecorder", "Recorded GetEncryptedSeed success at height %d (%d bytes)", height, len(output))
 	return nil
 }
 
 // RecordGetEncryptedSeedError records a failed GetEncryptedSeed ecall with its error message
-// Uses a separate key prefix (0x06) so it doesn't conflict with success entries
-func (r *EcallRecorder) RecordGetEncryptedSeedError(certHash []byte, errMsg string) error {
+// Key format: prefix(1) | height(8) | certHash
+func (r *EcallRecorder) RecordGetEncryptedSeedError(height int64, certHash []byte, errMsg string) error {
 	if r.db == nil {
 		return nil
 	}
@@ -414,18 +432,18 @@ func (r *EcallRecorder) RecordGetEncryptedSeedError(certHash []byte, errMsg stri
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	key := append(prefixGetEncryptedSeedErr, certHash...)
+	key := makeSeedErrKey(height, certHash)
 	if err := r.db.Set(key, []byte(errMsg)); err != nil {
 		return fmt.Errorf("failed to write error to db: %w", err)
 	}
 
-	logInfo("EcallRecorder", "Recorded GetEncryptedSeed error: %s", errMsg)
+	logInfo("EcallRecorder", "Recorded GetEncryptedSeed error at height %d: %s", height, errMsg)
 	return nil
 }
 
-// ReplayGetEncryptedSeed retrieves recorded GetEncryptedSeed data
+// ReplayGetEncryptedSeed retrieves recorded GetEncryptedSeed data for a given height
 // Returns (output, "", true) on recorded success, (nil, errMsg, true) on recorded error, (nil, "", false) if not found
-func (r *EcallRecorder) ReplayGetEncryptedSeed(certHash []byte) (output []byte, errMsg string, found bool) {
+func (r *EcallRecorder) ReplayGetEncryptedSeed(height int64, certHash []byte) (output []byte, errMsg string, found bool) {
 	if r.db == nil {
 		return nil, "", false
 	}
@@ -434,21 +452,21 @@ func (r *EcallRecorder) ReplayGetEncryptedSeed(certHash []byte) (output []byte, 
 	defer r.mu.RUnlock()
 
 	// Check for error entry first (separate key prefix)
-	errKey := append(prefixGetEncryptedSeedErr, certHash...)
+	errKey := makeSeedErrKey(height, certHash)
 	errVal, err := r.db.Get(errKey)
 	if err == nil && errVal != nil && len(errVal) > 0 {
-		logInfo("EcallRecorder", "Replayed GetEncryptedSeed error")
+		logInfo("EcallRecorder", "Replayed GetEncryptedSeed error at height %d", height)
 		return nil, string(errVal), true
 	}
 
 	// Check for success entry
-	key := append(prefixGetEncryptedSeed, certHash...)
+	key := makeSeedKey(height, certHash)
 	value, err := r.db.Get(key)
 	if err != nil || value == nil {
 		return nil, "", false
 	}
 
-	logInfo("EcallRecorder", "Replayed GetEncryptedSeed success (%d bytes)", len(value))
+	logInfo("EcallRecorder", "Replayed GetEncryptedSeed success at height %d (%d bytes)", height, len(value))
 	return value, "", true
 }
 
@@ -691,21 +709,26 @@ func (r *EcallRecorder) DeleteRecordsBeforeHeight(height int64) error {
 	batch := r.db.NewBatch()
 	defer batch.Close()
 
-	startKey := makeBlockKey(prefixSubmitBlockSignatures, 0)
-	endKey := makeBlockKey(prefixSubmitBlockSignatures, height)
-
-	iter, err := r.db.Iterator(startKey, endKey)
-	if err != nil {
-		return err
-	}
-	defer iter.Close()
-
 	count := 0
-	for ; iter.Valid(); iter.Next() {
-		if err := batch.Delete(iter.Key()); err != nil {
+
+	// Prune all height-keyed prefixes: block signatures, seeds, seed errors
+	for _, prefix := range [][]byte{prefixSubmitBlockSignatures, prefixGetEncryptedSeed, prefixGetEncryptedSeedErr} {
+		startKey := makeBlockKey(prefix, 0)
+		endKey := makeBlockKey(prefix, height)
+
+		iter, err := r.db.Iterator(startKey, endKey)
+		if err != nil {
 			return err
 		}
-		count++
+
+		for ; iter.Valid(); iter.Next() {
+			if err := batch.Delete(iter.Key()); err != nil {
+				iter.Close()
+				return err
+			}
+			count++
+		}
+		iter.Close()
 	}
 
 	if err := batch.Write(); err != nil {

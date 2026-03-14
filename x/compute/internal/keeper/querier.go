@@ -377,7 +377,7 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 		return nil, status.Error(codes.InvalidArgument, "cert_hash is required")
 	}
 
-	fmt.Printf("[INFO] gRPC EncryptedSeed query: certHash=%s\n", req.CertHash)
+	fmt.Printf("[INFO] gRPC EncryptedSeed query: certHash=%s height=%d\n", req.CertHash, req.Height)
 
 	// Decode hex string to bytes
 	certHash, err := hex.DecodeString(req.CertHash)
@@ -386,18 +386,18 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 	}
 
 	recorder := api.GetRecorder()
-	encryptedSeed, errMsg, found := recorder.ReplayGetEncryptedSeed(certHash)
+	encryptedSeed, errMsg, found := recorder.ReplayGetEncryptedSeed(req.Height, certHash)
 	if !found {
-		fmt.Printf("[INFO] gRPC EncryptedSeed: NOT FOUND in DB for certHash=%s\n", req.CertHash)
+		fmt.Printf("[INFO] gRPC EncryptedSeed: NOT FOUND in DB for certHash=%s height=%d\n", req.CertHash, req.Height)
 		return nil, status.Error(codes.NotFound, "no encrypted seed found for the given certificate hash")
 	}
 	if errMsg != "" {
-		fmt.Printf("[INFO] gRPC EncryptedSeed: found recorded ERROR for certHash=%s: %s\n", req.CertHash, errMsg)
+		fmt.Printf("[INFO] gRPC EncryptedSeed: found recorded ERROR for certHash=%s height=%d: %s\n", req.CertHash, req.Height, errMsg)
 		// Return the recorded error message so non-SGX nodes can replay the exact same error
 		return nil, status.Error(codes.FailedPrecondition, errMsg)
 	}
 
-	fmt.Printf("[INFO] gRPC EncryptedSeed: found SUCCESS for certHash=%s seedLen=%d\n", req.CertHash, len(encryptedSeed))
+	fmt.Printf("[INFO] gRPC EncryptedSeed: found SUCCESS for certHash=%s height=%d seedLen=%d\n", req.CertHash, req.Height, len(encryptedSeed))
 
 	return &types.QueryEncryptedSeedResponse{
 		EncryptedSeed: encryptedSeed,

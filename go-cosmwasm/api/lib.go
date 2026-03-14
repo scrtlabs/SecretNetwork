@@ -885,7 +885,8 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 
 	if recorder.IsReplayMode() {
 		// Try local DB first
-		if output, errMsg, found := recorder.ReplayGetEncryptedSeed(certHash[:]); found {
+		height := recorder.GetCurrentBlockHeight()
+		if output, errMsg, found := recorder.ReplayGetEncryptedSeed(height, certHash[:]); found {
 			if errMsg != "" {
 				// Replay the exact same error the SGX enclave produced
 				return nil, fmt.Errorf("%s", errMsg)
@@ -895,13 +896,13 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 
 		// Fetch from remote SGX node
 		client := GetEcallClient()
-		output, err := client.FetchEncryptedSeed(certHashHex)
+		output, err := client.FetchEncryptedSeed(height, certHashHex)
 		if err != nil {
 			return nil, fmt.Errorf("GetEncryptedSeed replay failed: %w", err)
 		}
 
 		// Cache locally
-		if cacheErr := recorder.RecordGetEncryptedSeed(certHash[:], output); cacheErr != nil {
+		if cacheErr := recorder.RecordGetEncryptedSeed(height, certHash[:], output); cacheErr != nil {
 			logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
 		}
 		return output, nil
@@ -916,15 +917,17 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 		enclaveErr := errorWithMessage(err, errmsg)
 		logInfo("GetEncryptedSeed", "SGX enclave FAILED for %s: %v", certHashHex, enclaveErr)
 		// Record the error so non-SGX nodes can replay the exact same message
-		if recErr := recorder.RecordGetEncryptedSeedError(certHash[:], enclaveErr.Error()); recErr != nil {
+		height := recorder.GetCurrentBlockHeight()
+		if recErr := recorder.RecordGetEncryptedSeedError(height, certHash[:], enclaveErr.Error()); recErr != nil {
 			logError("GetEncryptedSeed", "Failed to record error: %v", recErr)
 		}
 		return nil, enclaveErr
 	}
 
 	output := receiveVector(res)
-	logInfo("GetEncryptedSeed", "SGX enclave SUCCESS for %s (%d bytes), recording...", certHashHex, len(output))
-	if err := recorder.RecordGetEncryptedSeed(certHash[:], output); err != nil {
+	height := recorder.GetCurrentBlockHeight()
+	logInfo("GetEncryptedSeed", "SGX enclave SUCCESS for %s (%d bytes), recording at height %d...", certHashHex, len(output), height)
+	if err := recorder.RecordGetEncryptedSeed(height, certHash[:], output); err != nil {
 		logError("GetEncryptedSeed", "Failed to record: %v", err)
 	} else {
 		logInfo("GetEncryptedSeed", "Recorded GetEncryptedSeed for %s OK", certHashHex)

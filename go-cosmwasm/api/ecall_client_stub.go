@@ -17,7 +17,7 @@ type EcallRecordData struct {
 
 func GetEcallClient() *EcallClient                                       { return nil }
 func (c *EcallClient) FetchEcallRecord(int64) (*EcallRecordData, error)  { return nil, nil }
-func (c *EcallClient) FetchEncryptedSeed(string) ([]byte, error)         { return nil, nil }
+func (c *EcallClient) FetchEncryptedSeed(int64, string) ([]byte, error)  { return nil, nil }
 func (c *EcallClient) FetchBlockTraces(int64) ([]*ExecutionTrace, error) { return nil, nil }
 func (c *EcallClient) FetchBlockCreateResults(int64) ([]*CreateResult, [][]byte, error) { return nil, nil, nil }
 func (c *EcallClient) Close() error                                      { return nil }

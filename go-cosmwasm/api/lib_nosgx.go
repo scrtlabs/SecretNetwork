@@ -302,8 +302,10 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	logInfo("GetEncryptedSeed", "NON-SGX called: certHashHex=%s certLen=%d dbInitialized=%v",
 		certHashHex, len(cert), recorder != nil && recorder.db != nil)
 
+	height := recorder.GetCurrentBlockHeight()
+
 	// Try local DB first
-	if output, errMsg, found := recorder.ReplayGetEncryptedSeed(certHash[:]); found {
+	if output, errMsg, found := recorder.ReplayGetEncryptedSeed(height, certHash[:]); found {
 		if errMsg != "" {
 			logInfo("GetEncryptedSeed", "Found CACHED ERROR in local DB for %s: %s", certHashHex, errMsg)
 			return nil, fmt.Errorf("%s", errMsg)
@@ -322,12 +324,12 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 
 	var lastErr error
 	for attempt := 0; attempt < maxRetries; attempt++ {
-		output, err := client.FetchEncryptedSeed(certHashHex)
+		output, err := client.FetchEncryptedSeed(height, certHashHex)
 		if err == nil {
 			logInfo("GetEncryptedSeed", "Fetched seed from SGX node (attempt %d) for %s (%d bytes)",
 				attempt+1, certHashHex, len(output))
 			// Cache locally
-			if cacheErr := recorder.RecordGetEncryptedSeed(certHash[:], output); cacheErr != nil {
+			if cacheErr := recorder.RecordGetEncryptedSeed(height, certHash[:], output); cacheErr != nil {
 				logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
 			}
 			return output, nil
@@ -350,7 +352,7 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 			enclaveErrMsg := st.Message()
 			logInfo("GetEncryptedSeed", "SGX node returned FailedPrecondition (enclave error) for %s: %s",
 				certHashHex, enclaveErrMsg)
-			if cacheErr := recorder.RecordGetEncryptedSeedError(certHash[:], enclaveErrMsg); cacheErr != nil {
+			if cacheErr := recorder.RecordGetEncryptedSeedError(height, certHash[:], enclaveErrMsg); cacheErr != nil {
 				logError("GetEncryptedSeed", "Failed to cache error: %v", cacheErr)
 			}
 			return nil, fmt.Errorf("%s", enclaveErrMsg)

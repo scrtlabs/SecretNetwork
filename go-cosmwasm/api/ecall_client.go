@@ -75,10 +75,11 @@ func (m *QueryEcallRecordResponse) ProtoMessage()  {}
 // QueryEncryptedSeedRequest matches QueryEncryptedSeedRequest proto
 type QueryEncryptedSeedRequest struct {
 	CertHash string `protobuf:"bytes,1,opt,name=cert_hash,json=certHash,proto3" json:"cert_hash,omitempty"`
+	Height   int64  `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
 }
 
 func (m *QueryEncryptedSeedRequest) Reset()         { *m = QueryEncryptedSeedRequest{} }
-func (m *QueryEncryptedSeedRequest) String() string { return fmt.Sprintf("{CertHash:%s}", m.CertHash) }
+func (m *QueryEncryptedSeedRequest) String() string { return fmt.Sprintf("{CertHash:%s,Height:%d}", m.CertHash, m.Height) }
 func (m *QueryEncryptedSeedRequest) ProtoMessage()  {}
 
 // QueryEncryptedSeedResponse matches QueryEncryptedSeedResponse proto
@@ -502,15 +503,15 @@ func (c *EcallClient) FetchEcallRecord(height int64) (*EcallRecordData, error) {
 }
 
 // FetchEncryptedSeed fetches encrypted seed data from a random SGX node
-func (c *EcallClient) FetchEncryptedSeed(certHashHex string) ([]byte, error) {
-	req := &QueryEncryptedSeedRequest{CertHash: certHashHex}
+func (c *EcallClient) FetchEncryptedSeed(height int64, certHashHex string) ([]byte, error) {
+	req := &QueryEncryptedSeedRequest{CertHash: certHashHex, Height: height}
 	resp := &QueryEncryptedSeedResponse{}
 
 	if err := c.invokeWithRetry(methodEncryptedSeed, req, resp); err != nil {
 		return nil, err // Return raw error to preserve gRPC status codes
 	}
 
-	logInfo("EcallClient", "Fetched encrypted seed (%d bytes)", len(resp.EncryptedSeed))
+	logInfo("EcallClient", "Fetched encrypted seed (%d bytes) at height %d", len(resp.EncryptedSeed), height)
 	return resp.EncryptedSeed, nil
 }
 
