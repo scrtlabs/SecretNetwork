@@ -83,12 +83,11 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 
 		// Not found locally — fetch all Create results for this block from remote SGX node
 		client := GetEcallClient()
-		if client != nil && client.IsConnected() {
-			maxRetries := 20
-			retryDelay := 50 * time.Millisecond
-			maxDelay := 2 * time.Second
+		retryDelay := 2 * time.Second
+		attempt := 0
 
-			for attempt := 0; attempt < maxRetries; attempt++ {
+		for {
+			if client != nil && client.IsConnected() {
 				results, wasmHashes, err := client.FetchBlockCreateResults(height)
 				if err == nil && len(results) > 0 {
 					// Match wasmHash directly from fetched results (no DB round-trip needed)
@@ -103,18 +102,14 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 						}
 					}
 				}
-
-				if attempt < maxRetries-1 {
-					delay := retryDelay * time.Duration(1<<uint(attempt))
-					if delay > maxDelay {
-						delay = maxDelay
-					}
-					time.Sleep(delay)
-				}
 			}
-			return nil, fmt.Errorf("Create replay FAILED: could not fetch code hash from SGX node after retries (height=%d, wasmHash=%x)", height, wasmHash[:8])
+
+			attempt++
+			if attempt%15 == 1 { // Log every ~30 seconds
+				logWarn("Create", "Waiting for SGX node Create result: height=%d wasmHash=%x attempt=%d", height, wasmHash[:8], attempt)
+			}
+			time.Sleep(retryDelay)
 		}
-		return nil, fmt.Errorf("Create replay FAILED: no EcallClient connection (height=%d, wasmHash=%x)", height, wasmHash[:8])
 	}
 
 	// Non-replay mode (e.g. secretcli): no enclave available, use sha256 of wasm
@@ -410,37 +405,21 @@ func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) err
 
 	// Non-SGX nodes always fetch from the SGX node via gRPC
 	client := GetEcallClient()
-	maxRetries := 20
-	retryDelay := 50 * time.Millisecond
-	maxDelay := 2 * time.Second
+	retryDelay := 2 * time.Second
+	attempt := 0
 
-	var proofData []byte
-	var lastErr error
-
-	for attempt := 0; attempt < maxRetries; attempt++ {
+	for {
 		data, err := client.FetchMachineIDProof(height, machineIDHex)
 		if err == nil && len(data) > 0 {
-			proofData = data
 			logInfo("OnApproveMachineID", "Fetched proof from SGX node: height=%d (attempt %d)", height, attempt+1)
-			break
+			copy(proof[:], data)
+			return nil
 		}
-		lastErr = err
 
-		if attempt < maxRetries-1 {
-			delay := retryDelay * time.Duration(1<<uint(attempt))
-			if delay > maxDelay {
-				delay = maxDelay
-			}
-			logDebug("OnApproveMachineID", "Waiting for SGX node proof: height=%d attempt=%d delay=%v", height, attempt+1, delay)
-			time.Sleep(delay)
+		attempt++
+		if attempt%15 == 1 { // Log every ~30 seconds
+			logWarn("OnApproveMachineID", "Waiting for SGX node proof: height=%d machineID=%s attempt=%d err=%v", height, machineIDHex, attempt, err)
 		}
+		time.Sleep(retryDelay)
 	}
-
-	if proofData == nil {
-		logWarn("OnApproveMachineID", "No proof from SGX node after retries: height=%d, machineID=%s, lastErr=%v", height, machineIDHex, lastErr)
-		return fmt.Errorf("no machine ID proof from SGX node for height %d: %v", height, lastErr)
-	}
-
-	copy(proof[:], proofData)
-	return nil
 }

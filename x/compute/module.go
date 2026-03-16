@@ -3,8 +3,6 @@ package compute
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -191,12 +189,7 @@ func (am AppModule) BeginBlock(c context.Context) error {
 					if err == nil {
 						break
 					}
-					if !strings.Contains(err.Error(), "must be less than current height") {
-						// Not the "block not ready" error — fail immediately
-						ctx.Logger().Error("Failed to fetch ecall record from remote", "height", height, "error", err)
-						return fmt.Errorf("no ecall record found for height %d: %w", height, err)
-					}
-					ctx.Logger().Info("Waiting for SGX node to commit block, retrying ecall record fetch", "height", height)
+					ctx.Logger().Info("Waiting for SGX node ecall record, retrying...", "height", height, "error", err)
 					time.Sleep(retryInterval)
 				}
 				random = record.RandomSeed

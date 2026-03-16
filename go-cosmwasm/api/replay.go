@@ -26,11 +26,10 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 		logDebug("replayExecution", "TRACE NOT FOUND in memory: height=%d index=%d, waiting for SGX node", height, execIndex)
 
 		client := GetEcallClient()
-		maxRetries := 20
-		retryDelay := 50 * time.Millisecond
-		maxDelay := 2 * time.Second
+		retryDelay := 2 * time.Second
+		attempt := 0
 
-		for attempt := 0; attempt < maxRetries; attempt++ {
+		for {
 			allTraces, err := client.FetchBlockTraces(height)
 			if err == nil {
 				recorder.SetBlockTraces(allTraces)
@@ -41,13 +40,11 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 				}
 			}
 
-			if attempt < maxRetries-1 {
-				delay := retryDelay * time.Duration(1<<uint(attempt))
-				if delay > maxDelay {
-					delay = maxDelay
-				}
-				time.Sleep(delay)
+			attempt++
+			if attempt%15 == 1 { // Log every ~30 seconds (15 * 2s)
+				logWarn("replayExecution", "Waiting for SGX node trace: height=%d index=%d attempt=%d err=%v", height, execIndex, attempt, err)
 			}
+			time.Sleep(retryDelay)
 		}
 
 		if !found {
