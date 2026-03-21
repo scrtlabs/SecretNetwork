@@ -10,6 +10,8 @@ extern "C" {
     pub fn ecall_get_attestation_report(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
+        p_sk: *const u8,
+        n_sk: u32,
         flags: u32,
     ) -> sgx_status_t;
     pub fn ecall_authenticate_new_node(
@@ -30,7 +32,7 @@ extern "C" {
     ) -> sgx_status_t;
 }
 
-pub fn create_attestation_report_u(flags: u32) -> SgxResult<()> {
+pub fn create_attestation_report_u(p_sk: *const u8, n_sk: u32, flags: u32) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -40,7 +42,7 @@ pub fn create_attestation_report_u(flags: u32) -> SgxResult<()> {
 
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
-    let status = unsafe { ecall_get_attestation_report(eid, &mut retval, flags) };
+    let status = unsafe { ecall_get_attestation_report(eid, &mut retval, p_sk, n_sk, flags) };
 
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);

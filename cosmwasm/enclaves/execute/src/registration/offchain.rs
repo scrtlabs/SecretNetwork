@@ -339,8 +339,12 @@ fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_repo
  * # Safety
  * Something should go here
 */
-pub unsafe extern "C" fn ecall_get_attestation_report(flags: u32) -> sgx_status_t {
-    let mut report_data: [u8; 48] = [0; 48];
+pub unsafe extern "C" fn ecall_get_attestation_report(
+    p_sk: *const u8,
+    n_sk: u32,
+    flags: u32,
+) -> sgx_status_t {
+    let mut report_data = [0_u8; sgx_types::SGX_REPORT_DATA_SIZE];
 
     let (kp, is_migration_report) = match 0x10 & flags {
         0x10 => {
@@ -370,7 +374,19 @@ pub unsafe extern "C" fn ecall_get_attestation_report(flags: u32) -> sgx_status_
     };
 
     let attestation = {
-        report_data[0..32].copy_from_slice(&kp.get_pubkey());
+        let pk_len = 32 as usize;
+        report_data[0..pk_len].copy_from_slice(&kp.get_pubkey());
+
+        if n_sk == 32 {
+            let sk = ed25519_dalek::SecretKey::from_bytes(std::slice::from_raw_parts(
+                p_sk,
+                n_sk as usize,
+            ))
+            .unwrap();
+
+            let pk = ed25519_dalek::PublicKey::from(&sk);
+            report_data[pk_len..pk_len + pk_len].copy_from_slice(&pk.to_bytes());
+        }
 
         match get_attestation_report_dcap(&report_data) {
             Ok(x) => x,
@@ -555,7 +571,7 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
             println!("Create self migration report");
 
             export_local_migration_report();
-            ecall_get_attestation_report(0x10) // migration
+            ecall_get_attestation_report(core::ptr::null(), 0, 0x10) // migration
         }
         2 => {
             println!("Export encrypted data to the next aurhorized enclave");

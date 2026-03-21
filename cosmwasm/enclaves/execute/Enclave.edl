@@ -57,6 +57,8 @@ enclave {
         );
 
         public sgx_status_t ecall_get_attestation_report(
+            [in, count=n_sk] const uint8_t* p_sk,
+            uint32_t n_sk,
             uint32_t flags
         );
 

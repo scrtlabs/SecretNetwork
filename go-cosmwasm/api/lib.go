@@ -507,7 +507,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send request to enclave
-func CreateAttestationReport(is_migration_report bool) (bool, error) {
+func CreateAttestationReport(ext_sk []byte, is_migration_report bool) (bool, error) {
 	errmsg := C.Buffer{}
 
 	flags := u32(0)
@@ -515,7 +515,10 @@ func CreateAttestationReport(is_migration_report bool) (bool, error) {
 		flags |= u32(0x10)
 	}
 
-	_, err := C.create_attestation_report(flags, &errmsg)
+	skSlice := sendSlice(ext_sk)
+	defer freeAfterSend(skSlice)
+
+	_, err := C.create_attestation_report(skSlice, flags, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

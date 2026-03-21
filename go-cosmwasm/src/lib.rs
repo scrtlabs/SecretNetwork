@@ -164,8 +164,19 @@ pub extern "C" fn init_node(
 }
 
 #[no_mangle]
-pub extern "C" fn create_attestation_report(flags: u32, err: Option<&mut Buffer>) -> bool {
-    if let Err(status) = create_attestation_report_u(flags) {
+pub extern "C" fn create_attestation_report(
+    sk: Buffer,
+    flags: u32,
+    err: Option<&mut Buffer>,
+) -> bool {
+    let sk_slice = match unsafe { sk.read() } {
+        None => &[],
+        Some(r) => r,
+    };
+
+    if let Err(status) =
+        create_attestation_report_u(sk_slice.as_ptr(), sk_slice.len() as u32, flags)
+    {
         set_error(Error::enclave_err(status.to_string()), err);
         return false;
     }
