@@ -10,7 +10,7 @@ func (Api) LoadSeed(masterKey []byte, seed []byte) (bool, error) {
 	return api.LoadSeedToEnclave(masterKey, seed)
 }
 
-func (Api) GetEncryptedSeed(masterCert []byte) ([]byte, error) {
+func (Api) GetEncryptedSeed(masterCert []byte) ([]byte, []byte, error) {
 	return api.GetEncryptedSeed(masterCert)
 }
 

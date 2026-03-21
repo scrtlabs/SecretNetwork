@@ -525,15 +525,15 @@ func CreateAttestationReport(ext_sk []byte, is_migration_report bool) (bool, err
 	return true, nil
 }
 
-func GetEncryptedSeed(cert []byte) ([]byte, error) {
+func GetEncryptedSeed(cert []byte) ([]byte, []byte, error) {
 	errmsg := C.Buffer{}
 	certSlice := sendSlice(cert)
 	defer freeAfterSend(certSlice)
 	res, err := C.get_encrypted_seed(certSlice, &errmsg)
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		return nil, nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), nil
+	return receiveVector(res.buf1), receiveVector(res.buf2), nil
 }
 
 func GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {

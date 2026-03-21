@@ -22,6 +22,7 @@ extern "C" {
         p_seeds: *mut u8,
         n_seeds: u32,
         p_seeds_size: *mut u32,
+        p_owner: *mut u8,
     ) -> sgx_status_t;
     pub fn ecall_get_genesis_seed(
         eid: sgx_enclave_id_t,
@@ -55,7 +56,9 @@ pub fn create_attestation_report_u(p_sk: *const u8, n_sk: u32, flags: u32) -> Sg
     Ok(())
 }
 
-pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<Result<Vec<u8>, NodeAuthResult>> {
+pub fn untrusted_get_encrypted_seed(
+    cert: &[u8],
+) -> SgxResult<Result<(Vec<u8>, Vec<u8>), NodeAuthResult>> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -69,6 +72,7 @@ pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<Result<Vec<u8>, No
     seed_buffer.resize(SINGLE_ENCRYPTED_SEED_SIZE * 100, 0); // should be enough. Resize in later version, when approaching the limit
 
     let mut seeds_size: u32 = 0;
+    let mut owner = [0_u8; 32];
 
     let status = unsafe {
         ecall_authenticate_new_node(
@@ -79,6 +83,7 @@ pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<Result<Vec<u8>, No
             seed_buffer.as_mut_ptr(),
             seed_buffer.len() as u32,
             &mut seeds_size,
+            owner.as_mut_ptr(),
         )
     };
 
@@ -98,10 +103,16 @@ pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<Result<Vec<u8>, No
     }
 
     seed_buffer.resize(seeds_size as usize, 0);
-
     debug!("Done auth, got seed: {}", hex::encode(&seed_buffer));
 
-    Ok(Ok(seed_buffer))
+    let is_ownerzero = owner.iter().all(|&x| x == 0);
+    let owner_arr = if is_ownerzero {
+        Vec::new()
+    } else {
+        owner.to_vec()
+    };
+
+    Ok(Ok((seed_buffer, owner_arr)))
 }
 
 pub fn untrusted_get_encrypted_genesis_seed(

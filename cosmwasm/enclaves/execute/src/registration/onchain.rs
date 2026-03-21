@@ -97,6 +97,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     p_seeds: *mut u8,
     n_seeds: u32,
     p_seeds_size: *mut u32,
+    p_owner: *mut u8,
 ) -> NodeAuthResult {
     if let Err(_err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
@@ -104,6 +105,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     }
 
     validate_mut_ptr!(p_seeds, n_seeds as usize, NodeAuthResult::InvalidInput);
+    validate_mut_ptr!(p_owner, 32 as usize, NodeAuthResult::InvalidInput);
     validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
 
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
@@ -168,6 +170,9 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
                 slice::from_raw_parts_mut(p_seeds, res.len()).copy_from_slice(&res);
 
                 trace!("returning with seed: {}, {}", res.len(), hex::encode(&res));
+
+                slice::from_raw_parts_mut(p_owner, 32).copy_from_slice(&report_data.d[32..]);
+
                 NodeAuthResult::Success
             }
             Err(e) => {

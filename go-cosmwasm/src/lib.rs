@@ -68,12 +68,12 @@ pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
 }
 
 #[no_mangle]
-pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> Buffer {
+pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> TwoBuffers {
     trace!("Called get_encrypted_seed");
     let cert_slice = match unsafe { cert.read() } {
         None => {
             set_error(Error::empty_arg("attestation_cert"), err);
-            return Buffer::default();
+            return TwoBuffers::default();
         }
         Some(r) => r,
     };
@@ -82,16 +82,19 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
         Err(e) => {
             // An error happened in the SGX sdk.
             set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
+            TwoBuffers::default()
         }
         Ok(Err(e)) => {
             // An error was returned from the enclave.
             set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
+            TwoBuffers::default()
         }
-        Ok(Ok(seed)) => {
+        Ok(Ok((seed, owner))) => {
             clear_error();
-            Buffer::from_vec(seed.to_vec())
+            TwoBuffers {
+                buf1: Buffer::from_vec(seed.to_vec()),
+                buf2: Buffer::from_vec(owner.to_vec()),
+            }
         }
     }
 }
