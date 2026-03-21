@@ -7,7 +7,7 @@ use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::{Keychain, KEY_MANAGER};
 
 pub fn encrypt_seed(
-    new_node_pk: [u8; PUBLIC_KEY_SIZE],
+    new_node_pk: &[u8; PUBLIC_KEY_SIZE],
     seed_to_share: &Seed,
     is_legacy: bool,
 ) -> SgxResult<Vec<u8>> {
@@ -21,9 +21,9 @@ pub fn encrypt_seed(
         KEY_MANAGER.seed_exchange_key().unwrap()
     };
 
-    let shared_enc_key = base_seed.diffie_hellman(&new_node_pk);
+    let shared_enc_key = base_seed.diffie_hellman(new_node_pk);
 
-    let authenticated_data: Vec<&[u8]> = vec![&new_node_pk];
+    let authenticated_data: Vec<&[u8]> = vec![new_node_pk];
 
     // encrypt the seed using the symmetric key derived in the previous stage
     // genesis seed is passed in registration

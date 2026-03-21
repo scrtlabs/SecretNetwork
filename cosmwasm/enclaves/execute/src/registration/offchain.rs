@@ -490,7 +490,7 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
         );
 
         let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
-        let res: Vec<u8> = encrypt_seed(target_public_key, &seeds.arr[0], true)
+        let res: Vec<u8> = encrypt_seed(&target_public_key, &seeds.arr[0], true)
             .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
 
         Ok(res)

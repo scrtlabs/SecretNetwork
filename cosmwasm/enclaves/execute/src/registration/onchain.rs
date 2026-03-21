@@ -18,6 +18,7 @@ use sgx_types::sgx_ql_qv_result_t;
 use enclave_crypto::consts::SELF_REPORT_BODY;
 
 use super::seed_exchange::encrypt_seed;
+use std::convert::TryInto;
 use std::slice;
 
 #[cfg(feature = "light-client-validation")]
@@ -40,7 +41,7 @@ fn get_current_block_time_s() -> i64 {
 
 fn verify_attestation_dcap(
     attestation: &AttestationCombined,
-    pub_key: &mut [u8; 32],
+    report_data: &mut sgx_types::sgx_report_data_t,
 ) -> NodeAuthResult {
     let tm_s = get_current_block_time_s();
     trace!("Current block time: {}", tm_s);
@@ -68,7 +69,9 @@ fn verify_attestation_dcap(
         return NodeAuthResult::MrEnclaveMismatch;
     }
 
-    pub_key.copy_from_slice(&report_body.report_data.d[..32]);
+    report_data
+        .d
+        .copy_from_slice(&report_body.report_data.d[..32]);
 
     NodeAuthResult::Success
 }
@@ -110,8 +113,6 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         return NodeAuthResult::SignatureInvalid;
     }
 
-    let mut target_public_key: [u8; 32] = [0u8; 32];
-
     let attestation = AttestationCombined::from_blob(cert, cert_len as usize);
 
     if attestation.quote.is_empty() || attestation.coll.is_empty() {
@@ -119,15 +120,19 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         return NodeAuthResult::InvalidCert;
     }
 
-    let res = verify_attestation_dcap(&attestation, &mut target_public_key);
+    let mut report_data = sgx_types::sgx_report_data_t::default();
+
+    let res = verify_attestation_dcap(&attestation, &mut report_data);
     if NodeAuthResult::Success != res {
         return res;
     }
 
+    let target_public_key: &[u8; 32] = report_data.d[0..32].try_into().unwrap();
+
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
         trace!(
-            "ecall_get_encrypted_seed target_public_key key pk: {:?}",
-            &target_public_key.to_vec()
+            "ecall_get_encrypted_seed target_public_key key pk: {}",
+            hex::encode(target_public_key)
         );
 
         let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
@@ -150,7 +155,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     if let Ok(res) = result {
         match res {
             Ok(res) => {
-                trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
+                trace!("Done encrypting seed, got {}", hex::encode(&res));
 
                 let actual_size = res.len() as u32;
                 *p_seeds_size = actual_size;
