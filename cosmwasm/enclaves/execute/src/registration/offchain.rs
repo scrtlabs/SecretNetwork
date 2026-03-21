@@ -312,8 +312,8 @@ fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_repo
         let attestation = AttestationCombined::from_blob(cert.as_ptr(), cert.len());
 
         match verify_quote_sgx(&attestation, 0, check_ppid_wl) {
-            Ok((body, _)) => {
-                return Ok(body);
+            Ok(res) => {
+                return Ok(res.body);
             }
             Err(e) => {
                 error!("Can't verify remote quote: {}", e);

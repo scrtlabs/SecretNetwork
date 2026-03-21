@@ -657,11 +657,17 @@ impl AttestationCombined {
     }
 }
 
+pub struct VerifiedSgxQuote {
+    pub body: sgx_report_body_t,
+    pub qv_result: sgx_ql_qv_result_t,
+    pub machine_id_hash: Option<[u8; 20]>,
+}
+
 pub fn verify_quote_sgx(
     attestation: &AttestationCombined,
     time_s: i64,
     check_ppid_wl: bool,
-) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
+) -> sgx_types::SgxResult<VerifiedSgxQuote> {
     let qv_result = verify_quote_any(&attestation.quote, &attestation.coll, time_s)?;
 
     if attestation.quote.len() < mem::size_of::<sgx_quote_t>() {
@@ -677,21 +683,25 @@ pub fn verify_quote_sgx(
             trace!("Unrecognized quote version: {}", version);
             Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
         } else {
-            let report_body = (*my_p_quote).report_body;
-
             if !attestation.verify_fmspc() {
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
 
-            let is_in_wl = match attestation.extract_cpu_cert() {
-                Some(ppid) => {
-                    let ppid_addr = crate::registration::offchain::calculate_truncated_hash(&ppid);
+            let machine_id_opt = if let Some(ppid) = attestation.extract_cpu_cert() {
+                Some(crate::registration::offchain::calculate_truncated_hash(
+                    &ppid,
+                ))
+            } else {
+                None
+            };
 
+            let is_in_wl = match &machine_id_opt {
+                Some(machine_id_hash) => {
                     let wl = PPID_WHITELIST.lock().unwrap();
-                    if wl.contains(&ppid_addr) {
+                    if wl.contains(machine_id_hash) {
                         true
                     } else {
-                        println!("Unknown Machine ID: {}", orig_hex::encode(ppid_addr));
+                        println!("Unknown Machine ID: {}", orig_hex::encode(machine_id_hash));
                         false
                     }
                 }
@@ -715,7 +725,11 @@ pub fn verify_quote_sgx(
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
 
-            Ok((report_body, qv_result))
+            Ok(VerifiedSgxQuote {
+                body: (*my_p_quote).report_body,
+                qv_result: qv_result,
+                machine_id_hash: machine_id_opt,
+            })
         }
     }
 }
@@ -857,11 +871,11 @@ pub fn get_quote_ecdsa(pub_k: &[u8]) -> Result<AttestationCombined, sgx_status_t
 
     // test self
     match verify_quote_sgx(&attestation, 0, false) {
-        Ok(r) => {
+        Ok(res) => {
             trace!("Self quote verified ok");
-            if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
+            if res.qv_result != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
                 // TODO: strict policy wrt own quote verification
-                trace!("WARNING: {}", r.1);
+                trace!("WARNING: {}", res.qv_result);
             }
         }
         Err(e) => {

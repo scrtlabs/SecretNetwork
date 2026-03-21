@@ -43,9 +43,9 @@ unsafe fn check_patch_level_dcap(pub_k: &[u8; 32]) -> (NodeAuthResult, Option<Ve
     match get_quote_ecdsa_untested(pub_k) {
         Ok(attestation) => {
             match verify_quote_sgx(&attestation, 0, false) {
-                Ok(r) => {
-                    if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
-                        println!("WARNING: {}", r.1);
+                Ok(res) => {
+                    if res.qv_result != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
+                        println!("WARNING: {}", res.qv_result);
                     }
 
                     let ppid = attestation.extract_cpu_cert();

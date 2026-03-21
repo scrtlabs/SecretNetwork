@@ -6,7 +6,7 @@ use std::panic;
 
 use enclave_ffi_types::NodeAuthResult;
 
-use crate::registration::attestation::{verify_quote_sgx, AttestationCombined};
+use crate::registration::attestation::{verify_quote_sgx, AttestationCombined, VerifiedSgxQuote};
 
 use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
@@ -41,39 +41,34 @@ fn get_current_block_time_s() -> i64 {
 
 fn verify_attestation_dcap(
     attestation: &AttestationCombined,
-    report_data: &mut sgx_types::sgx_report_data_t,
-) -> NodeAuthResult {
+) -> Result<VerifiedSgxQuote, NodeAuthResult> {
     let tm_s = get_current_block_time_s();
     trace!("Current block time: {}", tm_s);
 
-    let report_body = match verify_quote_sgx(attestation, tm_s, true) {
-        Ok(r) => {
+    let res = match verify_quote_sgx(attestation, tm_s, true) {
+        Ok(res) => {
             trace!("Remote quote verified ok");
-            if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
-                trace!("WARNING: {}", r.1);
+            if res.qv_result != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
+                trace!("WARNING: {}", res.qv_result);
             }
-            r.0
+            res
         }
         Err(e) => {
             trace!("Remote quote verification failed: {}", e);
-            return NodeAuthResult::InvalidCert;
+            return Err(NodeAuthResult::InvalidCert);
         }
     };
 
-    if (report_body.mr_enclave.m) != SELF_REPORT_BODY.mr_enclave.m {
+    if (res.body.mr_enclave.m) != SELF_REPORT_BODY.mr_enclave.m {
         error!(
             "mrenclave expected={}, actual={}",
             hex::encode(SELF_REPORT_BODY.mr_enclave.m),
-            hex::encode(report_body.mr_enclave.m)
+            hex::encode(res.body.mr_enclave.m)
         );
-        return NodeAuthResult::MrEnclaveMismatch;
+        return Err(NodeAuthResult::MrEnclaveMismatch);
     }
 
-    report_data
-        .d
-        .copy_from_slice(&report_body.report_data.d[..32]);
-
-    NodeAuthResult::Success
+    Ok(res)
 }
 
 ///
@@ -105,7 +100,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     }
 
     validate_mut_ptr!(p_seeds, n_seeds as usize, NodeAuthResult::InvalidInput);
-    validate_mut_ptr!(p_owner, 32 as usize, NodeAuthResult::InvalidInput);
+    validate_mut_ptr!(p_owner, 52 as usize, NodeAuthResult::InvalidInput);
     validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
 
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
@@ -122,14 +117,14 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         return NodeAuthResult::InvalidCert;
     }
 
-    let mut report_data = sgx_types::sgx_report_data_t::default();
+    let verified_quote = match verify_attestation_dcap(&attestation) {
+        Ok(res) => res,
+        Err(e) => {
+            return e;
+        }
+    };
 
-    let res = verify_attestation_dcap(&attestation, &mut report_data);
-    if NodeAuthResult::Success != res {
-        return res;
-    }
-
-    let target_public_key: &[u8; 32] = report_data.d[0..32].try_into().unwrap();
+    let target_public_key: &[u8; 32] = verified_quote.body.report_data.d[0..32].try_into().unwrap();
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
         trace!(
@@ -171,7 +166,13 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
                 trace!("returning with seed: {}, {}", res.len(), hex::encode(&res));
 
-                slice::from_raw_parts_mut(p_owner, 32).copy_from_slice(&report_data.d[32..]);
+                slice::from_raw_parts_mut(p_owner, 32)
+                    .copy_from_slice(&verified_quote.body.report_data.d[32..]);
+
+                if let Some(machine_id_hash) = verified_quote.machine_id_hash {
+                    slice::from_raw_parts_mut(p_owner.add(32), 20)
+                        .copy_from_slice(&machine_id_hash);
+                }
 
                 NodeAuthResult::Success
             }
