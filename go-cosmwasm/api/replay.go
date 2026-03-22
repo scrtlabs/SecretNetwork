@@ -5,6 +5,8 @@ package api
 import (
 	"fmt"
 	"time"
+
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 )
 
 // replayExecution handles replay of a recorded execution trace.
@@ -74,13 +76,13 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 	// Since the store is gas-free, we don't need to reconcile with opsGas.
 	// This makes the replay node's gas meter match the SGX node exactly.
 	//
-	// We wrap this in a deferred recovery because the consumption may panic
-	// with ErrorOutOfGas. On the SGX node, the equivalent panic is caught by
-	// recoverPanic (callbacks.go) inside the CGo boundary and converted to
-	// GoResult_OutOfGas, so Handle returns normally with types.OutOfGasError.
-	// Without this recovery, the panic would propagate directly to runTx,
-	// producing a different ResponseDeliverTx and LastResultsHash mismatch.
-	if gasMeter != nil && trace.CallbackGas > 0 {
+	// We skip CallbackGas consumption for OutOfGas traces because on the SGX
+	// node, the out-of-gas panic is caught inside the CGo boundary (callbacks.go
+	// recoverPanic → GoResult_OutOfGas), and the enclave returns errno==2.
+	// api.Handle then returns types.OutOfGasError{} immediately — the keeper
+	// never reaches its own consumeGas call. So the gas meter already reflects
+	// whatever gas was consumed before the panic; we must not add more.
+	if gasMeter != nil && trace.CallbackGas > 0 && !trace.IsOutOfGas {
 		logDebug("replayExecution", "Consuming exact CallbackGas=%d on real gas meter", trace.CallbackGas)
 		func() {
 			defer func() {
@@ -96,6 +98,10 @@ func replayExecution(store KVStore, gasMeter *GasMeter, execIndex int64) ([]byte
 	// Return only compute gasUsed — the keeper's consumeGas will add (gasUsed/1000)+1,
 	// exactly matching the SGX node's second gas consumption step.
 	if trace.HasError {
+		if trace.IsOutOfGas {
+			logDebug("replayExecution", "Returning OutOfGasError (gasUsed=%d)", trace.GasUsed)
+			return nil, trace.GasUsed, types.OutOfGasError{}, true
+		}
 		logDebug("replayExecution", "Returning error (gasUsed=%d): %s", trace.GasUsed, trace.ErrorMsg)
 		return nil, trace.GasUsed, fmt.Errorf("%s", trace.ErrorMsg), true
 	}

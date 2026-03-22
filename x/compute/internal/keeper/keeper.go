@@ -1774,7 +1774,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 		replyStoreForExecution = prefixStore
 	}
 
-	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, replyStoreForExecution, cosmwasmAPI, querier, ctx.GasMeter(), gasForContract(ctx), ogSigInfo, wasmTypes.HandleTypeReply)
+	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, replyStoreForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), ogSigInfo, wasmTypes.HandleTypeReply)
 
 	// In replay mode, apply any cross-module ops stashed by replayExecution.
 	if recorder.IsReplayMode() {

@@ -365,8 +365,13 @@ func Migrate(
 		return nil, 0, fmt.Errorf("Migrate replay failed: trace not found for height %d index %d", height, execIndex)
 	}
 
-	// SGX mode: wrap store to record operations
-	recordingStore := NewRecordingKVStore(store)
+	recording := recorder.IsSGXMode()
+	var recordingStore *RecordingKVStore
+	var storeForDB KVStore = store
+	if recording {
+		recordingStore = NewRecordingKVStore(store)
+		storeForDB = recordingStore
+	}
 
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -379,7 +384,7 @@ func Migrate(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(recordingStore, counter)
+	dbState := buildDBState(storeForDB, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -397,11 +402,18 @@ func Migrate(
 
 	// Capture gas before execution to measure callback gas
 	var gasBefore uint64
-	if gasMeter != nil {
+	if recording && gasMeter != nil {
 		gasBefore = (*gasMeter).GasConsumed()
 	}
 
 	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer, adminProofBuffer)
+
+	if !recording {
+		if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+			return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		}
+		return receiveVector(res), uint64(gasUsed), nil
+	}
 
 	// Calculate callback gas consumed during execution
 	var callbackGas uint64
@@ -423,10 +435,13 @@ func Migrate(
 		trace.HasError = true
 		errorMsgBytes := receiveVector(errmsg)
 		trace.ErrorMsg = string(errorMsgBytes)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			trace.IsOutOfGas = true
+		}
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("Migrate", "Failed to record trace: %v", recordErr)
 		}
-		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+		if trace.IsOutOfGas {
 			return nil, uint64(gasUsed), types.OutOfGasError{}
 		}
 		if errorMsgBytes == nil {
@@ -468,19 +483,23 @@ func UpdateAdmin(
 		return nil, fmt.Errorf("UpdateAdmin replay failed: trace not found for height %d index %d", height, execIndex)
 	}
 
-	// SGX mode: wrap store to record operations
-	recordingStore := NewRecordingKVStore(store)
+	recording := recorder.IsSGXMode()
+	var recordingStore *RecordingKVStore
+	var storeForDB KVStore = store
+	if recording {
+		recordingStore = NewRecordingKVStore(store)
+		storeForDB = recordingStore
+	}
 
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
 	defer freeAfterSend(p)
 
-	// set up a new stack frame to handle iterators
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(recordingStore, counter)
+	dbState := buildDBState(storeForDB, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -498,13 +517,19 @@ func UpdateAdmin(
 	newAdminBuffer := sendSlice(newAdmin)
 	defer freeAfterSend(newAdminBuffer)
 
-	// Capture gas before execution to measure callback gas
 	var gasBefore uint64
-	if gasMeter != nil {
+	if recording && gasMeter != nil {
 		gasBefore = (*gasMeter).GasConsumed()
 	}
 
 	res, err := C.update_admin(cache.ptr, id, p, db, a, q, u64(gasLimit), &errmsg, s, currentAdminBuffer, currentAdminProofBuffer, newAdminBuffer)
+
+	if !recording {
+		if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+			return nil, errorWithMessage(err, errmsg)
+		}
+		return receiveVector(res), nil
+	}
 
 	// Calculate callback gas consumed during execution
 	var callbackGas uint64
@@ -526,10 +551,13 @@ func UpdateAdmin(
 		trace.HasError = true
 		errorMsgBytes := receiveVector(errmsg)
 		trace.ErrorMsg = string(errorMsgBytes)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			trace.IsOutOfGas = true
+		}
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("UpdateAdmin", "Failed to record trace: %v", recordErr)
 		}
-		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+		if trace.IsOutOfGas {
 			return nil, types.OutOfGasError{}
 		}
 		if errorMsgBytes == nil {
@@ -573,8 +601,13 @@ func Instantiate(
 		return nil, 0, fmt.Errorf("Instantiate replay failed: trace not found for height %d index %d", height, execIndex)
 	}
 
-	// SGX mode: wrap store to record operations
-	recordingStore := NewRecordingKVStore(store)
+	recording := recorder.IsSGXMode()
+	var recordingStore *RecordingKVStore
+	var storeForDB KVStore = store
+	if recording {
+		recordingStore = NewRecordingKVStore(store)
+		storeForDB = recordingStore
+	}
 
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -587,7 +620,7 @@ func Instantiate(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(recordingStore, counter)
+	dbState := buildDBState(storeForDB, counter)
 	db := buildDB(&dbState, gasMeter)
 
 	s := sendSlice(sigInfo)
@@ -602,12 +635,19 @@ func Instantiate(
 
 	// Capture gas before execution to measure callback gas
 	var gasBefore uint64
-	if gasMeter != nil {
+	if recording && gasMeter != nil {
 		gasBefore = (*gasMeter).GasConsumed()
 		logDebug("Instantiate", "SGX gasBefore=%d", gasBefore)
 	}
 
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer)
+
+	if !recording {
+		if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+			return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		}
+		return receiveVector(res), uint64(gasUsed), nil
+	}
 
 	// Calculate callback gas consumed during execution
 	var callbackGas uint64
@@ -634,10 +674,13 @@ func Instantiate(
 		trace.HasError = true
 		errorMsgBytes := receiveVector(errmsg)
 		trace.ErrorMsg = string(errorMsgBytes)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			trace.IsOutOfGas = true
+		}
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("Instantiate", "Failed to record trace: %v", recordErr)
 		}
-		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+		if trace.IsOutOfGas {
 			return nil, uint64(gasUsed), types.OutOfGasError{}
 		}
 		if errorMsgBytes == nil {
@@ -684,8 +727,13 @@ func Handle(
 		return nil, 0, fmt.Errorf("Handle replay failed: trace not found for height %d index %d", height, execIndex)
 	}
 
-	// SGX mode: wrap store to record operations
-	recordingStore := NewRecordingKVStore(store)
+	recording := recorder.IsSGXMode()
+	var recordingStore *RecordingKVStore
+	var storeForDB KVStore = store
+	if recording {
+		recordingStore = NewRecordingKVStore(store)
+		storeForDB = recordingStore
+	}
 
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -698,7 +746,7 @@ func Handle(
 	counter := startContract()
 	defer endContract(counter)
 
-	dbState := buildDBState(recordingStore, counter)
+	dbState := buildDBState(storeForDB, counter)
 	db := buildDB(&dbState, gasMeter)
 	s := sendSlice(sigInfo)
 	defer freeAfterSend(s)
@@ -709,12 +757,19 @@ func Handle(
 
 	// Capture gas before execution to measure callback gas
 	var gasBefore uint64
-	if gasMeter != nil {
+	if recording && gasMeter != nil {
 		gasBefore = (*gasMeter).GasConsumed()
 		logDebug("Handle", "SGX gasBefore=%d", gasBefore)
 	}
 
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, u8(handleType))
+
+	if !recording {
+		if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+			return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		}
+		return receiveVector(res), uint64(gasUsed), nil
+	}
 
 	// Calculate callback gas consumed during execution
 	var callbackGas uint64
@@ -741,10 +796,13 @@ func Handle(
 		trace.HasError = true
 		errorMsgBytes := receiveVector(errmsg)
 		trace.ErrorMsg = string(errorMsgBytes)
+		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+			trace.IsOutOfGas = true
+		}
 		if recordErr := recorder.RecordExecutionTrace(height, execIndex, trace); recordErr != nil {
 			logError("Handle", "Failed to record trace: %v", recordErr)
 		}
-		if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+		if trace.IsOutOfGas {
 			return nil, uint64(gasUsed), types.OutOfGasError{}
 		}
 		if errorMsgBytes == nil {

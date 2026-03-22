@@ -104,11 +104,26 @@ func (rcms *RecordingCacheMultiStore) GetKVStore(key storetypes.StoreKey) storet
 }
 
 func (rcms *RecordingCacheMultiStore) CacheMultiStore() storetypes.CacheMultiStore {
-	return rcms.inner.CacheMultiStore()
+	child := rcms.inner.CacheMultiStore()
+	return &RecordingCacheMultiStore{
+		MultiStore:   child,
+		inner:        child,
+		recorder:     rcms.recorder,
+		excludedKeys: rcms.excludedKeys,
+	}
 }
 
 func (rcms *RecordingCacheMultiStore) CacheMultiStoreWithVersion(version int64) (storetypes.CacheMultiStore, error) {
-	return rcms.inner.CacheMultiStoreWithVersion(version)
+	inner, err := rcms.inner.CacheMultiStoreWithVersion(version)
+	if err != nil {
+		return nil, err
+	}
+	return &RecordingCacheMultiStore{
+		MultiStore:   inner,
+		inner:        inner,
+		recorder:     rcms.recorder,
+		excludedKeys: rcms.excludedKeys,
+	}, nil
 }
 
 func (rms *RecordingMultiStore) CacheWrap() storetypes.CacheWrap {

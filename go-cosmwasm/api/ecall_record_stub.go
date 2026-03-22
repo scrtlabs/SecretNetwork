@@ -36,6 +36,7 @@ type ExecutionTrace struct {
 	GasUsed     uint64
 	CallbackGas uint64
 	HasError    bool
+	IsOutOfGas  bool
 	ErrorMsg    string
 }
 

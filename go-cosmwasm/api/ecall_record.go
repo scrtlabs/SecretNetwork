@@ -80,6 +80,7 @@ type ExecutionTrace struct {
 	GasUsed     uint64          // Gas reported by the enclave
 	CallbackGas uint64          // Total gas consumed by callbacks (store ops) during execution
 	HasError    bool
+	IsOutOfGas  bool   // True when the enclave returned errno==2 (OutOfGas)
 	ErrorMsg    string
 }
 
@@ -250,9 +251,8 @@ func (r *EcallRecorder) Mode() NodeMode {
 	return r.mode
 }
 
-// IsSGXMode returns true if running in SGX mode
 func (r *EcallRecorder) IsSGXMode() bool {
-	return r.mode == NodeModeSGX
+	return r.mode == NodeModeSGX && r.db != nil
 }
 
 // IsReplayMode returns true if running in replay mode
