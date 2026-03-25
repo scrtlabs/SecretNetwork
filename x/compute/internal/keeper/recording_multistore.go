@@ -59,8 +59,8 @@ func (rms *RecordingMultiStore) CacheMultiStore() storetypes.CacheMultiStore {
 	return &RecordingCacheMultiStore{
 		MultiStore:   inner,
 		inner:        inner,
-		recorder:        rms.recorder,
-		excludedKeys:    rms.excludedKeys,
+		recorder:     rms.recorder,
+		excludedKeys: rms.excludedKeys,
 	}
 }
 
@@ -72,8 +72,8 @@ func (rms *RecordingMultiStore) CacheMultiStoreWithVersion(version int64) (store
 	return &RecordingCacheMultiStore{
 		MultiStore:   inner,
 		inner:        inner,
-		recorder:        rms.recorder,
-		excludedKeys:    rms.excludedKeys,
+		recorder:     rms.recorder,
+		excludedKeys: rms.excludedKeys,
 	}, nil
 }
 
@@ -82,9 +82,9 @@ func (rms *RecordingMultiStore) CacheMultiStoreWithVersion(version int64) (store
 // by the cross-module recording.
 type RecordingCacheMultiStore struct {
 	storetypes.MultiStore // embed MultiStore interface for read-through
-	inner        storetypes.CacheMultiStore
-	recorder     *api.EcallRecorder
-	excludedKeys map[string]bool
+	inner                 storetypes.CacheMultiStore
+	recorder              *api.EcallRecorder
+	excludedKeys          map[string]bool
 }
 
 func (rcms *RecordingCacheMultiStore) Write() {
@@ -104,26 +104,11 @@ func (rcms *RecordingCacheMultiStore) GetKVStore(key storetypes.StoreKey) storet
 }
 
 func (rcms *RecordingCacheMultiStore) CacheMultiStore() storetypes.CacheMultiStore {
-	child := rcms.inner.CacheMultiStore()
-	return &RecordingCacheMultiStore{
-		MultiStore:   child,
-		inner:        child,
-		recorder:     rcms.recorder,
-		excludedKeys: rcms.excludedKeys,
-	}
+	return rcms.inner.CacheMultiStore()
 }
 
 func (rcms *RecordingCacheMultiStore) CacheMultiStoreWithVersion(version int64) (storetypes.CacheMultiStore, error) {
-	inner, err := rcms.inner.CacheMultiStoreWithVersion(version)
-	if err != nil {
-		return nil, err
-	}
-	return &RecordingCacheMultiStore{
-		MultiStore:   inner,
-		inner:        inner,
-		recorder:     rcms.recorder,
-		excludedKeys: rcms.excludedKeys,
-	}, nil
+	return rcms.inner.CacheMultiStoreWithVersion(version)
 }
 
 func (rms *RecordingMultiStore) CacheWrap() storetypes.CacheWrap {

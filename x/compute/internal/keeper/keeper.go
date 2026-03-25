@@ -765,7 +765,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		Caller:  contractAddress,
 	}
 
-	response, ogContractKey, adminProof, gasUsed, initError := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, storeForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), sigInfo, admin)
+	response, ogContractKey, adminProof, gasUsed, initError := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, storeForExecution, cosmwasmAPI, querier, ctx.GasMeter(), gasForContract(ctx), sigInfo, admin)
 
 	// In replay mode, apply any cross-module ops stashed by replayExecution.
 	if recorder.IsReplayMode() {
@@ -1774,7 +1774,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 		replyStoreForExecution = prefixStore
 	}
 
-	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, replyStoreForExecution, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), ogSigInfo, wasmTypes.HandleTypeReply)
+	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, replyStoreForExecution, cosmwasmAPI, querier, ctx.GasMeter(), gasForContract(ctx), ogSigInfo, wasmTypes.HandleTypeReply)
 
 	// In replay mode, apply any cross-module ops stashed by replayExecution.
 	if recorder.IsReplayMode() {

@@ -54,9 +54,17 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 	)
 
 	// prepare querier
+	recorder := api.GetRecorder()
+	querierCtx := ctx
+	if recorder.IsSGXMode() {
+		recordingMS := NewRecordingMultiStore(ctx.MultiStore(), recorder, nil)
+		querierCtx = ctx.WithMultiStore(recordingMS)
+	}
+
 	querier := QueryHandler{
-		Ctx:     ctx,
+		Ctx:     querierCtx,
 		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
 	}
 
 	gas := gasForContract(ctx)
@@ -73,6 +81,14 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 	}
 
 	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, storeForExecution, cosmwasmAPI, querier, ctx.GasMeter(), gas, sigInfo, callType)
+
+	if api.GetRecorder().IsReplayMode() {
+		crossOps := api.GetRecorder().GetAndClearPendingCrossModuleOps()
+		if len(crossOps) > 0 {
+			ApplyCrossModuleOps(ctx.MultiStore(), k.storeKeys, crossOps)
+		}
+	}
+
 	consumeGas(ctx, gasUsed)
 
 	return res, err
