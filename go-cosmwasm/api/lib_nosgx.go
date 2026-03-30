@@ -280,13 +280,9 @@ func KeyGen() ([]byte, error) {
 	return make([]byte, 32), nil
 }
 
-func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
+func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
 	logInfo("CreateAttestationReport", "Skipped in replay mode")
 	return true, nil
-}
-
-func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
-	return nil, nil
 }
 
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
@@ -387,39 +383,4 @@ func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
 
 func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	return nil
-}
-
-func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
-	recorder := GetRecorder()
-	height := recorder.GetCurrentBlockHeight()
-
-	// During node init (height=0), keeper loads stored proofs from state.
-	// On SGX nodes this loads them into the enclave; on non-SGX there's
-	// no enclave, so just skip — the proof already lives in the KV store.
-	if height == 0 {
-		logInfo("OnApproveMachineID", "Skipping at init (height=0, no enclave on non-SGX)")
-		return nil
-	}
-
-	machineIDHex := fmt.Sprintf("%x", machineID)
-
-	// Non-SGX nodes always fetch from the SGX node via gRPC
-	client := GetEcallClient()
-	retryDelay := 2 * time.Second
-	attempt := 0
-
-	for {
-		data, err := client.FetchMachineIDProof(height, machineIDHex)
-		if err == nil && len(data) > 0 {
-			logInfo("OnApproveMachineID", "Fetched proof from SGX node: height=%d (attempt %d)", height, attempt+1)
-			copy(proof[:], data)
-			return nil
-		}
-
-		attempt++
-		if attempt%15 == 1 { // Log every ~30 seconds
-			logWarn("OnApproveMachineID", "Waiting for SGX node proof: height=%d machineID=%s attempt=%d err=%v", height, machineIDHex, attempt, err)
-		}
-		time.Sleep(retryDelay)
-	}
 }

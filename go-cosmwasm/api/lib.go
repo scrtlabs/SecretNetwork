@@ -174,16 +174,6 @@ func MigrationOp(op uint32) (bool, error) {
 	return true, nil
 }
 
-func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
-	recorder := GetRecorder()
-	if recorder.IsReplayMode() {
-		// No enclave; return empty so UpdateNetworkKeys loop exits immediately
-		return nil, nil
-	}
-	res := C.get_network_pubkey(u32(i_seed))
-	return receiveVector(res.buf1), receiveVector(res.buf2)
-}
-
 func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
@@ -261,41 +251,6 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	}
 	if !ret {
 		return errors.New("onchain_approve_upgrade failed")
-	}
-
-	return nil
-}
-
-func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
-	recorder := GetRecorder()
-	if recorder.IsReplayMode() {
-		// In replay mode, retrieve the recorded proof
-		height := recorder.GetCurrentBlockHeight()
-		proofData, found := recorder.ReplayMachineIDProof(height, machineID)
-		if !found {
-			logWarn("OnApproveMachineID", "No recorded proof found for height=%d, machineID len=%d", height, len(machineID))
-			return fmt.Errorf("no recorded machine ID proof for height %d", height)
-		}
-		copy(proof[:], proofData)
-		logInfo("OnApproveMachineID", "Replayed proof from record for height=%d", height)
-		return nil
-	}
-
-	msgBuf := sendSlice(machineID)
-	defer freeAfterSend(msgBuf)
-
-	ret, err := C.onchain_approve_machine_id(msgBuf, (*C.uint8_t)(unsafe.Pointer(proof)), C.bool(is_on_chain))
-	if err != nil {
-		return err
-	}
-	if !ret {
-		return errors.New("onchain_approve_machine_id failed")
-	}
-
-	// Record the proof for non-SGX/replay nodes
-	height := recorder.GetCurrentBlockHeight()
-	if err := recorder.RecordMachineIDProof(height, machineID, proof[:]); err != nil {
-		logWarn("OnApproveMachineID", "Failed to record proof: %v", err)
 	}
 
 	return nil
@@ -905,10 +860,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
-<<<<<<< HEAD
 func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
-=======
-func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
 		// In replay mode, skip attestation report creation (no SGX)
@@ -916,7 +868,6 @@ func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report boo
 		return true, nil
 	}
 
->>>>>>> c68aa2166 (write ecalls data to the db)
 	errmsg := C.Buffer{}
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
