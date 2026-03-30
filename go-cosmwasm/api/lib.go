@@ -174,6 +174,10 @@ func MigrationOp(op uint32) (bool, error) {
 	return true, nil
 }
 
+func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
+	return nil, nil
+}
+
 func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {

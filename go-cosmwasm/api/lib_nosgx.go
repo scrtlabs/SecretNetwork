@@ -289,6 +289,10 @@ func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
 	return nil, nil
 }
 
+func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
+	return nil, nil
+}
+
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	recorder := GetRecorder()
 	certHash := sha256.Sum256(cert)
