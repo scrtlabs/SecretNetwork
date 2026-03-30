@@ -68,7 +68,8 @@ enclave {
             [out, count=n_seeds] uint8_t* p_seeds,
             uintptr_t n_seeds,
             [out] uintptr_t* p_seeds_size,
-            [out, count=52] uint8_t* p_owner
+            [in, count=20] const uint8_t* p_machine_pop,
+            [out, count=104] uint8_t* p_machine_del_add
         );
 
         public NodeAuthResult ecall_check_patch_level(

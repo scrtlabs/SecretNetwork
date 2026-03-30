@@ -22,7 +22,8 @@ extern "C" {
         p_seeds: *mut u8,
         n_seeds: u32,
         p_seeds_size: *mut u32,
-        p_owner: *mut u8,
+        p_machine_pop: *const u8,
+        p_machine_del_add: *mut u8,
     ) -> sgx_status_t;
     pub fn ecall_get_genesis_seed(
         eid: sgx_enclave_id_t,
@@ -72,7 +73,8 @@ pub fn untrusted_get_encrypted_seed(
     seed_buffer.resize(SINGLE_ENCRYPTED_SEED_SIZE * 100, 0); // should be enough. Resize in later version, when approaching the limit
 
     let mut seeds_size: u32 = 0;
-    let mut owner = [0_u8; 52];
+    let mut machine_pop = [0_u8; 20];
+    let mut machine_add_del = [0_u8; 104];
 
     let status = unsafe {
         ecall_authenticate_new_node(
@@ -83,7 +85,8 @@ pub fn untrusted_get_encrypted_seed(
             seed_buffer.as_mut_ptr(),
             seed_buffer.len() as u32,
             &mut seeds_size,
-            owner.as_mut_ptr(),
+            machine_pop.as_ptr(),
+            machine_add_del.as_mut_ptr(),
         )
     };
 
@@ -105,14 +108,14 @@ pub fn untrusted_get_encrypted_seed(
     seed_buffer.resize(seeds_size as usize, 0);
     debug!("Done auth, got seed: {}", hex::encode(&seed_buffer));
 
-    let is_ownerzero = owner.iter().all(|&x| x == 0);
-    let owner_arr = if is_ownerzero {
+    let is_machine_data_zero = machine_add_del.iter().all(|&x| x == 0);
+    let machine_data_arr = if is_machine_data_zero {
         Vec::new()
     } else {
-        owner.to_vec()
+        machine_add_del.to_vec()
     };
 
-    Ok(Ok((seed_buffer, owner_arr)))
+    Ok(Ok((seed_buffer, machine_data_arr)))
 }
 
 pub fn untrusted_get_encrypted_genesis_seed(

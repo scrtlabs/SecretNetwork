@@ -6,7 +6,9 @@ use std::panic;
 
 use enclave_ffi_types::NodeAuthResult;
 
-use crate::registration::attestation::{verify_quote_sgx, AttestationCombined, VerifiedSgxQuote};
+use crate::registration::attestation::{
+    allow_list, verify_quote_sgx, AttestationCombined, VerifiedSgxQuote,
+};
 
 use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
@@ -71,6 +73,20 @@ fn verify_attestation_dcap(
     Ok(res)
 }
 
+unsafe fn copy_machine_data_res(
+    p_machine_data: *mut u8,
+    machine: &allow_list::MachineID,
+    owner: &allow_list::Owner,
+) {
+    slice::from_raw_parts_mut(p_machine_data, allow_list::OWNER_LEN).copy_from_slice(owner);
+
+    slice::from_raw_parts_mut(
+        p_machine_data.add(allow_list::OWNER_LEN),
+        allow_list::MACHINE_ID_LEN,
+    )
+    .copy_from_slice(machine);
+}
+
 ///
 /// `ecall_authenticate_new_node`
 ///
@@ -92,15 +108,27 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     p_seeds: *mut u8,
     n_seeds: u32,
     p_seeds_size: *mut u32,
-    p_owner: *mut u8,
+    p_machine_pop: *const u8,
+    p_machine_del_add: *mut u8,
 ) -> NodeAuthResult {
     if let Err(_err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
         return NodeAuthResult::MemorySafetyAllocationError;
     }
 
+    let machine_data = allow_list::OWNER_LEN + allow_list::MACHINE_ID_LEN;
+
     validate_mut_ptr!(p_seeds, n_seeds as usize, NodeAuthResult::InvalidInput);
-    validate_mut_ptr!(p_owner, 52 as usize, NodeAuthResult::InvalidInput);
+    validate_const_ptr!(
+        p_machine_pop,
+        allow_list::MACHINE_ID_LEN,
+        NodeAuthResult::InvalidInput
+    );
+    validate_mut_ptr!(
+        p_machine_del_add,
+        machine_data * 2,
+        NodeAuthResult::InvalidInput
+    );
     validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
 
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
@@ -152,8 +180,6 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     if let Ok(res) = result {
         match res {
             Ok(res) => {
-                trace!("Done encrypting seed, got {}", hex::encode(&res));
-
                 let actual_size = res.len() as u32;
                 *p_seeds_size = actual_size;
 
@@ -162,17 +188,41 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
                     return NodeAuthResult::InvalidInput;
                 }
 
-                slice::from_raw_parts_mut(p_seeds, res.len()).copy_from_slice(&res);
-
-                trace!("returning with seed: {}, {}", res.len(), hex::encode(&res));
-
-                slice::from_raw_parts_mut(p_owner, 32)
-                    .copy_from_slice(&verified_quote.body.report_data.d[32..]);
-
                 if let Some(machine_id_hash) = verified_quote.machine_id_hash {
-                    slice::from_raw_parts_mut(p_owner.add(32), 20)
-                        .copy_from_slice(&machine_id_hash);
+                    // handle changes to the SGX allow-list
+                    let mut allow_list = crate::registration::attestation::PPID_WHITELIST
+                        .lock()
+                        .unwrap();
+
+                    let owner: &allow_list::Owner =
+                        &verified_quote.body.report_data.d[32..].try_into().unwrap();
+
+                    let machine_pop: &allow_list::MachineID =
+                        slice::from_raw_parts(p_machine_pop, allow_list::MACHINE_ID_LEN)
+                            .try_into()
+                            .unwrap();
+
+                    let height = {
+                        let extra = KEY_MANAGER.extra_data.lock().unwrap();
+                        extra.height
+                    };
+
+                    // if swap-res failed - never mind. This is probably because the machine was added with proof-of-cloud
+                    if let Some(swap_res) =
+                        allow_list.update(&machine_id_hash, owner, machine_pop, height)
+                    {
+                        copy_machine_data_res(
+                            p_machine_del_add.add(machine_data),
+                            &machine_id_hash,
+                            owner,
+                        );
+
+                        copy_machine_data_res(p_machine_del_add, &swap_res.0, &swap_res.1);
+                    }
                 }
+
+                slice::from_raw_parts_mut(p_seeds, res.len()).copy_from_slice(&res);
+                trace!("returning with seed: {}, {}", res.len(), hex::encode(&res));
 
                 NodeAuthResult::Success
             }
