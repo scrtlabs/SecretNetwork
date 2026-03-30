@@ -886,15 +886,15 @@ pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
     }
 
     {
-        let mut set = crate::registration::attestation::PPID_WHITELIST
+        let mut allow_list = crate::registration::attestation::PPID_WHITELIST
             .lock()
             .unwrap();
 
         let arg: &[u8; 20] = machine_id.try_into().unwrap();
 
-        if !set.contains(arg) {
+        if !allow_list.m_to_o.contains_key(arg) {
             println!("Onchain added machine ID: {}", hex::encode(arg));
-            set.insert(*arg);
+            allow_list.m_to_o.insert(*arg, [0_u8; 32]);
         }
     }
 

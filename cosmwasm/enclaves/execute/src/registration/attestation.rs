@@ -106,6 +106,91 @@ impl KnownJwtKeys {
     }
 }
 
+pub mod allow_list {
+
+    use std::collections::{BTreeMap, HashMap};
+
+    pub const MACHINE_ID_LEN: usize = 20;
+    pub const OWNER_LEN: usize = 32;
+
+    pub type MachineID = [u8; MACHINE_ID_LEN];
+    pub type Owner = [u8; OWNER_LEN];
+
+    pub struct Data {
+        pub m_to_o: HashMap<[u8; 20], [u8; 32]>,
+        pub o_to_m: HashMap<[u8; 32], BTreeMap<[u8; 20], u64>>,
+    }
+
+    impl Data {
+        fn update_o_to_m(&mut self, owner: &Owner, machine: &MachineID, add: bool, height: u64) {
+            if *owner == [0u8; OWNER_LEN] {
+                return;
+            }
+
+            let should_remove = {
+                let owned_machines = self.o_to_m.entry(*owner).or_default();
+
+                if add {
+                    owned_machines.insert(*machine, height);
+                } else {
+                    owned_machines.remove(machine);
+                }
+
+                owned_machines.is_empty()
+            };
+
+            if should_remove {
+                self.o_to_m.remove(owner);
+            }
+        }
+
+        pub fn update(
+            &mut self,
+            machine: &MachineID,
+            owner: &Owner,
+            machine_pop: &MachineID,
+            height: u64,
+        ) -> Option<(MachineID, Owner)> {
+            let (prev_owner, prev_machine) = if let Some(prev_owner) = self.m_to_o.get_mut(machine)
+            {
+                let prev_owner_val = *prev_owner;
+                *prev_owner = *owner; // update existing machine
+                (prev_owner_val, *machine)
+            } else {
+                // machine is new. Remove this owner's old machine
+                let old_machine = {
+                    let owned_machines = match self.o_to_m.get(owner) {
+                        Some(x) => x,
+                        None => {
+                            return None; // no old machines
+                        }
+                    };
+
+                    if owned_machines.contains_key(machine_pop) {
+                        machine_pop // use hint, the machine the owner wants to remove
+                    } else {
+                        // find the oldest machine
+                        match owned_machines.iter().min_by_key(|(_, height)| *height) {
+                            Some((machine, _)) => machine,
+                            None => return None,
+                        }
+                    }
+                };
+
+                self.m_to_o.remove(old_machine); // remove old machine
+                self.m_to_o.insert(*machine, *owner); // insert new machine
+
+                (*owner, *old_machine)
+            };
+
+            self.update_o_to_m(&prev_owner, &prev_machine, false, 0_u64);
+            self.update_o_to_m(owner, machine, true, height);
+
+            Some((prev_machine, prev_owner))
+        }
+    }
+}
+
 lazy_static::lazy_static! {
 
     static ref KNOWN_JWT_KEYS: KnownJwtKeys  = {
@@ -140,7 +225,7 @@ lazy_static::lazy_static! {
         keys
     };
 
-    pub static ref PPID_WHITELIST: SgxMutex<HashSet<[u8; 20]>>  = {
+    pub static ref PPID_WHITELIST: SgxMutex<allow_list::Data>  = {
         let mut set: HashSet<[u8; 20]> = HashSet::new();
 
         set.insert([0x01,0x50,0x7c,0x95,0x77,0x89,0xb7,0xc1,0xaf,0xde,0x97,0x2d,0x67,0xf1,0xfd,0xd5,0x3a,0xf1,0xa8,0xda]);
@@ -287,7 +372,16 @@ lazy_static::lazy_static! {
         set.insert([0xfe,0xc9,0x34,0x2e,0x9e,0xe4,0x18,0x64,0x53,0xf8,0xa7,0xe0,0x27,0xfa,0xc8,0xc2,0x4e,0x7c,0x0c,0x60]);
         set.insert([0xff,0xf4,0xfe,0x67,0xc5,0x2b,0x8d,0x0d,0x42,0x5d,0x2b,0x97,0x72,0xe7,0xa4,0xff,0xcd,0x9d,0xac,0xf3]);
 
-        SgxMutex::new(set)
+        let mut ret = allow_list::Data {
+            m_to_o: HashMap::new(),
+            o_to_m: HashMap::new(),
+        };
+
+        for x in set {
+            ret.m_to_o.insert(x, [0_u8; 32]);
+        }
+
+        SgxMutex::new(ret)
     };
 
     static ref FMSPC_EOL: HashSet<&'static str> = HashSet::from([
@@ -660,7 +754,7 @@ impl AttestationCombined {
 pub struct VerifiedSgxQuote {
     pub body: sgx_report_body_t,
     pub qv_result: sgx_ql_qv_result_t,
-    pub machine_id_hash: Option<[u8; 20]>,
+    pub machine_id_hash: Option<allow_list::MachineID>,
 }
 
 pub fn verify_quote_sgx(
@@ -698,7 +792,7 @@ pub fn verify_quote_sgx(
             let is_in_wl = match &machine_id_opt {
                 Some(machine_id_hash) => {
                     let wl = PPID_WHITELIST.lock().unwrap();
-                    if wl.contains(machine_id_hash) {
+                    if wl.m_to_o.contains_key(machine_id_hash) {
                         true
                     } else {
                         println!("Unknown Machine ID: {}", orig_hex::encode(machine_id_hash));
