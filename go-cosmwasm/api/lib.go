@@ -96,7 +96,6 @@ func InitBootstrap() ([]byte, error) {
 		logInfo("InitBootstrap", "Skipped in replay mode")
 		return make([]byte, 32), nil
 	}
-
 	errmsg := C.Buffer{}
 	res, err := C.init_bootstrap(&errmsg)
 	if err != nil {
@@ -112,7 +111,6 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte) (bool, error) {
 		logInfo("LoadSeedToEnclave", "Skipped in replay mode")
 		return true, nil
 	}
-
 	pkSlice := sendSlice(masterKey)
 	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
@@ -166,7 +164,24 @@ func MigrationOp(op uint32) (bool, error) {
 }
 
 func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
-	return nil, nil
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+
+	if recorder.IsReplayMode() {
+		nodePk, ioPk, err := GetEcallClient().FetchNetworkPubkey(height, i_seed)
+		if err != nil {
+			logError("GetNetworkPubkey", "Failed to fetch on replay: %v", err)
+			return nil, nil
+		}
+		return nodePk, ioPk
+	}
+
+	res := C.get_network_pubkey(u32(i_seed))
+	nodePk := receiveVector(res.buf1)
+	ioPk := receiveVector(res.buf2)
+
+	_ = recorder.RecordGetNetworkPubkey(height, i_seed, nodePk, ioPk)
+	return nodePk, ioPk
 }
 
 func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
@@ -886,16 +901,14 @@ func KeyGen() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
+// CreateAttestationReport Send request to enclave
 func CreateAttestationReport(ext_sk []byte, is_migration_report bool) (bool, error) {
-// CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
 		// In replay mode, skip attestation report creation (no SGX)
 		logInfo("CreateAttestationReport", "Skipped in replay mode")
 		return true, nil
 	}
-
 	errmsg := C.Buffer{}
 
 	flags := u32(0)

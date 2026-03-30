@@ -59,6 +59,7 @@ var (
 	prefixMachineIDProof        = []byte{0x04} // For MachineID approval: prefix | height | machineID
 	prefixCreateResult          = []byte{0x05} // For Create (store code): prefix | height | sha256(wasm)
 	prefixGetEncryptedSeedErr   = []byte{0x06} // For GetEncryptedSeed errors: prefix | certHash
+	prefixGetNetworkPubkey      = []byte{0x07} // For GetNetworkPubkey: prefix | height | i_seed
 )
 
 // CrossModuleOp represents a write to a module store other than the contract's
@@ -80,7 +81,7 @@ type ExecutionTrace struct {
 	GasUsed     uint64          // Gas reported by the enclave
 	CallbackGas uint64          // Total gas consumed by callbacks (store ops) during execution
 	HasError    bool
-	IsOutOfGas  bool   // True when the enclave returned errno==2 (OutOfGas)
+	IsOutOfGas  bool // True when the enclave returned errno==2 (OutOfGas)
 	ErrorMsg    string
 }
 
@@ -381,6 +382,69 @@ func (r *EcallRecorder) ReplayMachineIDProof(height int64, machineID []byte) (pr
 
 	logInfo("EcallRecorder", "Replayed MachineIDProof for height %d (%d bytes)", height, len(value))
 	return value, true
+}
+
+// --- GetNetworkPubkey recording ---
+
+func makeNetworkPubkeyKey(height int64, iSeed uint32) []byte {
+	key := make([]byte, 1+8+4)
+	key[0] = prefixGetNetworkPubkey[0]
+	binary.BigEndian.PutUint64(key[1:9], uint64(height))
+	binary.BigEndian.PutUint32(key[9:13], iSeed)
+	return key
+}
+
+func (r *EcallRecorder) RecordGetNetworkPubkey(height int64, iSeed uint32, nodePk, ioPk []byte) error {
+	if r.db == nil {
+		return nil
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Pack lengths + data
+	value := make([]byte, 2+len(nodePk)+2+len(ioPk))
+	binary.BigEndian.PutUint16(value[0:2], uint16(len(nodePk)))
+	copy(value[2:2+len(nodePk)], nodePk)
+
+	offset := 2 + len(nodePk)
+	binary.BigEndian.PutUint16(value[offset:offset+2], uint16(len(ioPk)))
+	copy(value[offset+2:], ioPk)
+
+	key := makeNetworkPubkeyKey(height, iSeed)
+	if err := r.db.Set(key, value); err != nil {
+		return fmt.Errorf("failed to write network pubkey to db: %w", err)
+	}
+
+	logInfo("EcallRecorder", "Recorded GetNetworkPubkey at height %d for i_seed %d", height, iSeed)
+	return nil
+}
+
+func (r *EcallRecorder) ReplayGetNetworkPubkey(height int64, iSeed uint32) (nodePk, ioPk []byte, found bool) {
+	if r.db == nil {
+		return nil, nil, false
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	key := makeNetworkPubkeyKey(height, iSeed)
+	value, err := r.db.Get(key)
+	if err != nil || value == nil {
+		return nil, nil, false
+	}
+
+	nodePkLen := binary.BigEndian.Uint16(value[0:2])
+	nodePk = make([]byte, nodePkLen)
+	copy(nodePk, value[2:2+nodePkLen])
+
+	offset := 2 + nodePkLen
+	ioPkLen := binary.BigEndian.Uint16(value[offset : offset+2])
+	ioPk = make([]byte, ioPkLen)
+	copy(ioPk, value[offset+2:])
+
+	logInfo("EcallRecorder", "Replayed GetNetworkPubkey at height %d for i_seed %d", height, iSeed)
+	return nodePk, ioPk, true
 }
 
 // --- GetEncryptedSeed recording (by height + cert hash) ---
