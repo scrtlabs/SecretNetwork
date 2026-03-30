@@ -286,11 +286,15 @@ func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report boo
 }
 
 func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
-	return nil, nil
-}
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
 
-func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
-	return nil, nil
+	nodePk, ioPk, err := GetEcallClient().FetchNetworkPubkey(height, i_seed)
+	if err != nil {
+		logError("GetNetworkPubkey", "Failed to fetch on replay: %v", err)
+		return nil, nil
+	}
+	return nodePk, ioPk
 }
 
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
