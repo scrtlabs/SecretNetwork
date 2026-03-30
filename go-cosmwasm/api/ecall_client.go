@@ -78,9 +78,11 @@ type QueryEncryptedSeedRequest struct {
 	Height   int64  `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
 }
 
-func (m *QueryEncryptedSeedRequest) Reset()         { *m = QueryEncryptedSeedRequest{} }
-func (m *QueryEncryptedSeedRequest) String() string { return fmt.Sprintf("{CertHash:%s,Height:%d}", m.CertHash, m.Height) }
-func (m *QueryEncryptedSeedRequest) ProtoMessage()  {}
+func (m *QueryEncryptedSeedRequest) Reset() { *m = QueryEncryptedSeedRequest{} }
+func (m *QueryEncryptedSeedRequest) String() string {
+	return fmt.Sprintf("{CertHash:%s,Height:%d}", m.CertHash, m.Height)
+}
+func (m *QueryEncryptedSeedRequest) ProtoMessage() {}
 
 // QueryEncryptedSeedResponse matches QueryEncryptedSeedResponse proto
 type QueryEncryptedSeedResponse struct {
@@ -92,6 +94,30 @@ func (m *QueryEncryptedSeedResponse) String() string {
 	return fmt.Sprintf("{len:%d}", len(m.EncryptedSeed))
 }
 func (m *QueryEncryptedSeedResponse) ProtoMessage() {}
+
+// QueryNetworkPubkeyRequest matches QueryNetworkPubkeyRequest proto
+type QueryNetworkPubkeyRequest struct {
+	Height int64  `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	ISeed  uint32 `protobuf:"varint,2,opt,name=i_seed,json=iSeed,proto3" json:"i_seed,omitempty"`
+}
+
+func (m *QueryNetworkPubkeyRequest) Reset() { *m = QueryNetworkPubkeyRequest{} }
+func (m *QueryNetworkPubkeyRequest) String() string {
+	return fmt.Sprintf("{Height:%d,ISeed:%d}", m.Height, m.ISeed)
+}
+func (m *QueryNetworkPubkeyRequest) ProtoMessage() {}
+
+// QueryNetworkPubkeyResponse matches QueryNetworkPubkeyResponse proto
+type QueryNetworkPubkeyResponse struct {
+	NodePubkey []byte `protobuf:"bytes,1,opt,name=node_pubkey,json=nodePubkey,proto3" json:"node_pubkey,omitempty"`
+	IoPubkey   []byte `protobuf:"bytes,2,opt,name=io_pubkey,json=ioPubkey,proto3" json:"io_pubkey,omitempty"`
+}
+
+func (m *QueryNetworkPubkeyResponse) Reset() { *m = QueryNetworkPubkeyResponse{} }
+func (m *QueryNetworkPubkeyResponse) String() string {
+	return fmt.Sprintf("{len(node):%d,len(io):%d}", len(m.NodePubkey), len(m.IoPubkey))
+}
+func (m *QueryNetworkPubkeyResponse) ProtoMessage() {}
 
 // StorageOpProto matches the proto definition for storage operation
 type StorageOpProto struct {
@@ -167,9 +193,11 @@ type QueryAnalyzeCodeResponse struct {
 	RequiredFeatures  string `protobuf:"bytes,2,opt,name=required_features,json=requiredFeatures,proto3" json:"required_features,omitempty"`
 }
 
-func (m *QueryAnalyzeCodeResponse) Reset()         { *m = QueryAnalyzeCodeResponse{} }
-func (m *QueryAnalyzeCodeResponse) String() string { return fmt.Sprintf("{HasIBC:%v}", m.HasIBCEntryPoints) }
-func (m *QueryAnalyzeCodeResponse) ProtoMessage()  {}
+func (m *QueryAnalyzeCodeResponse) Reset() { *m = QueryAnalyzeCodeResponse{} }
+func (m *QueryAnalyzeCodeResponse) String() string {
+	return fmt.Sprintf("{HasIBC:%v}", m.HasIBCEntryPoints)
+}
+func (m *QueryAnalyzeCodeResponse) ProtoMessage() {}
 
 // QueryMachineIDProofRequest matches QueryMachineIDProofRequest proto
 type QueryMachineIDProofRequest struct {
@@ -177,9 +205,11 @@ type QueryMachineIDProofRequest struct {
 	MachineId string `protobuf:"bytes,2,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
 }
 
-func (m *QueryMachineIDProofRequest) Reset()         { *m = QueryMachineIDProofRequest{} }
-func (m *QueryMachineIDProofRequest) String() string { return fmt.Sprintf("{Height:%d,MachineId:%s}", m.Height, m.MachineId) }
-func (m *QueryMachineIDProofRequest) ProtoMessage()  {}
+func (m *QueryMachineIDProofRequest) Reset() { *m = QueryMachineIDProofRequest{} }
+func (m *QueryMachineIDProofRequest) String() string {
+	return fmt.Sprintf("{Height:%d,MachineId:%s}", m.Height, m.MachineId)
+}
+func (m *QueryMachineIDProofRequest) ProtoMessage() {}
 
 // QueryMachineIDProofResponse matches QueryMachineIDProofResponse proto
 type QueryMachineIDProofResponse struct {
@@ -223,12 +253,13 @@ func (m *QueryBlockCreateResultsResponse) String() string {
 func (m *QueryBlockCreateResultsResponse) ProtoMessage() {}
 
 const (
-	methodEcallRecord          = "/secret.compute.v1beta1.Query/EcallRecord"
-	methodEncryptedSeed        = "/secret.compute.v1beta1.Query/EncryptedSeed"
-	methodBlockTraces          = "/secret.compute.v1beta1.Query/BlockTraces"
-	methodAnalyzeCode          = "/secret.compute.v1beta1.Query/AnalyzeCode"
-	methodMachineIDProof       = "/secret.compute.v1beta1.Query/MachineIDProof"
-	methodBlockCreateResults   = "/secret.compute.v1beta1.Query/BlockCreateResults"
+	methodEcallRecord        = "/secret.compute.v1beta1.Query/EcallRecord"
+	methodEncryptedSeed      = "/secret.compute.v1beta1.Query/EncryptedSeed"
+	methodBlockTraces        = "/secret.compute.v1beta1.Query/BlockTraces"
+	methodAnalyzeCode        = "/secret.compute.v1beta1.Query/AnalyzeCode"
+	methodMachineIDProof     = "/secret.compute.v1beta1.Query/MachineIDProof"
+	methodBlockCreateResults = "/secret.compute.v1beta1.Query/BlockCreateResults"
+	methodNetworkPubkey      = "/secret.compute.v1beta1.Query/NetworkPubkey"
 )
 
 var (
@@ -252,6 +283,8 @@ var (
 	_ proto.Message = (*CreateResultDataProto)(nil)
 	_ proto.Message = (*QueryBlockCreateResultsRequest)(nil)
 	_ proto.Message = (*QueryBlockCreateResultsResponse)(nil)
+	_ proto.Message = (*QueryNetworkPubkeyRequest)(nil)
+	_ proto.Message = (*QueryNetworkPubkeyResponse)(nil)
 )
 
 // GetEcallClient returns the global ecall client instance
@@ -640,4 +673,17 @@ func (c *EcallClient) FetchBlockCreateResults(height int64) ([]*CreateResult, []
 		logInfo("EcallClient", "Fetched %d Create results for block %d", len(results), height)
 	}
 	return results, wasmHashes, nil
+}
+
+// FetchNetworkPubkey fetches a stored network pubkey from a random SGX node
+func (c *EcallClient) FetchNetworkPubkey(height int64, iSeed uint32) ([]byte, []byte, error) {
+	req := &QueryNetworkPubkeyRequest{Height: height, ISeed: iSeed}
+	resp := &QueryNetworkPubkeyResponse{}
+
+	if err := c.invokeWithRetry(methodNetworkPubkey, req, resp); err != nil {
+		return nil, nil, fmt.Errorf("gRPC NetworkPubkey failed for height %d seed %d: %w", height, iSeed, err)
+	}
+
+	logInfo("EcallClient", "Fetched NetworkPubkey for height %d seed %d", height, iSeed)
+	return resp.NodePubkey, resp.IoPubkey, nil
 }

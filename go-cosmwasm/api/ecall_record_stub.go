@@ -121,8 +121,8 @@ func (r *EcallRecorder) SetBlockTraces(traces []*ExecutionTrace)                
 func (r *EcallRecorder) GetTraceFromMemory(index int64) (*ExecutionTrace, bool) { return nil, false }
 
 // Cross-module ops stubs
-func (r *EcallRecorder) SetPendingCrossModuleOps(ops []CrossModuleOp)    {}
-func (r *EcallRecorder) AppendCrossModuleOp(op CrossModuleOp)            {}
+func (r *EcallRecorder) SetPendingCrossModuleOps(ops []CrossModuleOp)      {}
+func (r *EcallRecorder) AppendCrossModuleOp(op CrossModuleOp)              {}
 func (r *EcallRecorder) GetAndClearPendingCrossModuleOps() []CrossModuleOp { return nil }
 
 // CreateResult stores the outcome of an SGX Create call
@@ -136,10 +136,19 @@ type CreateResult struct {
 func (r *EcallRecorder) RecordCreateResult(height int64, wasmHash []byte, codeHash []byte, errMsg string) error {
 	return nil
 }
+
 func (r *EcallRecorder) ReplayCreateResult(height int64, wasmHash []byte) (codeHash []byte, errMsg string, found bool) {
 	return nil, "", false
 }
+
 func (r *EcallRecorder) GetAllCreateResultsForBlock(height int64) ([]*CreateResult, [][]byte, error) {
 	return nil, nil, nil
 }
 
+func (r *EcallRecorder) RecordGetNetworkPubkey(height int64, iSeed uint32, nodePk, ioPk []byte) error {
+	return nil
+}
+
+func (r *EcallRecorder) ReplayGetNetworkPubkey(height int64, iSeed uint32) ([]byte, []byte, bool) {
+	return nil, nil, false
+}

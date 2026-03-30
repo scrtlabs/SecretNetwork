@@ -175,7 +175,24 @@ func MigrationOp(op uint32) (bool, error) {
 }
 
 func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
-	return nil, nil
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
+
+	if recorder.IsReplayMode() {
+		nodePk, ioPk, err := GetEcallClient().FetchNetworkPubkey(height, i_seed)
+		if err != nil {
+			logError("GetNetworkPubkey", "Failed to fetch on replay: %v", err)
+			return nil, nil
+		}
+		return nodePk, ioPk
+	}
+
+	res := C.get_network_pubkey(u32(i_seed))
+	nodePk := receiveVector(res.buf1)
+	ioPk := receiveVector(res.buf2)
+
+	_ = recorder.RecordGetNetworkPubkey(height, i_seed, nodePk, ioPk)
+	return nodePk, ioPk
 }
 
 func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
