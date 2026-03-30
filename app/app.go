@@ -67,6 +67,7 @@ import (
 	v1_20 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.20"
 	v1_21 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.21"
 	v1_21_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.21.7"
+
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
@@ -500,7 +501,23 @@ func (app *SecretNetworkApp) PreBlocker(ctx sdk.Context, _ *abci.RequestFinalize
 
 // EndBlocker application updates every end block
 func (app *SecretNetworkApp) EndBlocker(ctx sdk.Context) (sdk.EndBlock, error) {
-	return app.mm.EndBlock(ctx)
+	resp, err := app.mm.EndBlock(ctx)
+
+	// DUMP STATE FOR DIVERGENT BLOCK
+	if ctx.BlockHeight() == 24066603 {
+		fmt.Printf("\n==== INTERCEPTED ENDBLOCK AT 24066603 ====\n")
+		// Dump ALL events accumulated in the block
+		eventsJSON, _ := tmjson.MarshalIndent(ctx.EventManager().Events(), "", "  ")
+
+		errWrite := os.WriteFile("divergent_events_24066603.json", eventsJSON, 0o644)
+		if errWrite != nil {
+			fmt.Printf("Failed to write events to file: %v\n", errWrite)
+		} else {
+			fmt.Printf("Wrote divergent EndBlock events to divergent_events_24066603.json\n")
+		}
+	}
+
+	return resp, err
 }
 
 // InitChainer application update at chain initialization

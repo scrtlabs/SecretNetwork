@@ -248,6 +248,10 @@ type WasmConfig struct {
 	// It must always be true except the case when we create temporary app to
 	// extract autoCLIOpts from it
 	InitEnclave bool
+	// StoreSGXData enables storing SGX ecall data (ecall records and execution traces)
+	// for non-SGX node sync. When enabled, this node will store data that can be
+	// queried by non-SGX nodes via gRPC. Default: false (opt-in)
+	StoreSGXData bool
 }
 
 // DefaultWasmConfig returns the default settings for WasmConfig
@@ -257,6 +261,7 @@ func DefaultWasmConfig() *WasmConfig {
 		CacheSize:          defaultLRUCacheSize,
 		EnclaveCacheSize:   defaultEnclaveLRUCacheSize,
 		InitEnclave:        true,
+		StoreSGXData:       false, // Opt-in: validators choose to store/serve SGX data
 	}
 }
 
@@ -310,6 +315,10 @@ func GetConfig(appOpts servertypes.AppOptions) *WasmConfig {
 		config.EnclaveCacheSize = enclaveCacheSize
 	}
 
+	// Read store-sgx-data config (defaults to false if not set)
+	storeSGXData := cast.ToBool(appOpts.Get("wasm.store-sgx-data"))
+	config.StoreSGXData = storeSGXData
+
 	return config
 }
 
@@ -326,6 +335,13 @@ contract-memory-cache-size = "{{ .WASMConfig.CacheSize }}"
 
 # The WASM VM memory cache size in number of cached modules. Can safely go up to 15, but not recommended for validators
 contract-memory-enclave-cache-size = "{{ .WASMConfig.EnclaveCacheSize }}"
+
+# Enable storing SGX ecall data for non-SGX node sync.
+# When enabled, this node will store ecall records and execution traces
+# that can be queried by non-SGX nodes via gRPC (port 9090).
+# Validators who enable this should also open gRPC port 9090 in their firewall.
+# Default: false (opt-in)
+store-sgx-data = {{ .WASMConfig.StoreSGXData }}
 `
 
 // ZeroSender is a valid 20 byte canonical address that's used to bypass the x/compute checks
