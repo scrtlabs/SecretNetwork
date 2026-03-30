@@ -251,6 +251,27 @@ func (q GrpcQuerier) AuthorizedMigration(c context.Context, req *types.QueryAuth
 // EcallRecord returns the ecall record for a specific block height
 // This is used by non-SGX nodes to sync with the network
 // SECURITY: Only returns data for heights < current height (prevents non-SGX nodes from participating in consensus)
+func (q GrpcQuerier) NetworkPubkey(c context.Context, req *types.QueryNetworkPubkeyRequest) (*types.QueryNetworkPubkeyResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+
+	recorder := api.GetRecorder()
+	if !recorder.IsSGXMode() {
+		return nil, status.Error(codes.FailedPrecondition, "NetworkPubkey query is only available on SGX nodes")
+	}
+
+	nodePk, ioPk, found := recorder.ReplayGetNetworkPubkey(req.Height, req.ISeed)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "No network pubkey recorded for height %d seed %d", req.Height, req.ISeed)
+	}
+
+	return &types.QueryNetworkPubkeyResponse{
+		NodePubkey: nodePk,
+		IoPubkey:   ioPk,
+	}, nil
+}
+
 func (q GrpcQuerier) EcallRecord(c context.Context, req *types.QueryEcallRecordRequest) (*types.QueryEcallRecordResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
