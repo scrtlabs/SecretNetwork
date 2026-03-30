@@ -19,6 +19,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute/client/cli"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
+	tmenclave "github.com/scrtlabs/tm-secret-enclave"
 )
 
 var (
@@ -230,7 +231,6 @@ func (am AppModule) BeginBlock(c context.Context) error {
 				ctx.Logger().Error("Failed to record SubmitBlockSignatures", "error", err)
 				// Don't fail the block for recording errors
 			}
-		}
 		}
 
 		am.keeper.SetRandomSeed(ctx, random, validator_set_evidence)

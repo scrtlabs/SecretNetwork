@@ -23,11 +23,11 @@ func HealthCheck() ([]byte, error) {
 	return []byte("replay"), nil
 }
 
-func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
+func InitBootstrap() ([]byte, error) {
 	return nil, nil
 }
 
-func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte, cronMsgs []byte) ([]byte, []byte, error) {
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte) ([]byte, []byte, error) {
 	return nil, nil, errors.New("submit block signatures not supported on non-SGX node")
 }
 
@@ -36,7 +36,7 @@ func SubmitValidatorSetEvidence(evidence []byte) error {
 	return nil
 }
 
-func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
+func LoadSeedToEnclave(masterKey []byte, seed []byte) (bool, error) {
 	return true, nil
 }
 
@@ -280,17 +280,21 @@ func KeyGen() ([]byte, error) {
 	return make([]byte, 32), nil
 }
 
-func CreateAttestationReport(no_epid bool, no_dcap bool, is_migration_report bool) (bool, error) {
+func CreateAttestationReport(is_migration_report bool) (bool, error) {
 	logInfo("CreateAttestationReport", "Skipped in replay mode")
 	return true, nil
 }
 
 func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
-	return nil, nil
-}
+	recorder := GetRecorder()
+	height := recorder.GetCurrentBlockHeight()
 
-func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
-	return nil, nil
+	nodePk, ioPk, err := GetEcallClient().FetchNetworkPubkey(height, i_seed)
+	if err != nil {
+		logError("GetNetworkPubkey", "Failed to fetch on replay: %v", err)
+		return nil, nil
+	}
+	return nodePk, ioPk
 }
 
 func GetEncryptedSeed(cert []byte) ([]byte, error) {

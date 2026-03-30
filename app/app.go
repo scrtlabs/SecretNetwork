@@ -70,17 +70,10 @@ import (
 	v1_21 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.21"
 	v1_21_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.21.7"
 	v1_22 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.22"
-<<<<<<< HEAD
 	v1_23 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.23"
 	v1_23_1 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.23.1"
 	v1_23_2 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.23.2"
-<<<<<<< HEAD
 	v1_24 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.24"
-=======
-=======
-
->>>>>>> 9cc517593 (write ecalls data to the db)
->>>>>>> e156894f2 (write ecalls data to the db)
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
