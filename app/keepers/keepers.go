@@ -539,6 +539,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.TransferKeeper,
 		ak.IbcKeeper.ChannelKeeper,
 		ak.IbcSwitchKeeper,
+		*ak.RegKeeper,
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
 		computeDir,

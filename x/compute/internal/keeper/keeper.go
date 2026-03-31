@@ -56,6 +56,7 @@ import (
 	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
 	cronkeeper "github.com/scrtlabs/SecretNetwork/x/cron/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/registration"
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
@@ -84,6 +85,7 @@ type Keeper struct {
 	bankKeeper       bankkeeper.Keeper
 	portKeeper       portkeeper.Keeper
 	capabilityKeeper capabilitykeeper.ScopedKeeper
+	regKeeper        registration.Keeper
 	cronKeeper       cronkeeper.Keeper
 	wasmer           wasm.Wasmer
 	queryPlugins     QueryPlugins
@@ -123,6 +125,7 @@ func NewKeeper(
 	portSource types.ICS20TransferPortSource,
 	channelKeeper channelkeeper.Keeper,
 	ics4Wrapper porttypes.ICS4Wrapper,
+	regKeeper registration.Keeper,
 	msgRouter MessageRouter,
 	queryRouter GRPCQueryRouter,
 	homeDir string,
@@ -148,6 +151,7 @@ func NewKeeper(
 		cronKeeper:       cronKeeper,
 		portKeeper:       portKeeper,
 		capabilityKeeper: capabilityKeeper,
+		regKeeper:        regKeeper,
 		messenger: NewMessageHandler(
 			msgRouter,
 			customEncoders,
