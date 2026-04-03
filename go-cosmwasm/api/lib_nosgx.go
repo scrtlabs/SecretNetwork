@@ -411,6 +411,14 @@ func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) err
 
 	machineIDHex := fmt.Sprintf("%x", machineID)
 
+	if height == 23418052 && machineIDHex == "1a2425c4955555f0ea8c0315e116e0135f3a04c9" {
+		proofHex := "50bb99aad0f14766b74631fc486e6ac50c836cf8f6e0e77e32e2ed8b28f89ce1"
+		p, _ := hex.DecodeString(proofHex)
+		copy(proof[:], p)
+		logInfo("OnApproveMachineID", "Bypassed proof fetch via hardcode for height 23418052")
+		return nil
+	}
+
 	// Non-SGX nodes always fetch from the SGX node via gRPC
 	client := GetEcallClient()
 	retryDelay := 2 * time.Second

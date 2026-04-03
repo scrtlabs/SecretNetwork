@@ -289,6 +289,14 @@ func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) err
 		return errors.New("onchain_approve_machine_id failed")
 	}
 
+	recorder := GetRecorder()
+	if recorder.IsSGXMode() {
+		height := recorder.GetCurrentBlockHeight()
+		if err := recorder.RecordMachineIDProof(height, machineID, proof[:]); err != nil {
+			logError("OnApproveMachineID", "Failed to record proof: %v", err)
+		}
+	}
+
 	return nil
 }
 
