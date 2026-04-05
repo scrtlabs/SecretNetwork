@@ -511,6 +511,7 @@ func (app *SecretNetworkApp) Initialize() {
 	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
 
 	_ = app.AppKeepers.ComputeKeeper.SetEnclaveColdEvidences(ctx)
+	_ = app.AppKeepers.RegKeeper.SetEnclaveColdData(ctx)
 	app.UpdateNetworkKeys()
 }
 

@@ -16,7 +16,8 @@ use cosmwasm_sgx_vm::{
     untrusted_approve_upgrade, untrusted_get_encrypted_genesis_seed, untrusted_get_encrypted_seed,
     untrusted_get_network_pubkey, untrusted_health_check, untrusted_init_bootstrap,
     untrusted_init_node, untrusted_key_gen, untrusted_migration_op, untrusted_rotate_store,
-    untrusted_submit_validator_set_evidence, Checksum, CosmCache, Extern,
+    untrusted_submit_machine_swap, untrusted_submit_validator_set_evidence, Checksum, CosmCache,
+    Extern,
 };
 use ctor::ctor;
 pub use db::{db_t, DB};
@@ -979,11 +980,7 @@ pub extern "C" fn onchain_approve_upgrade(msg: Buffer) -> bool {
 
 #[no_mangle]
 #[allow(deprecated)]
-pub extern "C" fn onchain_approve_machine_id(
-    machine_id: Buffer,
-    proof: *mut u8,
-    is_on_chain: bool,
-) -> bool {
+pub extern "C" fn onchain_approve_machine_id(machine_id: Buffer) -> bool {
     let machine_id_slice = match unsafe { machine_id.read() } {
         None => {
             return false;
@@ -991,7 +988,36 @@ pub extern "C" fn onchain_approve_machine_id(
         Some(r) => r,
     };
 
-    match untrusted_approve_machine_id(&machine_id_slice, proof, is_on_chain) {
+    match untrusted_approve_machine_id(machine_id_slice) {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), None);
+            false
+        }
+        Ok(()) => {
+            clear_error();
+            true
+        }
+    }
+}
+
+#[no_mangle]
+#[allow(deprecated)]
+pub extern "C" fn submit_machine_swap(index: u32, machine_info: Buffer, proof: Buffer) -> bool {
+    let machine_info_slice = match unsafe { machine_info.read() } {
+        None => {
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    let proof_slice = match unsafe { proof.read() } {
+        None => {
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    match untrusted_submit_machine_swap(index, machine_info_slice, proof_slice) {
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), None);
             false

@@ -1,6 +1,6 @@
 //!
 use super::attestation::get_quote_ecdsa;
-use crate::registration::attestation::{verify_quote_sgx, AttestationCombined};
+use crate::registration::attestation::{allow_list, verify_quote_sgx, AttestationCombined};
 #[cfg(feature = "verify-validator-whitelist")]
 use block_verifier::validator_whitelist;
 use core::convert::TryInto;
@@ -10,7 +10,6 @@ use enclave_crypto::consts::{
     FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS, FILE_MIGRATION_DATA,
     FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY,
 };
-use enclave_crypto::HASH_SIZE;
 #[cfg(feature = "random")]
 use enclave_crypto::{
     consts::SELF_REPORT_BODY, AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE,
@@ -695,20 +694,6 @@ pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
     sgx_types::sgx_status_t::SGX_SUCCESS
 }
 
-fn calculate_machine_id_evidence(machine_id: &[u8]) -> [u8; HASH_SIZE] {
-    let mut hasher = Sha256::new();
-
-    let magic = [b'm', b'i', b'd'];
-    hasher.update(magic);
-
-    hasher.update(SELF_REPORT_BODY.mr_enclave.m);
-    hasher.update(machine_id);
-
-    let mut ret = [0_u8; HASH_SIZE];
-    ret.copy_from_slice(&hasher.finalize());
-    ret
-}
-
 struct ProtobufParser<'a> {
     pub cursor: &'a [u8],
 }
@@ -853,36 +838,20 @@ fn check_machine_id_in_block(_msg_slice: &[u8]) -> bool {
 pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
     p_id: *const u8,
     n_id: u32,
-    p_proof: *mut u8,
-    is_on_chain: bool,
 ) -> sgx_types::sgx_status_t {
     validate_const_ptr!(p_id, n_id as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    validate_mut_ptr!(p_proof, 32, sgx_status_t::SGX_ERROR_UNEXPECTED);
 
-    if n_id != 20 {
+    if n_id as usize != allow_list::MACHINE_ID_LEN {
         println!("machine_id wrong len");
         return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
     let machine_id = slice::from_raw_parts(p_id, n_id as usize);
-    let proof = calculate_machine_id_evidence(machine_id);
+    let machine_id_str = hex::encode(machine_id);
 
-    if is_on_chain {
-        let machine_id_str = hex::encode(machine_id);
-
-        if !check_machine_id_in_block(machine_id_str.as_bytes()) {
-            error!("machine ID not approved");
-            return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-
-        // TODO: ensure message was in the signed block
-        slice::from_raw_parts_mut(p_proof, HASH_SIZE).copy_from_slice(&proof);
-    } else {
-        // compare
-        if proof != slice::from_raw_parts(p_proof, HASH_SIZE) {
-            error!("machine ID not approved earlier");
-            return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
+    if !check_machine_id_in_block(machine_id_str.as_bytes()) {
+        error!("machine ID not approved");
+        return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
     {
@@ -890,11 +859,85 @@ pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
             .lock()
             .unwrap();
 
-        let arg: &[u8; 20] = machine_id.try_into().unwrap();
+        let machine_id: &allow_list::MachineID = machine_id.try_into().unwrap();
 
-        if !allow_list.m_to_o.contains_key(arg) {
-            println!("Onchain added machine ID: {}", hex::encode(arg));
-            allow_list.m_to_o.insert(*arg, [0_u8; 32]);
+        if allow_list.add_new(*machine_id) {
+            println!("Onchain added machine ID: {}", hex::encode(machine_id));
+        }
+    }
+
+    sgx_types::sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ecall_submit_machine_swap(
+    _index: u32,
+    p_machine_info: *const u8,
+    n_machine_info: u32,
+    p_proof: *const u8,
+    n_proof: u32,
+) -> sgx_types::sgx_status_t {
+    validate_const_ptr!(
+        p_machine_info,
+        n_machine_info as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
+    validate_const_ptr!(
+        p_proof,
+        n_proof as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
+
+    const MACHINE_SWAP_INFO_LEN: usize =
+        allow_list::OWNER_LEN + allow_list::MACHINE_ID_LEN + allow_list::MACHINE_ID_LEN;
+
+    let (swap_info_opt, p_machine_id) = match n_machine_info as usize {
+        MACHINE_SWAP_INFO_LEN => {
+            let owner: &allow_list::Owner =
+                slice::from_raw_parts(p_machine_info, allow_list::OWNER_LEN)
+                    .try_into()
+                    .unwrap();
+
+            let machine_id_pop: &allow_list::MachineID = slice::from_raw_parts(
+                p_machine_info.add(allow_list::OWNER_LEN + allow_list::MACHINE_ID_LEN),
+                allow_list::MACHINE_ID_LEN,
+            )
+            .try_into()
+            .unwrap();
+
+            (
+                Some((owner, machine_id_pop)),
+                p_machine_info.add(allow_list::OWNER_LEN),
+            )
+        }
+        allow_list::MACHINE_ID_LEN => (None, p_machine_info),
+        _ => {
+            println!("machine_info wrong len");
+            return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    let machine_id: &allow_list::MachineID =
+        slice::from_raw_parts(p_machine_id, allow_list::MACHINE_ID_LEN)
+            .try_into()
+            .unwrap();
+
+    {
+        let mut allow_list = crate::registration::attestation::PPID_WHITELIST
+            .lock()
+            .unwrap();
+
+        if let Some(swap_info) = swap_info_opt {
+            if allow_list
+                .update(machine_id, swap_info.0, swap_info.1)
+                .is_some()
+            {
+                println!("cold updated machine ID: {}", hex::encode(machine_id));
+            }
+        } else {
+            if allow_list.add_new(*machine_id) {
+                println!("cold added machine ID: {}", hex::encode(machine_id));
+            }
         }
     }
 

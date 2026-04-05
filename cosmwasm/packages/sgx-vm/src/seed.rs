@@ -61,8 +61,16 @@ extern "C" {
         retval: *mut sgx_status_t,
         p_id: *const u8,
         n_id: u32,
-        p_proof: *mut u8,
-        is_on_chain: bool,
+    ) -> sgx_types::sgx_status_t;
+
+    pub fn ecall_submit_machine_swap(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        index: u32,
+        p_machine_info: *const u8,
+        n_machine_info: u32,
+        p_proof: *const u8,
+        n_proof: u32,
     ) -> sgx_types::sgx_status_t;
 
     /// Trigger a query method in a wasm contract
@@ -273,11 +281,7 @@ pub fn untrusted_approve_upgrade(msg_slice: &[u8]) -> SgxResult<()> {
     Ok(())
 }
 
-pub fn untrusted_approve_machine_id(
-    machine_id: &[u8],
-    proof: *mut u8,
-    is_on_chain: bool,
-) -> SgxResult<()> {
+pub fn untrusted_approve_machine_id(machine_id: &[u8]) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -295,8 +299,43 @@ pub fn untrusted_approve_machine_id(
             &mut ret,
             machine_id.as_ptr(),
             machine_id.len() as u32,
-            proof,
-            is_on_chain,
+        )
+    };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if ret != sgx_status_t::SGX_SUCCESS {
+        return Err(ret);
+    }
+
+    Ok(())
+}
+
+pub fn untrusted_submit_machine_swap(
+    index: u32,
+    machine_info: &[u8],
+    proof: &[u8],
+) -> SgxResult<()> {
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
+    //info!("Initialized enclave successfully!");
+
+    let eid = enclave.geteid();
+    let mut ret = sgx_status_t::SGX_SUCCESS;
+    let status = unsafe {
+        ecall_submit_machine_swap(
+            eid,
+            &mut ret,
+            index,
+            machine_info.as_ptr(),
+            machine_info.len() as u32,
+            proof.as_ptr(),
+            proof.len() as u32,
         )
     };
 

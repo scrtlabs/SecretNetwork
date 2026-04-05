@@ -196,16 +196,33 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	return nil
 }
 
-func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
+func OnApproveMachineID(machineID []byte) error {
 	msgBuf := sendSlice(machineID)
 	defer freeAfterSend(msgBuf)
 
-	ret, err := C.onchain_approve_machine_id(msgBuf, (*C.uint8_t)(unsafe.Pointer(proof)), C.bool(is_on_chain))
+	ret, err := C.onchain_approve_machine_id(msgBuf)
 	if err != nil {
 		return err
 	}
 	if !ret {
 		return errors.New("onchain_approve_machine_id failed")
+	}
+
+	return nil
+}
+
+func SubmitMachineSwap(index uint32, machineInfo []byte, proof []byte) error {
+	machineInfoBuf := sendSlice(machineInfo)
+	defer freeAfterSend(machineInfoBuf)
+	proofBuf := sendSlice(proof)
+	defer freeAfterSend(proofBuf)
+
+	ret, err := C.submit_machine_swap(u32(index), machineInfoBuf, proofBuf)
+	if err != nil {
+		return err
+	}
+	if !ret {
+		return errors.New("submit_machine_swap failed")
 	}
 
 	return nil

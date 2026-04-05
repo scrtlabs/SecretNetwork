@@ -222,7 +222,7 @@ Buffer migrate(cache_t *cache,
 
 bool migration_op(uint32_t opcode);
 
-bool onchain_approve_machine_id(Buffer machine_id, uint8_t *proof, bool is_on_chain);
+bool onchain_approve_machine_id(Buffer machine_id);
 
 bool onchain_approve_upgrade(Buffer msg);
 
@@ -254,6 +254,8 @@ TwoBuffers submit_block_signatures(Buffer header,
                                    Buffer txs,
                                    Buffer random,
                                    Buffer *err);
+
+bool submit_machine_swap(uint32_t index, Buffer machine_info, Buffer proof);
 
 void submit_validator_set_evidence(Buffer evidence, Buffer *err);
 

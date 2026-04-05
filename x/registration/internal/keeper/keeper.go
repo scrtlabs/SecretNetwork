@@ -8,9 +8,12 @@ import (
 
 	"cosmossdk.io/core/store"
 	errorsmod "cosmossdk.io/errors"
+	"cosmossdk.io/store/prefix"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
@@ -124,6 +127,57 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	}
 }
 
+func (k Keeper) AddMachineSwapInfo(ctx sdk.Context, data []byte) error {
+	store := k.storeService.OpenKVStore(ctx)
+
+	var next_index [4]byte
+
+	{
+		bz, _ := store.Get(types.RegistrationMachineIndex)
+		if bz != nil {
+			next_index_numeric := binary.BigEndian.Uint32(bz) + 1
+			binary.BigEndian.PutUint32(next_index[:], next_index_numeric)
+
+		}
+	}
+
+	store.Set(types.RegistrationMachineIndex, next_index[:])
+
+	key := make([]byte, 0, len(types.RegistrationMachinePrefix)+4)
+	key = append(key, types.RegistrationMachinePrefix...)
+	key = append(key, next_index[:]...)
+
+	store.Set(key, data)
+
+	return nil
+}
+
+func (k Keeper) OnNewMachine(ctx sdk.Context, id []byte) error {
+	return k.AddMachineSwapInfo(ctx, id)
+}
+
+func (k Keeper) SetEnclaveColdData(ctx sdk.Context) error {
+	// on-chain approved machine migrations
+
+	store := k.storeService.OpenKVStore(ctx)
+	prefixStore := prefix.NewStore(runtime.KVStoreAdapter(store), types.RegistrationMachinePrefix)
+	it := prefixStore.Iterator(nil, nil)
+	defer it.Close()
+
+	for ; it.Valid(); it.Next() {
+		key := it.Key()
+		index := binary.BigEndian.Uint32(key[len(types.RegistrationMachinePrefix):])
+		value := it.Value()
+
+		// TODO: proof
+		var proof []byte
+
+		api.SubmitMachineSwap(index, value, proof)
+	}
+
+	return nil
+}
+
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
 	// fmt.Println("RegisterNode")
 	var encSeed []byte
@@ -141,19 +195,25 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 
 		publicKey = publicKey_
 
-		isAuth, err := k.isNodeAuthenticated(ctx, publicKey)
-		if err != nil {
-			return nil, errorsmod.Wrap(types.ErrAuthenticateFailed, err.Error())
-		}
-		if isAuth {
-			return k.getRegistrationInfo(ctx, publicKey).EncryptedSeed, nil
-		}
+		// Note: don't skip envoking the enclave even if the node was already registered.
+		// The enclave may realize the new node ownership
 
-		encSeed, _, err = k.enclave.GetEncryptedSeed(certificate)
+		var machineSwapInfo []byte
+		encSeed, machineSwapInfo, err = k.enclave.GetEncryptedSeed(certificate)
 		if err != nil {
 			// return 0, errorsmod.Wrap(err, "cosmwasm create")
 			return nil, errorsmod.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
+
+		if len(machineSwapInfo) == 104 {
+
+			store_swap_info := make([]byte, 72)
+			copy(store_swap_info[:52], machineSwapInfo[52:52+52])
+
+			// last 20 bytes are the machine_id_pop - will be added later
+			k.AddMachineSwapInfo(ctx, store_swap_info)
+		}
+
 	}
 
 	regInfo := types.RegistrationNodeInfo{

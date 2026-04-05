@@ -116,7 +116,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         return NodeAuthResult::MemorySafetyAllocationError;
     }
 
-    let machine_data = allow_list::OWNER_LEN + allow_list::MACHINE_ID_LEN;
+    const MACHINE_INFO_LEN: usize = allow_list::OWNER_LEN + allow_list::MACHINE_ID_LEN;
 
     validate_mut_ptr!(p_seeds, n_seeds as usize, NodeAuthResult::InvalidInput);
     validate_const_ptr!(
@@ -126,7 +126,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     );
     validate_mut_ptr!(
         p_machine_del_add,
-        machine_data * 2,
+        MACHINE_INFO_LEN * 2,
         NodeAuthResult::InvalidInput
     );
     validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
@@ -202,17 +202,11 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
                             .try_into()
                             .unwrap();
 
-                    let height = {
-                        let extra = KEY_MANAGER.extra_data.lock().unwrap();
-                        extra.height
-                    };
-
                     // if swap-res failed - never mind. This is probably because the machine was added with proof-of-cloud
-                    if let Some(swap_res) =
-                        allow_list.update(&machine_id_hash, owner, machine_pop, height)
+                    if let Some(swap_res) = allow_list.update(&machine_id_hash, owner, machine_pop)
                     {
                         copy_machine_data_res(
-                            p_machine_del_add.add(machine_data),
+                            p_machine_del_add.add(MACHINE_INFO_LEN),
                             &machine_id_hash,
                             owner,
                         );

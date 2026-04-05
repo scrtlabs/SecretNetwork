@@ -316,6 +316,10 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	return nil
 }
 
-func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
+func OnApproveMachineID(machineID []byte) error {
+	return nil
+}
+
+func SubmitMachineSwap(index uint32, machineInfo []byte, proof []byte) error {
 	return nil
 }

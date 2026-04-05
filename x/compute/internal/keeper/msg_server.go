@@ -373,23 +373,19 @@ func (m msgServer) UpdateMachineWhitelist(goCtx context.Context, msg *types.MsgU
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	store := m.keeper.storeService.OpenKVStore(ctx)
-
 	ids, err := ParseHexList(msg.MachineId)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, id := range ids {
-		proof := [32]byte{}
-		err := api.OnApproveMachineID(id, &proof, true)
+		err := api.OnApproveMachineID(id)
 		id_txt := hex.EncodeToString(id)
 		if err != nil {
 			fmt.Println("Failed to add machine_id: ", id_txt)
 		} else {
 			fmt.Println("Added machine_id: ", id_txt)
-			key := append(types.MachineIDEvidencePrefix, id...)
-			_ = store.Set(key, proof[:])
+			_ = m.keeper.regKeeper.OnNewMachine(ctx, id)
 		}
 	}
 

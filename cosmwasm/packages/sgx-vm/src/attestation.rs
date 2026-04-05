@@ -73,7 +73,7 @@ pub fn untrusted_get_encrypted_seed(
     seed_buffer.resize(SINGLE_ENCRYPTED_SEED_SIZE * 100, 0); // should be enough. Resize in later version, when approaching the limit
 
     let mut seeds_size: u32 = 0;
-    let mut machine_pop = [0_u8; 20];
+    let machine_pop = [0_u8; 20]; // TODO - pass hint
     let mut machine_add_del = [0_u8; 104];
 
     let status = unsafe {

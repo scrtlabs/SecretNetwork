@@ -108,7 +108,7 @@ impl KnownJwtKeys {
 
 pub mod allow_list {
 
-    use std::collections::{BTreeMap, HashMap};
+    use std::collections::HashMap;
 
     pub const MACHINE_ID_LEN: usize = 20;
     pub const OWNER_LEN: usize = 32;
@@ -117,12 +117,12 @@ pub mod allow_list {
     pub type Owner = [u8; OWNER_LEN];
 
     pub struct Data {
-        pub m_to_o: HashMap<[u8; 20], [u8; 32]>,
-        pub o_to_m: HashMap<[u8; 32], BTreeMap<[u8; 20], u64>>,
+        pub m_to_o: HashMap<MachineID, Owner>,
+        pub o_to_m: HashMap<Owner, Vec<MachineID>>,
     }
 
     impl Data {
-        fn update_o_to_m(&mut self, owner: &Owner, machine: &MachineID, add: bool, height: u64) {
+        fn update_o_to_m(&mut self, owner: &Owner, machine: &MachineID, add: bool) {
             if *owner == [0u8; OWNER_LEN] {
                 return;
             }
@@ -131,9 +131,11 @@ pub mod allow_list {
                 let owned_machines = self.o_to_m.entry(*owner).or_default();
 
                 if add {
-                    owned_machines.insert(*machine, height);
+                    owned_machines.push(*machine);
                 } else {
-                    owned_machines.remove(machine);
+                    if let Some(pos) = owned_machines.iter().position(|x| x == machine) {
+                        owned_machines.remove(pos);
+                    }
                 }
 
                 owned_machines.is_empty()
@@ -149,44 +151,57 @@ pub mod allow_list {
             machine: &MachineID,
             owner: &Owner,
             machine_pop: &MachineID,
-            height: u64,
         ) -> Option<(MachineID, Owner)> {
-            let (prev_owner, prev_machine) = if let Some(prev_owner) = self.m_to_o.get_mut(machine)
-            {
-                let prev_owner_val = *prev_owner;
-                *prev_owner = *owner; // update existing machine
-                (prev_owner_val, *machine)
+            let prev_owner_opt = if let Some(prev_owner_ref) = self.m_to_o.get_mut(machine) {
+                let prev_owner_val = *prev_owner_ref;
+                *prev_owner_ref = *owner; // update existing machine
+
+                Some(prev_owner_val)
+            } else {
+                None
+            };
+
+            if let Some(prev_owner) = prev_owner_opt {
+                self.update_o_to_m(&prev_owner, machine, false); // remove machine from prev owner
+                self.update_o_to_m(owner, machine, true); // insert machine to new owner
+
+                Some((*machine, prev_owner))
             } else {
                 // machine is new. Remove this owner's old machine
                 let old_machine = {
-                    let owned_machines = match self.o_to_m.get(owner) {
+                    let owned_machines = match self.o_to_m.get_mut(owner) {
                         Some(x) => x,
                         None => {
                             return None; // no old machines
                         }
                     };
 
-                    if owned_machines.contains_key(machine_pop) {
-                        machine_pop // use hint, the machine the owner wants to remove
-                    } else {
-                        // find the oldest machine
-                        match owned_machines.iter().min_by_key(|(_, height)| *height) {
-                            Some((machine, _)) => machine,
-                            None => return None,
-                        }
-                    }
+                    // select the machine to remove. Either the specified, OR the first in the array
+                    let pos = owned_machines
+                        .iter()
+                        .position(|x| x == machine_pop)
+                        .unwrap_or(0);
+
+                    let old_machine = owned_machines[pos];
+                    owned_machines[pos] = *machine; // update the owner machine
+
+                    old_machine
                 };
 
-                self.m_to_o.remove(old_machine); // remove old machine
-                self.m_to_o.insert(*machine, *owner); // insert new machine
+                self.m_to_o.remove(&old_machine);
+                self.m_to_o.insert(*machine, *owner);
 
-                (*owner, *old_machine)
-            };
+                Some((old_machine, *owner))
+            }
+        }
 
-            self.update_o_to_m(&prev_owner, &prev_machine, false, 0_u64);
-            self.update_o_to_m(owner, machine, true, height);
-
-            Some((prev_machine, prev_owner))
+        pub fn add_new(&mut self, machine: MachineID) -> bool {
+            if let std::collections::hash_map::Entry::Vacant(e) = self.m_to_o.entry(machine) {
+                e.insert([0u8; OWNER_LEN]);
+                true
+            } else {
+                false
+            }
         }
     }
 }
@@ -378,7 +393,7 @@ lazy_static::lazy_static! {
         };
 
         for x in set {
-            ret.m_to_o.insert(x, [0_u8; 32]);
+            ret.add_new(x);
         }
 
         SgxMutex::new(ret)
