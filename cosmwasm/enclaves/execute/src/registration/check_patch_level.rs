@@ -8,10 +8,9 @@ use enclave_ffi_types::NodeAuthResult;
 use enclave_utils::validate_const_ptr;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use crate::registration::attestation::get_quote_ecdsa_untested;
-
-#[cfg(feature = "SGX_MODE_HW")]
-use crate::registration::attestation::verify_quote_sgx;
+use crate::registration::attestation::{
+    get_quote_ecdsa_untested, verify_quote_sgx, SELF_QUOTE_PPID, SELF_QUOTE_UNTESTED,
+};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_utils::storage::write_to_untrusted;
@@ -39,8 +38,8 @@ pub unsafe extern "C" fn ecall_check_patch_level(
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-unsafe fn check_patch_level_dcap(pub_k: &[u8; 32]) -> (NodeAuthResult, Option<Vec<u8>>) {
-    match get_quote_ecdsa_untested(pub_k) {
+unsafe fn check_patch_level_dcap() -> NodeAuthResult {
+    match &*SELF_QUOTE_UNTESTED {
         Ok(attestation) => {
             match verify_quote_sgx(&attestation, 0, false) {
                 Ok(res) => {
@@ -48,10 +47,8 @@ unsafe fn check_patch_level_dcap(pub_k: &[u8; 32]) -> (NodeAuthResult, Option<Ve
                         println!("WARNING: {}", res.qv_result);
                     }
 
-                    let ppid = attestation.extract_cpu_cert();
-
                     println!("DCAP attestation obtained and verified ok");
-                    return (NodeAuthResult::Success, ppid);
+                    return NodeAuthResult::Success;
                 }
                 Err(e) => {
                     println!("DCAP quote obtained, but failed to verify it: {}", e);
@@ -65,7 +62,7 @@ unsafe fn check_patch_level_dcap(pub_k: &[u8; 32]) -> (NodeAuthResult, Option<Ve
             println!("Failed to obtain DCAP attestation: {}", e);
         }
     }
-    (NodeAuthResult::InvalidCert, None)
+    NodeAuthResult::InvalidCert
 }
 
 /// # Safety
@@ -81,11 +78,9 @@ pub unsafe extern "C" fn ecall_check_patch_level(
 
     validate_mut_ptr!(p_ppid, n_ppid as usize, NodeAuthResult::BadQuoteStatus);
 
-    let temp_key_result = enclave_crypto::KeyPair::new().unwrap();
+    let res = check_patch_level_dcap();
 
-    let (res, ppid) = check_patch_level_dcap(&temp_key_result.get_pubkey());
-
-    if let Some(ppid_val) = ppid {
+    if let Some(ppid_val) = SELF_QUOTE_PPID.as_ref() {
         *p_ppid_size = ppid_val.len() as u32;
         let size_out = cmp::min(ppid_val.len(), n_ppid as usize);
         std::ptr::copy_nonoverlapping(ppid_val.as_ptr(), p_ppid, size_out);

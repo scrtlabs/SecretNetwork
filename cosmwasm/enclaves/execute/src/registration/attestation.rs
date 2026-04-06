@@ -415,6 +415,33 @@ lazy_static::lazy_static! {
         "20806EB70000",
         "20906EC10000",
     ]);
+
+    pub static ref SELF_QUOTE_UNTESTED: Result<AttestationCombined, sgx_types::sgx_status_t> = {
+        #[cfg(feature = "SGX_MODE_HW")]
+        {
+            get_quote_ecdsa_untested(&[])
+        }
+
+        #[cfg(not(feature = "SGX_MODE_HW"))]
+        {
+            Err(sgx_types::sgx_status_t::SGX_ERROR_NO_DEVICE)
+        }
+    };
+
+    pub static ref SELF_QUOTE_PPID: Option<Vec<u8>> = {
+        match &*SELF_QUOTE_UNTESTED {
+            Ok(x) => unsafe { x.extract_cpu_cert() },
+            _ => None
+        }
+    };
+
+    pub static ref SELF_MACHINE_ID: Option<allow_list::MachineID> = {
+        let ppid = SELF_QUOTE_PPID.as_ref()?;
+        let machine_id = crate::registration::offchain::calculate_truncated_hash(&ppid);
+        trace!("Self machine_id = {}", hex::encode(&machine_id));
+        Some(machine_id)
+    };
+
 }
 
 unsafe fn extract_fmspc_from_collateral(vec_coll: &[u8]) -> Option<String> {
