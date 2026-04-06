@@ -16,8 +16,6 @@ macro_rules! unwrap_or_return {
 use crate::txs::tx_from_bytes;
 use crate::wasm_messages::VERIFIED_BLOCK_MESSAGES;
 
-use sha2::{Digest, Sha256};
-
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
 const MAX_BLOCK_DATA_LENGTH: u32 = 22_020_096; // 21 MiB = max block size
 const RANDOM_PROOF_LEN: u32 = 80;
