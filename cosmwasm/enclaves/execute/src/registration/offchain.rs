@@ -32,6 +32,7 @@ use sgx_types::{
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs::File;
+use std::io;
 use std::io::prelude::*;
 use std::panic;
 use std::sgxfs::SgxFile;
@@ -869,9 +870,91 @@ pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
     sgx_types::sgx_status_t::SGX_SUCCESS
 }
 
+struct MerkleProcessor<'a> {
+    cursor: io::Cursor<&'a [u8]>,
+}
+
+impl<'a> MerkleProcessor<'a> {
+    fn new(data: &'a [u8]) -> Self {
+        Self {
+            cursor: io::Cursor::new(data),
+        }
+    }
+
+    fn read_slice_n(&mut self, n: usize) -> io::Result<&'a [u8]> {
+        let pos = self.cursor.position() as usize;
+        let buf = self.cursor.get_ref();
+
+        if pos + n > buf.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "not enough bytes",
+            ));
+        }
+
+        let out = &buf[pos..pos + n];
+        self.cursor.set_position((pos + n) as u64);
+        Ok(out)
+    }
+
+    fn read_slice(&mut self) -> io::Result<&'a [u8]> {
+        let n = Keychain::read_u32(&mut self.cursor)? as usize;
+        self.read_slice_n(n)
+    }
+
+    fn hash_var_uint(hasher: &mut Sha256, mut x: usize) {
+        loop {
+            if x < 0x80 {
+                let b = x as u8;
+                hasher.update([b]);
+                break;
+            }
+
+            let b = 0x80 | ((x & 0x7f) as u8);
+            hasher.update([b]);
+            x >>= 7;
+        }
+    }
+
+    fn hash_leaf_iavl(&mut self, key: &[u8], val: &[u8]) -> io::Result<[u8; 32]> {
+        let prefix = self.read_slice()?;
+
+        let valhash: [u8; 32] = {
+            let mut hasher = Sha256::new();
+            hasher.update(val);
+            hasher.finalize().into()
+        };
+
+        let mut hasher = Sha256::new();
+        hasher.update(prefix); // prefix len isn't required
+        Self::hash_var_uint(&mut hasher, key.len());
+        hasher.update(key);
+        Self::hash_var_uint(&mut hasher, valhash.len());
+        hasher.update(&valhash);
+
+        Ok(hasher.finalize().into())
+    }
+
+    fn interpret_sub_path(&mut self, hash_value: &mut [u8; 32]) -> io::Result<()> {
+        //println!("*** leaf hash: {}", hex::encode(&hash_value));
+
+        let n = Keychain::read_u32(&mut self.cursor)?;
+        for _i in 0..n {
+            let mut hasher = Sha256::new();
+            hasher.update(self.read_slice()?); // prefix
+            hasher.update(&hash_value);
+            hasher.update(self.read_slice()?); // suffix
+            *hash_value = hasher.finalize().into();
+            //println!("*** next hash: {}", hex::encode(&hash_value));
+        }
+
+        Ok(())
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ecall_submit_machine_swap(
-    _index: u32,
+    index: u32,
     p_machine_info: *const u8,
     n_machine_info: u32,
     p_proof: *const u8,
@@ -887,6 +970,61 @@ pub unsafe extern "C" fn ecall_submit_machine_swap(
         n_proof as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED
     );
+
+    let merkle_proof_result = (|| -> io::Result<()> {
+        // verify merkle proof
+
+        let apphash = {
+            let extra = KEY_MANAGER.extra_data.lock().unwrap();
+            extra.apphash
+        };
+
+        //println!("expected apphash: {}", hex::encode(&apphash));
+
+        let mut merkle = MerkleProcessor::new(slice::from_raw_parts(p_proof, n_proof as usize));
+
+        let proof_parts = Keychain::read_u32(&mut merkle.cursor)?;
+        if proof_parts != 2 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "proof wrong len",
+            ));
+        }
+
+        // leaf
+        let mut hash_val = {
+            let mut k = [0u8; 5];
+            k[0] = 0x03; // RegistrationMachinePrefix
+            k[1..5].copy_from_slice(&index.to_le_bytes());
+
+            let v = slice::from_raw_parts(p_machine_info, n_machine_info as usize);
+
+            merkle.hash_leaf_iavl(&k, v)?
+        };
+
+        merkle.interpret_sub_path(&mut hash_val)?;
+
+        hash_val = {
+            let k = b"register";
+            merkle.hash_leaf_iavl(k, &hash_val)?
+        };
+
+        merkle.interpret_sub_path(&mut hash_val)?;
+
+        if apphash != hash_val {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "apphash mismatch",
+            ));
+        }
+
+        Ok(())
+    })();
+
+    if let Err(e) = merkle_proof_result {
+        println!("Merkle proof failed: {}", e);
+        return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
 
     const MACHINE_SWAP_INFO_LEN: usize =
         allow_list::OWNER_LEN + allow_list::MACHINE_ID_LEN + allow_list::MACHINE_ID_LEN;
