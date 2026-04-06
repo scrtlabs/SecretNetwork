@@ -135,7 +135,7 @@ pub unsafe fn submit_block_signatures_impl(
 
     let apphash = header.header().app_hash.as_bytes();
     if apphash.len() == 32 {
-        println!("saving apphash: {}", hex::encode(apphash));
+        //println!("saving apphash: {}", hex::encode(apphash));
 
         {
             let mut extra = KEY_MANAGER.extra_data.lock().unwrap();
