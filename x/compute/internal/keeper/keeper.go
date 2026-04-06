@@ -1122,6 +1122,8 @@ func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte, validator_set_evid
 	if err != nil {
 		ctx.Logger().Error("SetRandomSeed:", err.Error())
 	}
+
+	k.regKeeper.MaybeSetEnclaveColdData(ctx)
 }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {

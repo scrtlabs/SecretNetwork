@@ -588,6 +588,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		registration.EnclaveApi{},
 		tempDir,
 		false,
+		&baseapp.BaseApp{},
 	)
 
 	bappTxMngr := baseapp.LastMsgMarkerContainer{}

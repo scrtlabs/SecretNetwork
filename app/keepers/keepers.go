@@ -381,6 +381,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		reg.EnclaveApi{},
 		homePath,
 		bootstrap,
+		app,
 	)
 	ak.RegKeeper = &regKeeper
 	ak.CronKeeper.SetRegKeeper(&regKeeper)

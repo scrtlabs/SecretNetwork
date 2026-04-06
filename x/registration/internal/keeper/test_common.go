@@ -136,7 +136,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, bootstrap boo
 	router := baseapp.NewMsgServiceRouter()
 
 	// Load default wasm config
-	keeper := NewKeeper(cdc, runtime.NewKVStoreService(keys[regtypes.StoreKey]), router, registrationmock.MockEnclaveApi{}, tempDir, bootstrap)
+	keeper := NewKeeper(cdc, runtime.NewKVStoreService(keys[regtypes.StoreKey]), router, registrationmock.MockEnclaveApi{}, tempDir, bootstrap, &baseapp.BaseApp{})
 
 	return ctx, keeper
 }
