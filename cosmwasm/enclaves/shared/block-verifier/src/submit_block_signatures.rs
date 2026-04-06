@@ -133,6 +133,17 @@ pub unsafe fn submit_block_signatures_impl(
             .copy_from_slice(validator_set_evidence.as_slice());
     }
 
+    let apphash = header.header().app_hash.as_bytes();
+    if apphash.len() == 32 {
+        println!("saving apphash: {}", hex::encode(apphash));
+
+        {
+            let mut extra = KEY_MANAGER.extra_data.lock().unwrap();
+            extra.apphash.copy_from_slice(apphash);
+        }
+        KEY_MANAGER.save();
+    }
+
     debug!(
         "Done verifying block height: {:?}",
         header.header.height.value()

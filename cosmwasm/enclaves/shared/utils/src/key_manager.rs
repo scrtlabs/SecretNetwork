@@ -39,6 +39,7 @@ use tendermint_proto::Protobuf;
 // as sha256(key) encrypted with the seed.
 pub struct KeychainMutableData {
     pub height: u64,
+    pub apphash: [u8; 32],
     pub validator_set_serialized: Vec<u8>,
     pub next_mr_enclave: Option<sgx_measurement_t>,
     pub last_block_seed: u16,
@@ -128,6 +129,10 @@ impl Keychain {
             2_u8
         } else {
             0_u8
+        }) | (if extra.apphash != [0u8; 32] {
+            4_u8
+        } else {
+            0_u8
         });
 
         writer.write_all(&[ex_flag])?;
@@ -140,6 +145,10 @@ impl Keychain {
             writer.write_all(&extra.last_block_seed.to_le_bytes())?;
         }
 
+        if ex_flag & 4_u8 != 0 {
+            writer.write_all(&extra.apphash)?;
+        }
+
         Ok(())
     }
 
@@ -149,7 +158,7 @@ impl Keychain {
         Ok(u16::from_le_bytes(buf))
     }
 
-    fn read_u32(reader: &mut dyn Read) -> std::io::Result<u32> {
+    pub fn read_u32(reader: &mut dyn Read) -> std::io::Result<u32> {
         let mut buf = [0u8; 4];
         reader.read_exact(&mut buf)?;
         Ok(u32::from_le_bytes(buf))
@@ -220,6 +229,12 @@ impl Keychain {
             extra.last_block_seed = DEF_LAST_BLOCK_SEED;
         }
 
+        if (flag_bytes[0] & 4_u8) != 0 {
+            reader.read_exact(&mut extra.apphash)?;
+        } else {
+            extra.apphash = [0u8; 32];
+        }
+
         Ok(())
     }
 
@@ -283,6 +298,7 @@ impl Keychain {
             random_encryption_key: None,
             extra_data: SgxMutex::new(KeychainMutableData {
                 height: 0,
+                apphash: [0u8; 32],
                 validator_set_serialized: Vec::new(),
                 next_mr_enclave: None,
                 last_block_seed: DEF_LAST_BLOCK_SEED,
