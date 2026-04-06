@@ -85,7 +85,7 @@ type Keeper struct {
 	bankKeeper       bankkeeper.Keeper
 	portKeeper       portkeeper.Keeper
 	capabilityKeeper capabilitykeeper.ScopedKeeper
-	regKeeper        registration.Keeper
+	regKeeper        *registration.Keeper
 	cronKeeper       cronkeeper.Keeper
 	wasmer           wasm.Wasmer
 	queryPlugins     QueryPlugins
@@ -125,7 +125,7 @@ func NewKeeper(
 	portSource types.ICS20TransferPortSource,
 	channelKeeper channelkeeper.Keeper,
 	ics4Wrapper porttypes.ICS4Wrapper,
-	regKeeper registration.Keeper,
+	regKeeper *registration.Keeper,
 	msgRouter MessageRouter,
 	queryRouter GRPCQueryRouter,
 	homeDir string,

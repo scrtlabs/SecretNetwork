@@ -383,7 +383,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		bootstrap,
 	)
 	ak.RegKeeper = &regKeeper
-	ak.CronKeeper.SetRegKeeper(regKeeper)
+	ak.CronKeeper.SetRegKeeper(&regKeeper)
 
 	// Assaf:
 	// Rules:
@@ -539,7 +539,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.TransferKeeper,
 		ak.IbcKeeper.ChannelKeeper,
 		ak.IbcSwitchKeeper,
-		*ak.RegKeeper,
+		ak.RegKeeper,
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
 		computeDir,

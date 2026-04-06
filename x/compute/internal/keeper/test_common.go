@@ -609,7 +609,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		MockIBCTransferKeeper{},
 		ibcKeeper.ChannelKeeper,
 		nil,
-		regKeeper,
+		&regKeeper,
 		msgRouter,
 		queryRouter,
 		tempDir,
