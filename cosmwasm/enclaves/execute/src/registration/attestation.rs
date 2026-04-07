@@ -110,6 +110,10 @@ pub mod allow_list {
 
     use std::collections::HashMap;
 
+    use enclave_utils::KEY_MANAGER;
+
+    use crate::registration::attestation::SELF_MACHINE_ID;
+
     pub const MACHINE_ID_LEN: usize = 20;
     pub const OWNER_LEN: usize = 32;
 
@@ -143,6 +147,17 @@ pub mod allow_list {
 
             if should_remove {
                 self.o_to_m.remove(owner);
+            }
+        }
+
+        fn on_machine_changed(&mut self, machine: &MachineID, added: bool) {
+            if let Some(my_machine) = SELF_MACHINE_ID.as_ref() {
+                if my_machine == machine {
+                    println!("Self machine included: {}", added);
+
+                    let mut extra = KEY_MANAGER.extra_data.lock().unwrap();
+                    extra.machine_allowed = added;
+                }
             }
         }
 
@@ -191,6 +206,9 @@ pub mod allow_list {
                 self.m_to_o.remove(&old_machine);
                 self.m_to_o.insert(*machine, *owner);
 
+                self.on_machine_changed(&old_machine, false);
+                self.on_machine_changed(machine, true);
+
                 Some((old_machine, *owner))
             }
         }
@@ -198,6 +216,7 @@ pub mod allow_list {
         pub fn add_new(&mut self, machine: MachineID) -> bool {
             if let std::collections::hash_map::Entry::Vacant(e) = self.m_to_o.entry(machine) {
                 e.insert([0u8; OWNER_LEN]);
+                self.on_machine_changed(&machine, true);
                 true
             } else {
                 false

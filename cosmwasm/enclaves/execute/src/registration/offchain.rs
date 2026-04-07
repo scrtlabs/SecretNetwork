@@ -1,6 +1,8 @@
 //!
 use super::attestation::get_quote_ecdsa;
-use crate::registration::attestation::{allow_list, verify_quote_sgx, AttestationCombined};
+use crate::registration::attestation::{
+    allow_list, verify_quote_sgx, AttestationCombined, PPID_WHITELIST,
+};
 #[cfg(feature = "verify-validator-whitelist")]
 use block_verifier::validator_whitelist;
 use core::convert::TryInto;
@@ -45,6 +47,9 @@ use super::seed_exchange::{decrypt_seed, encrypt_seed};
 #[cfg(feature = "light-client-validation")]
 use block_verifier::VERIFIED_BLOCK_MESSAGES;
 
+fn enforce_allow_list_init() {
+    let _ = &*PPID_WHITELIST;
+}
 ///
 /// `ecall_init_bootstrap`
 ///
@@ -119,6 +124,8 @@ pub unsafe extern "C" fn ecall_get_network_pubkey(
     } else {
         *p_seeds = 0;
     }
+
+    enforce_allow_list_init();
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -856,9 +863,7 @@ pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
     }
 
     {
-        let mut allow_list = crate::registration::attestation::PPID_WHITELIST
-            .lock()
-            .unwrap();
+        let mut allow_list = PPID_WHITELIST.lock().unwrap();
 
         let machine_id: &allow_list::MachineID = machine_id.try_into().unwrap();
 
@@ -1061,9 +1066,7 @@ pub unsafe extern "C" fn ecall_submit_machine_swap(
             .unwrap();
 
     {
-        let mut allow_list = crate::registration::attestation::PPID_WHITELIST
-            .lock()
-            .unwrap();
+        let mut allow_list = PPID_WHITELIST.lock().unwrap();
 
         if let Some(swap_info) = swap_info_opt {
             if allow_list

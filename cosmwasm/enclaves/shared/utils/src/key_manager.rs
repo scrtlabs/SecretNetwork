@@ -43,6 +43,9 @@ pub struct KeychainMutableData {
     pub validator_set_serialized: Vec<u8>,
     pub next_mr_enclave: Option<sgx_measurement_t>,
     pub last_block_seed: u16,
+    // the following is NOT serialized
+    pub last_submitted_header_height: u64,
+    pub machine_allowed: bool,
 }
 
 impl KeychainMutableData {
@@ -302,6 +305,8 @@ impl Keychain {
                 validator_set_serialized: Vec::new(),
                 next_mr_enclave: None,
                 last_block_seed: DEF_LAST_BLOCK_SEED,
+                last_submitted_header_height: 0,
+                machine_allowed: false,
             }),
         }
     }

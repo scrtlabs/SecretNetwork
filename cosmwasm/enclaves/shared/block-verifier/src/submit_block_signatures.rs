@@ -61,12 +61,22 @@ pub unsafe fn submit_block_signatures_impl(
     };
 
     let (validator_set, height) = {
-        let extra = KEY_MANAGER.extra_data.lock().unwrap();
+        let mut extra = KEY_MANAGER.extra_data.lock().unwrap();
+
+        if extra.last_submitted_header_height == 0 {
+            extra.last_submitted_header_height = extra.height;
+        } else {
+            if (extra.last_submitted_header_height != extra.height) && !extra.machine_allowed {
+                error!("This machine isn't allowed to run");
+                return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+            }
+        }
+
         let validator_set = match extra.decode_validator_set() {
             Some(set) => set,
             None => {
                 error!("Error parsing validator set from proto");
-                return sgx_status_t::SGX_SUCCESS;
+                return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
             }
         };
 
