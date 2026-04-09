@@ -359,17 +359,17 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate, replac
 			}
 		}
 
-		var machineSwapInfo []byte
-		encSeed, machineSwapInfo, err = k.enclave.GetEncryptedSeed(certificate, replaceMachineID[:])
+		var machineInfo []byte
+		encSeed, machineInfo, err = k.enclave.GetEncryptedSeed(certificate, replaceMachineID[:])
 		if err != nil {
 			// return 0, errorsmod.Wrap(err, "cosmwasm create")
 			return nil, errorsmod.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
 
-		if len(machineSwapInfo) == 104 {
+		if len(machineInfo) == 52 {
 
 			store_swap_info := make([]byte, 72)
-			copy(store_swap_info[:52], machineSwapInfo[52:52+52])
+			copy(store_swap_info[:52], machineInfo[:])
 			copy(store_swap_info[52:72], replaceMachineID[:])
 
 			// last 20 bytes are the machine_id_pop - will be added later

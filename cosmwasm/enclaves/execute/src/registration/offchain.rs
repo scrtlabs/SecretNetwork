@@ -867,9 +867,7 @@ pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
 
         let machine_id: &allow_list::MachineID = machine_id.try_into().unwrap();
 
-        if allow_list.add_new(*machine_id) {
-            println!("Onchain added machine ID: {}", hex::encode(machine_id));
-        }
+        allow_list.add_new(*machine_id, false);
     }
 
     sgx_types::sgx_status_t::SGX_SUCCESS
@@ -1069,16 +1067,9 @@ pub unsafe extern "C" fn ecall_submit_machine_swap(
         let mut allow_list = PPID_WHITELIST.lock().unwrap();
 
         if let Some(swap_info) = swap_info_opt {
-            if allow_list
-                .update(machine_id, swap_info.0, swap_info.1)
-                .is_some()
-            {
-                println!("cold updated machine ID: {}", hex::encode(machine_id));
-            }
+            allow_list.update(machine_id, swap_info.0, swap_info.1);
         } else {
-            if allow_list.add_new(*machine_id) {
-                println!("cold added machine ID: {}", hex::encode(machine_id));
-            }
+            allow_list.add_new(*machine_id, false);
         }
     }
 

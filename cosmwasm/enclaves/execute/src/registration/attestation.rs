@@ -108,9 +108,9 @@ impl KnownJwtKeys {
 
 pub mod allow_list {
 
-    use std::collections::HashMap;
-
     use enclave_utils::KEY_MANAGER;
+    use log::*;
+    use std::collections::HashMap;
 
     use crate::registration::attestation::SELF_MACHINE_ID;
 
@@ -122,35 +122,23 @@ pub mod allow_list {
 
     pub struct Data {
         pub m_to_o: HashMap<MachineID, Owner>,
-        pub o_to_m: HashMap<Owner, Vec<MachineID>>,
     }
 
     impl Data {
-        fn update_o_to_m(&mut self, owner: &Owner, machine: &MachineID, add: bool) {
-            if *owner == [0u8; OWNER_LEN] {
-                return;
-            }
-
-            let should_remove = {
-                let owned_machines = self.o_to_m.entry(*owner).or_default();
-
-                if add {
-                    owned_machines.push(*machine);
-                } else {
-                    if let Some(pos) = owned_machines.iter().position(|x| x == machine) {
-                        owned_machines.remove(pos);
-                    }
-                }
-
-                owned_machines.is_empty()
-            };
-
-            if should_remove {
-                self.o_to_m.remove(owner);
-            }
+        fn log_machine_change(machine: &MachineID, owner: &Owner) {
+            println!(
+                "machine {} owner set to {}",
+                hex::encode(machine),
+                hex::encode(owner)
+            );
         }
 
-        fn on_machine_changed(&mut self, machine: &MachineID, added: bool) {
+        fn on_machine_changed(machine: &MachineID, added: bool, silent: bool) {
+            if !silent {
+                let action = if added { "added" } else { "deleted" };
+                println!("machine {} {}", hex::encode(machine), action);
+            }
+
             if let Some(my_machine) = SELF_MACHINE_ID.as_ref() {
                 if my_machine == machine {
                     println!("Self machine included: {}", added);
@@ -166,57 +154,57 @@ pub mod allow_list {
             machine: &MachineID,
             owner: &Owner,
             machine_pop: &MachineID,
-        ) -> Option<(MachineID, Owner)> {
-            let prev_owner_opt = if let Some(prev_owner_ref) = self.m_to_o.get_mut(machine) {
-                let prev_owner_val = *prev_owner_ref;
-                *prev_owner_ref = *owner; // update existing machine
-
-                Some(prev_owner_val)
-            } else {
-                None
-            };
-
-            if let Some(prev_owner) = prev_owner_opt {
-                self.update_o_to_m(&prev_owner, machine, false); // remove machine from prev owner
-                self.update_o_to_m(owner, machine, true); // insert machine to new owner
-
-                Some((*machine, prev_owner))
-            } else {
-                // machine is new. Remove this owner's old machine
-                let old_machine = {
-                    let owned_machines = match self.o_to_m.get_mut(owner) {
-                        Some(x) => x,
-                        None => {
-                            return None; // no old machines
-                        }
-                    };
-
-                    // select the machine to remove. Either the specified, OR the first in the array
-                    let pos = owned_machines
-                        .iter()
-                        .position(|x| x == machine_pop)
-                        .unwrap_or(0);
-
-                    let old_machine = owned_machines[pos];
-                    owned_machines[pos] = *machine; // update the owner machine
-
-                    old_machine
+        ) -> bool {
+            let is_same_machine =
+                (*machine_pop == [0u8; MACHINE_ID_LEN]) || (*machine_pop == *machine);
+            if is_same_machine {
+                let x = match self.m_to_o.get_mut(machine) {
+                    Some(x) => x,
+                    None => {
+                        error!("unknown machine {}", hex::encode(machine));
+                        return false;
+                    }
                 };
 
-                self.m_to_o.remove(&old_machine);
+                if x == owner {
+                    return false; // no error, just no effect
+                }
+
+                *x = *owner; // replace the owner of
+            } else {
+                if let Some(x) = self.m_to_o.get(machine_pop) {
+                    if *x != *owner {
+                        error!(
+                            "unknown machine {} not owned by this actor",
+                            hex::encode(machine_pop)
+                        );
+                        return false;
+                    }
+                } else {
+                    error!("unknown machine {}", hex::encode(machine_pop));
+                    return false;
+                }
+
+                if self.m_to_o.contains_key(machine) {
+                    error!("machine {} already exists", hex::encode(machine));
+                    return false;
+                }
+
+                self.m_to_o.remove(machine_pop);
                 self.m_to_o.insert(*machine, *owner);
 
-                self.on_machine_changed(&old_machine, false);
-                self.on_machine_changed(machine, true);
-
-                Some((old_machine, *owner))
+                Self::on_machine_changed(machine_pop, false, false);
+                Self::on_machine_changed(machine, true, false);
             }
+
+            Self::log_machine_change(machine, owner);
+            true
         }
 
-        pub fn add_new(&mut self, machine: MachineID) -> bool {
+        pub fn add_new(&mut self, machine: MachineID, silent: bool) -> bool {
             if let std::collections::hash_map::Entry::Vacant(e) = self.m_to_o.entry(machine) {
                 e.insert([0u8; OWNER_LEN]);
-                self.on_machine_changed(&machine, true);
+                Self::on_machine_changed(&machine, true, silent);
                 true
             } else {
                 false
@@ -260,13 +248,15 @@ lazy_static::lazy_static! {
     };
 
     pub static ref PPID_WHITELIST: SgxMutex<allow_list::Data>  = {
-        let mut set: HashSet<[u8; 20]> = HashSet::new();
-
         macro_rules! add_machine {
             ($set:expr, $hex:literal) => {
-                $set.insert(hex_literal::hex!($hex));
+                $set.add_new(hex_literal::hex!($hex), true);
             };
         }
+
+        let mut set = allow_list::Data {
+            m_to_o: HashMap::new(),
+        };
 
         add_machine!(set, "01507c957789b7c1afde972d67f1fdd53af1a8da");
         add_machine!(set, "03372b2a39e0713c965a0876b5e807b41d509538");
@@ -416,16 +406,7 @@ lazy_static::lazy_static! {
         add_machine!(set, "fec9342e9ee4186453f8a7e027fac8c24e7c0c60");
         add_machine!(set, "fff4fe67c52b8d0d425d2b9772e7a4ffcd9dacf3");
 
-        let mut ret = allow_list::Data {
-            m_to_o: HashMap::new(),
-            o_to_m: HashMap::new(),
-        };
-
-        for x in set {
-            ret.add_new(x);
-        }
-
-        SgxMutex::new(ret)
+        SgxMutex::new(set)
     };
 
     static ref FMSPC_EOL: HashSet<&'static str> = HashSet::from([

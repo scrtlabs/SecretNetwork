@@ -73,20 +73,6 @@ fn verify_attestation_dcap(
     Ok(res)
 }
 
-unsafe fn copy_machine_data_res(
-    p_machine_data: *mut u8,
-    machine: &allow_list::MachineID,
-    owner: &allow_list::Owner,
-) {
-    slice::from_raw_parts_mut(p_machine_data, allow_list::OWNER_LEN).copy_from_slice(owner);
-
-    slice::from_raw_parts_mut(
-        p_machine_data.add(allow_list::OWNER_LEN),
-        allow_list::MACHINE_ID_LEN,
-    )
-    .copy_from_slice(machine);
-}
-
 ///
 /// `ecall_authenticate_new_node`
 ///
@@ -109,14 +95,12 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     n_seeds: u32,
     p_seeds_size: *mut u32,
     p_machine_pop: *const u8,
-    p_machine_del_add: *mut u8,
+    p_machine_info: *mut u8,
 ) -> NodeAuthResult {
     if let Err(_err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
         return NodeAuthResult::MemorySafetyAllocationError;
     }
-
-    const MACHINE_INFO_LEN: usize = allow_list::OWNER_LEN + allow_list::MACHINE_ID_LEN;
 
     validate_mut_ptr!(p_seeds, n_seeds as usize, NodeAuthResult::InvalidInput);
     validate_const_ptr!(
@@ -125,8 +109,8 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         NodeAuthResult::InvalidInput
     );
     validate_mut_ptr!(
-        p_machine_del_add,
-        MACHINE_INFO_LEN * 2,
+        p_machine_info,
+        allow_list::OWNER_LEN + allow_list::MACHINE_ID_LEN,
         NodeAuthResult::InvalidInput
     );
     validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
@@ -203,15 +187,15 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
                             .unwrap();
 
                     // if swap-res failed - never mind. This is probably because the machine was added with proof-of-cloud
-                    if let Some(swap_res) = allow_list.update(&machine_id_hash, owner, machine_pop)
-                    {
-                        copy_machine_data_res(
-                            p_machine_del_add.add(MACHINE_INFO_LEN),
-                            &machine_id_hash,
-                            owner,
-                        );
+                    if allow_list.update(&machine_id_hash, owner, machine_pop) {
+                        slice::from_raw_parts_mut(p_machine_info, allow_list::OWNER_LEN)
+                            .copy_from_slice(owner);
 
-                        copy_machine_data_res(p_machine_del_add, &swap_res.0, &swap_res.1);
+                        slice::from_raw_parts_mut(
+                            p_machine_info.add(allow_list::OWNER_LEN),
+                            allow_list::MACHINE_ID_LEN,
+                        )
+                        .copy_from_slice(&machine_id_hash);
                     }
                 }
 
