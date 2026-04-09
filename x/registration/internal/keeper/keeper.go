@@ -330,7 +330,7 @@ func (k *Keeper) MaybeSetEnclaveColdData(ctx sdk.Context) error {
 	return nil
 }
 
-func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
+func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate, replace_machine_id string) ([]byte, error) {
 	// fmt.Println("RegisterNode")
 	var encSeed []byte
 	var publicKey []byte
@@ -350,8 +350,17 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 		// Note: don't skip envoking the enclave even if the node was already registered.
 		// The enclave may realize the new node ownership
 
+		var replaceMachineID [20]byte // this is by default
+
+		{
+			decoded, err := hex.DecodeString(replace_machine_id)
+			if err == nil && len(decoded) == 20 {
+				copy(replaceMachineID[:], decoded)
+			}
+		}
+
 		var machineSwapInfo []byte
-		encSeed, machineSwapInfo, err = k.enclave.GetEncryptedSeed(certificate)
+		encSeed, machineSwapInfo, err = k.enclave.GetEncryptedSeed(certificate, replaceMachineID[:])
 		if err != nil {
 			// return 0, errorsmod.Wrap(err, "cosmwasm create")
 			return nil, errorsmod.Wrap(types.ErrAuthenticateFailed, err.Error())
@@ -361,6 +370,7 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 
 			store_swap_info := make([]byte, 72)
 			copy(store_swap_info[:52], machineSwapInfo[52:52+52])
+			copy(store_swap_info[52:72], replaceMachineID[:])
 
 			// last 20 bytes are the machine_id_pop - will be added later
 			k.AddMachineSwapInfo(ctx, store_swap_info)

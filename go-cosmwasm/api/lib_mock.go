@@ -285,7 +285,7 @@ func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
 	return nil, nil
 }
 
-func GetEncryptedSeed(cert []byte) ([]byte, []byte, error) {
+func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, error) {
 	//errmsg := C.Buffer{}
 	//certSlice := sendSlice(cert)
 	//defer freeAfterSend(certSlice)

@@ -69,7 +69,11 @@ pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
 }
 
 #[no_mangle]
-pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> TwoBuffers {
+pub extern "C" fn get_encrypted_seed(
+    cert: Buffer,
+    replace_machine: Buffer,
+    err: Option<&mut Buffer>,
+) -> TwoBuffers {
     trace!("Called get_encrypted_seed");
     let cert_slice = match unsafe { cert.read() } {
         None => {
@@ -78,8 +82,12 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
         }
         Some(r) => r,
     };
+    let replace_machine_slice = match unsafe { replace_machine.read() } {
+        None => &[0u8],
+        Some(r) => r,
+    };
     trace!("Hello from right before untrusted_get_encrypted_seed");
-    match untrusted_get_encrypted_seed(cert_slice) {
+    match untrusted_get_encrypted_seed(cert_slice, replace_machine_slice) {
         Err(e) => {
             // An error happened in the SGX sdk.
             set_error(Error::enclave_err(e.to_string()), err);

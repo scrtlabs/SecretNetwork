@@ -45,7 +45,7 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 		return nil, err
 	}
 
-	encSeed, err := k.RegisterNode(ctx, msg.Certificate)
+	encSeed, err := k.RegisterNode(ctx, msg.Certificate, msg.ReplaceMachineId)
 	if err != nil {
 		return nil, err
 	}

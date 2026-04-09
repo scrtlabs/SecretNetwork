@@ -542,11 +542,13 @@ func CreateAttestationReport(ext_sk []byte, is_migration_report bool) (bool, err
 	return true, nil
 }
 
-func GetEncryptedSeed(cert []byte) ([]byte, []byte, error) {
+func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, error) {
 	errmsg := C.Buffer{}
 	certSlice := sendSlice(cert)
 	defer freeAfterSend(certSlice)
-	res, err := C.get_encrypted_seed(certSlice, &errmsg)
+	replace_machine_slice := sendSlice(replace_machine_id)
+	defer freeAfterSend(replace_machine_slice)
+	res, err := C.get_encrypted_seed(certSlice, replace_machine_slice, &errmsg)
 	if err != nil {
 		return nil, nil, errorWithMessage(err, errmsg)
 	}

@@ -59,6 +59,7 @@ pub fn create_attestation_report_u(p_sk: *const u8, n_sk: u32, flags: u32) -> Sg
 
 pub fn untrusted_get_encrypted_seed(
     cert: &[u8],
+    replace_machine: &[u8],
 ) -> SgxResult<Result<(Vec<u8>, Vec<u8>), NodeAuthResult>> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
@@ -73,7 +74,6 @@ pub fn untrusted_get_encrypted_seed(
     seed_buffer.resize(SINGLE_ENCRYPTED_SEED_SIZE * 100, 0); // should be enough. Resize in later version, when approaching the limit
 
     let mut seeds_size: u32 = 0;
-    let machine_pop = [0_u8; 20]; // TODO - pass hint
     let mut machine_add_del = [0_u8; 104];
 
     let status = unsafe {
@@ -85,7 +85,7 @@ pub fn untrusted_get_encrypted_seed(
             seed_buffer.as_mut_ptr(),
             seed_buffer.len() as u32,
             &mut seeds_size,
-            machine_pop.as_ptr(),
+            replace_machine.as_ptr(),
             machine_add_del.as_mut_ptr(),
         )
     };

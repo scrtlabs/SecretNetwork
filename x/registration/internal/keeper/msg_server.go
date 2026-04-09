@@ -41,7 +41,7 @@ func (m msgServer) RegisterAuth(goCtx context.Context, msg *types.RaAuthenticate
 		return nil, err
 	}
 
-	encSeed, err := m.keeper.RegisterNode(ctx, msg.Certificate)
+	encSeed, err := m.keeper.RegisterNode(ctx, msg.Certificate, msg.ReplaceMachineId)
 	if err != nil {
 		return nil, err
 	}
