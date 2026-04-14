@@ -401,6 +401,14 @@ func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) err
 	recorder := GetRecorder()
 	height := recorder.GetCurrentBlockHeight()
 
+	machineIDHex := fmt.Sprintf("%x", machineID)
+	if height == 24727451 && machineIDHex == "07a78d5ff52afbc023a6c0b95a28f2f4048f2d36" {
+		logInfo("OnApproveMachineID", "Using hardcoded proof to bypass missing SGX record at height 24727451")
+		hardcodedProof, _ := hex.DecodeString("364580d1787d77a024f852aeb871bcec5114033c30341f09ae1863a3522d2773")
+		copy(proof[:], hardcodedProof)
+		return nil
+	}
+
 	// During node init (height=0), keeper loads stored proofs from state.
 	// On SGX nodes this loads them into the enclave; on non-SGX there's
 	// no enclave, so just skip — the proof already lives in the KV store.
@@ -408,8 +416,6 @@ func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) err
 		logInfo("OnApproveMachineID", "Skipping at init (height=0, no enclave on non-SGX)")
 		return nil
 	}
-
-	machineIDHex := fmt.Sprintf("%x", machineID)
 
 	// Non-SGX nodes always fetch from the SGX node via gRPC
 	client := GetEcallClient()

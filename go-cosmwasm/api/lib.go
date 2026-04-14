@@ -278,6 +278,17 @@ func OnApproveMachineID(machineID []byte) error {
 		return errors.New("onchain_approve_machine_id failed")
 	}
 
+	recorder := GetRecorder()
+	if recorder.IsSGXMode() {
+		height := recorder.GetCurrentBlockHeight()
+		machineIDHex := hex.EncodeToString(machineID)
+		if recErr := recorder.RecordMachineIDProof(height, []byte(machineIDHex), proof[:]); recErr != nil {
+			logError("OnApproveMachineID", "Failed to record machine ID proof for replay: %v", recErr)
+		} else {
+			logInfo("OnApproveMachineID", "Recorded MachineIDProof for %s at height %d", machineIDHex, height)
+		}
+	}
+
 	return nil
 }
 
