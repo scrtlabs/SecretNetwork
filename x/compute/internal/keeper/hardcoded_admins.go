@@ -579,4 +579,5 @@ var hardcodedContractAdmins = map[string]string{
 	"secret16snu3lt8k9u0xr54j2hqyhvwnx9my7kq7ay8lp": "secret1hxrvx0v0zvqgmpuzspdg5j8rrxpjgyjql3w9gh",
 	"secret14p6dhjznntlzw0yysl7p6z069nk0skv5e9qjut": "secret1hxrvx0v0zvqgmpuzspdg5j8rrxpjgyjql3w9gh",
 	"secret1yrzp33hvkwd3dr5farjgwdutecrhd0r7uhqksq": "secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03",
+	"secret1r2vzslwkad9vcg06hgy4km9zh4jvawxtc2hl98": "secret16cx295surhm7ps60jsfwernx4kxa4gf8z7yxvd", // derivative_hooks
 }

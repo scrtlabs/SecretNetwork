@@ -213,6 +213,42 @@ func (m Migrator) Migrate7to8(ctx sdk.Context) error {
 	return nil
 }
 
+// Migrate8to9 migrates from version 8 to 9. The migration includes setting the admin for any newly added hardcoded contracts
+func (m Migrator) Migrate8to9(ctx sdk.Context) error {
+	store := prefix.NewStore(runtime.KVStoreAdapter(m.keeper.storeService.OpenKVStore(ctx)), types.ContractKeyPrefix)
+
+	// Iterate only over the hardcoded list
+	for contractAddrStr, newAdmin := range hardcodedContractAdmins {
+		if newAdmin == "" {
+			continue
+		}
+
+		contractAddress, err := sdk.AccAddressFromBech32(contractAddrStr)
+		if err != nil {
+			ctx.Logger().Error("Migrate8to9: invalid contract address in hardcoded admins", "contract", contractAddrStr, "error", err)
+			continue
+		}
+
+		bz := store.Get(contractAddress)
+		if bz != nil {
+			var contractInfo types.ContractInfo
+			m.keeper.cdc.MustUnmarshal(bz, &contractInfo)
+
+			if newAdmin != contractInfo.Admin {
+				contractInfo.Admin = newAdmin
+				contractInfo.AdminProof = make([]byte, 32) // Dummy proof, ignored by enclave
+
+				updatedBz := m.keeper.cdc.MustMarshal(&contractInfo)
+				store.Set(contractAddress, updatedBz)
+
+				ctx.Logger().Info("Migrate8to9: successfully migrated admin for contract", "contract", contractAddrStr, "new_admin", newAdmin)
+			}
+		}
+	}
+
+	return nil
+}
+
 const progressPartSize = 1000
 
 func logMigrationProgress(ctx sdk.Context, formatter *message.Printer, migratedContracts uint64, totalContracts uint64, previousTime int64) {
