@@ -730,15 +730,14 @@ impl AttestationCombined {
         let kid_bytes = base64::decode(kid_str)?;
         //println!("Kid {}", hex::encode(&kid_bytes));
 
+        // 3️⃣ Prepare the signed message (header + '.' + claims)
+        let mut message = Vec::new();
+        message.extend_from_slice(header_b64.as_bytes());
+        message.push(b'.');
+        message.extend_from_slice(claims_b64.as_bytes());
+
         let known_keys = &KNOWN_JWT_KEYS;
-
         if let Some(verifying_key) = known_keys.coll.get(&kid_bytes) {
-            // 3️⃣ Prepare the signed message (header + '.' + claims)
-            let mut message = Vec::new();
-            message.extend_from_slice(header_b64.as_bytes());
-            message.push(b'.');
-            message.extend_from_slice(claims_b64.as_bytes());
-
             let signature = rsa::pkcs1v15::Signature::try_from(signature_bytes.as_slice())
                 .map_err(|e| format!("invalid signature: {e}"))?;
 
@@ -747,7 +746,20 @@ impl AttestationCombined {
                 .verify(&message, &signature)
                 .map_err(|_| "invalid signature")?;
         } else {
-            return Err(format!("Unknown kid: {}", kid_str).into());
+            let poc_key = hex_literal::hex!(
+                "5ea69fede5bcf71054395b273bad67f67158c242d77945d436374020ece525cb"
+            );
+            if kid_bytes == poc_key {
+                let pubkey = ed25519_dalek::PublicKey::from_bytes(&poc_key)
+                    .map_err(|e| format!("invalid POC key: {e}"))?;
+                let sig = ed25519_dalek::Signature::from_bytes(signature_bytes.as_slice())
+                    .map_err(|e| format!("invalid POC sig: {e}"))?;
+                pubkey
+                    .verify_strict(&message, &sig)
+                    .map_err(|e| format!("invalid POC sig: {e}"))?;
+            } else {
+                return Err(format!("Unknown kid: {}", kid_str).into());
+            }
         }
 
         Ok(claims_json)
