@@ -246,7 +246,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		} else if msg.Msg.Stargate != nil {
 			msgType = "stargate"
 		}
-		ctx.Logger().Info(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] id=%s type=%s replyOn=%s gasLimit=%v detail=%s gasBefore=%d",
+		ctx.Logger().Debug(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] id=%s type=%s replyOn=%s gasLimit=%v detail=%s gasBefore=%d",
 			ctx.BlockHeight(), i, string(msg.ID), msgType, msg.ReplyOn, msg.GasLimit, msgDetail, ctx.GasMeter().GasConsumed()))
 
 		if d.keeper.GetLastMsgMarkerContainer().GetMarker() {
@@ -291,10 +291,10 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			totalDataLen += len(d)
 		}
 		if err != nil {
-			ctx.Logger().Info(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] FAILED: %v gasAfter=%d",
+			ctx.Logger().Debug(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] FAILED: %v gasAfter=%d",
 				ctx.BlockHeight(), i, err, ctx.GasMeter().GasConsumed()))
 		} else {
-			ctx.Logger().Info(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] SUCCESS: events=%d dataChunks=%d totalDataLen=%d gasAfter=%d",
+			ctx.Logger().Debug(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] SUCCESS: events=%d dataChunks=%d totalDataLen=%d gasAfter=%d",
 				ctx.BlockHeight(), i, len(events), len(data), totalDataLen, ctx.GasMeter().GasConsumed()))
 		}
 

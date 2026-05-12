@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
@@ -30,6 +31,10 @@ type EcallRecorder struct {
 	mu   sync.RWMutex
 	mode NodeMode
 	db   dbm.DB
+
+	// Config
+	retentionBlocks int64
+	pruneInterval   int64
 
 	// Block-scoped execution tracking
 	currentBlockHeight int64
@@ -104,10 +109,30 @@ func GetRecorder() *EcallRecorder {
 	// Check if storing SGX data is enabled (from config or env var)
 	storeSGXData := os.Getenv("SECRET_STORE_SGX_DATA") == "true"
 
+	// Get retention settings
+	retentionBlocks := DefaultRetentionBlocks
+	if v := os.Getenv("SECRET_SGX_DATA_RETENTION_BLOCKS"); v != "" {
+		if parsed, err := strconv.ParseInt(v, 10, 64); err == nil && parsed > 0 {
+			retentionBlocks = parsed
+		}
+	}
+
+	pruneInterval := PruneIntervalBlocks
+	if v := os.Getenv("SECRET_SGX_DATA_PRUNE_INTERVAL"); v != "" {
+		if parsed, err := strconv.ParseInt(v, 10, 64); err == nil && parsed > 0 {
+			pruneInterval = parsed
+		}
+	}
+
 	// If already initialized, check if we need to upgrade the recording state
 	if globalRecorder != nil {
 		hasDB := globalRecorder.db != nil
 		if mode == NodeModeReplay || storeSGXData == hasDB {
+			// Update config dynamically if re-initialized
+			globalRecorder.mu.Lock()
+			globalRecorder.retentionBlocks = retentionBlocks
+			globalRecorder.pruneInterval = pruneInterval
+			globalRecorder.mu.Unlock()
 			return globalRecorder
 		}
 		// Transitioning states (tempApp didn't have flag, but real app does)
@@ -118,9 +143,11 @@ func GetRecorder() *EcallRecorder {
 
 	if mode == NodeModeReplay || (mode == NodeModeSGX && !storeSGXData) {
 		globalRecorder = &EcallRecorder{
-			mode:        mode,
-			db:          nil,
-			blockTraces: make(map[int64]*ExecutionTrace),
+			mode:            mode,
+			db:              nil,
+			retentionBlocks: retentionBlocks,
+			pruneInterval:   pruneInterval,
+			blockTraces:     make(map[int64]*ExecutionTrace),
 		}
 		if mode == NodeModeReplay {
 			logInfo("EcallRecorder", "Initialized in replay mode (no local DB, fetches from remote)")
@@ -154,17 +181,21 @@ func GetRecorder() *EcallRecorder {
 		logError("EcallRecorder", "Error opening database: %v", err)
 		// Create a nil recorder that will skip recording
 		globalRecorder = &EcallRecorder{
-			mode:        mode,
-			db:          nil,
-			blockTraces: make(map[int64]*ExecutionTrace),
+			mode:            mode,
+			db:              nil,
+			retentionBlocks: retentionBlocks,
+			pruneInterval:   pruneInterval,
+			blockTraces:     make(map[int64]*ExecutionTrace),
 		}
 		return globalRecorder
 	}
 
 	globalRecorder = &EcallRecorder{
-		mode:        mode,
-		db:          db,
-		blockTraces: make(map[int64]*ExecutionTrace),
+		mode:            mode,
+		db:              db,
+		retentionBlocks: retentionBlocks,
+		pruneInterval:   pruneInterval,
+		blockTraces:     make(map[int64]*ExecutionTrace),
 	}
 
 	if storeSGXData {
@@ -775,8 +806,16 @@ func (r *EcallRecorder) DeleteRecordsBeforeHeight(height int64) error {
 
 	count := 0
 
-	// Prune all height-keyed prefixes: block signatures, seeds, seed errors
-	for _, prefix := range [][]byte{prefixSubmitBlockSignatures, prefixGetEncryptedSeed, prefixGetEncryptedSeedErr} {
+	// Prune all height-keyed prefixes
+	for _, prefix := range [][]byte{
+		prefixSubmitBlockSignatures,
+		prefixGetEncryptedSeed,
+		prefixGetEncryptedSeedErr,
+		prefixExecutionTrace,
+		prefixMachineIDProof,
+		prefixCreateResult,
+		prefixGetNetworkPubkey,
+	} {
 		startKey := makeBlockKey(prefix, 0)
 		endKey := makeBlockKey(prefix, height)
 
@@ -805,20 +844,25 @@ func (r *EcallRecorder) DeleteRecordsBeforeHeight(height int64) error {
 	return nil
 }
 
-// PruneOldRecords runs pruning if conditions are met (every PruneIntervalBlocks)
+// PruneOldRecords runs pruning if conditions are met (every pruneInterval)
 func (r *EcallRecorder) PruneOldRecords(currentHeight int64) {
 	// Only prune in SGX mode (non-replay)
 	if r.IsReplayMode() {
 		return
 	}
 
-	// Only prune every PruneIntervalBlocks
-	if currentHeight%PruneIntervalBlocks != 0 {
+	r.mu.RLock()
+	interval := r.pruneInterval
+	retention := r.retentionBlocks
+	r.mu.RUnlock()
+
+	// Only prune every pruneInterval
+	if interval <= 0 || currentHeight%interval != 0 {
 		return
 	}
 
 	// Calculate cutoff height
-	cutoffHeight := currentHeight - DefaultRetentionBlocks
+	cutoffHeight := currentHeight - retention
 	if cutoffHeight <= 0 {
 		return
 	}

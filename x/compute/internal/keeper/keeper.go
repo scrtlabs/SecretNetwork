@@ -1512,7 +1512,7 @@ func (k *Keeper) handleContractResponse(
 	// This is used mainly in replies in order to decrypt their data.
 	ogSigInfo wasmTypes.SigInfo,
 ) ([]byte, error) {
-	ctx.Logger().Info(fmt.Sprintf("[handleContractResponse] height=%d contract=%s numSubMsgs=%d numLogs=%d numEvents=%d dataLen=%d gasConsumed=%d",
+	ctx.Logger().Debug(fmt.Sprintf("[handleContractResponse] height=%d contract=%s numSubMsgs=%d numLogs=%d numEvents=%d dataLen=%d gasConsumed=%d",
 		ctx.BlockHeight(), contractAddr.String(), len(msgs), len(logs), len(evts), len(data), ctx.GasMeter().GasConsumed()))
 
 	events := types.ContractLogsToSdkEvents(logs, contractAddr)
