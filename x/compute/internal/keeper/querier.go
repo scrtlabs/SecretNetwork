@@ -440,14 +440,8 @@ func (q GrpcQuerier) MachineIDProof(c context.Context, req *types.QueryMachineID
 		return nil, status.Error(codes.InvalidArgument, "machine_id is required")
 	}
 
-	// Decode hex string to bytes
-	machineID, err := hex.DecodeString(req.MachineId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid machine_id: must be hex encoded")
-	}
-
 	recorder := api.GetRecorder()
-	proof, found := recorder.ReplayMachineIDProof(req.Height, machineID)
+	proof, found := recorder.ReplayMachineIDProof(req.Height, []byte(req.MachineId))
 	if !found {
 		return nil, status.Errorf(codes.NotFound, "no machine ID proof found for height %d", req.Height)
 	}
