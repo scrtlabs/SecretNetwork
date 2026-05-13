@@ -5,7 +5,7 @@ use std::collections::HashMap;
 lazy_static::lazy_static! {
     /// Current hardcoded contract admins
     static ref HARDCODED_CONTRACT_ADMINS: HashMap<&'static str, &'static str> = HashMap::from([
-        ("secret1hg83qtpn0444k7shhmuawhykklycd7qt24z34g", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
+        ("secret1vuq7hw2qp5trqyp4vzm6axpg4jrw6vc03uzgrp", "secret1pcegd258whwdynv76xtudwhshq3dv73rwjx5jf"), // snip20 testnet contract
         ("secret1jr05klxup5285wv2w24x3rs6rr37c8fyz39evd", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
         ("secret1my2ycry070nsgugw67k4ej93ttsgut5yd8xnhj", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
         ("secret1rekrj69d9kl7p5gpcq7d0qrwdrw0hmszrv5hy3", "secret1f2jrcqsx7glyta39c6tum2lhk5kh2a0ty6r9ms"), // snip20 testnet contract
@@ -581,6 +581,7 @@ lazy_static::lazy_static! {
         ("secret16snu3lt8k9u0xr54j2hqyhvwnx9my7kq7ay8lp", "secret1hxrvx0v0zvqgmpuzspdg5j8rrxpjgyjql3w9gh"), // ERTH
         ("secret14p6dhjznntlzw0yysl7p6z069nk0skv5e9qjut", "secret1hxrvx0v0zvqgmpuzspdg5j8rrxpjgyjql3w9gh"), // ANML
         ("secret1yrzp33hvkwd3dr5farjgwdutecrhd0r7uhqksq", "secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03"), // testnet contract
+        ("secret1r2vzslwkad9vcg06hgy4km9zh4jvawxtc2hl98", "secret16cx295surhm7ps60jsfwernx4kxa4gf8z7yxvd"), // derivative_hooks
     ]);
 
     /// The entire history of contracts that were deployed before v1.10 and have been migrated using the hardcoded admin feature.
