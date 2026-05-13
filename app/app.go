@@ -3,10 +3,8 @@ package app
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"syscall"
 
@@ -528,23 +526,7 @@ func (app *SecretNetworkApp) PreBlocker(ctx sdk.Context, _ *abci.RequestFinalize
 
 // EndBlocker application updates every end block
 func (app *SecretNetworkApp) EndBlocker(ctx sdk.Context) (sdk.EndBlock, error) {
-	resp, err := app.mm.EndBlock(ctx)
-
-	// DUMP STATE FOR DIVERGENT BLOCK
-	if ctx.BlockHeight() == 24066603 {
-		fmt.Printf("\n==== INTERCEPTED ENDBLOCK AT 24066603 ====\n")
-		// Dump ALL events accumulated in the block
-		eventsJSON, _ := tmjson.MarshalIndent(ctx.EventManager().Events(), "", "  ")
-
-		errWrite := os.WriteFile("divergent_events_24066603.json", eventsJSON, 0o644)
-		if errWrite != nil {
-			fmt.Printf("Failed to write events to file: %v\n", errWrite)
-		} else {
-			fmt.Printf("Wrote divergent EndBlock events to divergent_events_24066603.json\n")
-		}
-	}
-
-	return resp, err
+	return app.mm.EndBlock(ctx)
 }
 
 // InitChainer application update at chain initialization
