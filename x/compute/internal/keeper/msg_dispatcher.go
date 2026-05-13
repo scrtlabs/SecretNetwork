@@ -195,7 +195,59 @@ func redactError(err error) (bool, error) {
 // that dispatched them, both on success as well as failure
 func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.SigInfo) ([]byte, error) {
 	var rsp []byte
-	for _, msg := range msgs {
+
+	ctx.Logger().Info(fmt.Sprintf("[DispatchSubmessages] height=%d contract=%s numMsgs=%d gasConsumed=%d",
+		ctx.BlockHeight(), contractAddr.String(), len(msgs), ctx.GasMeter().GasConsumed()))
+
+	for i, msg := range msgs {
+
+		// Log submessage details
+		msgType := "unknown"
+		msgDetail := ""
+		if msg.Msg.Bank != nil {
+			if msg.Msg.Bank.Send != nil {
+				msgType = "bank/send"
+				msgDetail = fmt.Sprintf("to=%s coins=%v", msg.Msg.Bank.Send.ToAddress, msg.Msg.Bank.Send.Amount)
+			} else if msg.Msg.Bank.Burn != nil {
+				msgType = "bank/burn"
+				msgDetail = fmt.Sprintf("coins=%v", msg.Msg.Bank.Burn.Amount)
+			}
+		} else if msg.Msg.Staking != nil {
+			if msg.Msg.Staking.Delegate != nil {
+				msgType = "staking/delegate"
+				msgDetail = fmt.Sprintf("validator=%s amount=%v", msg.Msg.Staking.Delegate.Validator, msg.Msg.Staking.Delegate.Amount)
+			} else if msg.Msg.Staking.Undelegate != nil {
+				msgType = "staking/undelegate"
+				msgDetail = fmt.Sprintf("validator=%s amount=%v", msg.Msg.Staking.Undelegate.Validator, msg.Msg.Staking.Undelegate.Amount)
+			} else if msg.Msg.Staking.Redelegate != nil {
+				msgType = "staking/redelegate"
+				msgDetail = fmt.Sprintf("src=%s dst=%s amount=%v", msg.Msg.Staking.Redelegate.SrcValidator, msg.Msg.Staking.Redelegate.DstValidator, msg.Msg.Staking.Redelegate.Amount)
+			} else if msg.Msg.Staking.Withdraw != nil {
+				msgType = "staking/withdraw"
+				msgDetail = fmt.Sprintf("validator=%s recipient=%s", msg.Msg.Staking.Withdraw.Validator, msg.Msg.Staking.Withdraw.Recipient)
+			}
+		} else if msg.Msg.Wasm != nil {
+			if msg.Msg.Wasm.Execute != nil {
+				msgType = "wasm/execute"
+				msgDetail = fmt.Sprintf("contract=%s msgLen=%d", msg.Msg.Wasm.Execute.ContractAddr, len(msg.Msg.Wasm.Execute.Msg))
+			} else if msg.Msg.Wasm.Instantiate != nil {
+				msgType = "wasm/instantiate"
+				msgDetail = fmt.Sprintf("codeID=%d label=%s", msg.Msg.Wasm.Instantiate.CodeID, msg.Msg.Wasm.Instantiate.Label)
+			}
+		} else if msg.Msg.Custom != nil {
+			msgType = "custom"
+			msgDetail = fmt.Sprintf("dataLen=%d", len(msg.Msg.Custom))
+		} else if msg.Msg.Gov != nil {
+			msgType = "gov"
+		} else if msg.Msg.IBC != nil {
+			msgType = "ibc"
+		} else if msg.Msg.Distribution != nil {
+			msgType = "distribution"
+		} else if msg.Msg.Stargate != nil {
+			msgType = "stargate"
+		}
+		ctx.Logger().Debug(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] id=%s type=%s replyOn=%s gasLimit=%v detail=%s gasBefore=%d",
+			ctx.BlockHeight(), i, string(msg.ID), msgType, msg.ReplyOn, msg.GasLimit, msgDetail, ctx.GasMeter().GasConsumed()))
 
 		if d.keeper.GetLastMsgMarkerContainer().GetMarker() {
 			return nil, sdkerrors.ErrLastTx.Wrap("Cannot send messages or submessages after last tx marker was set")
@@ -231,6 +283,19 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			events, data, err = d.dispatchMsgWithGasLimit(subCtx, contractAddr, ibcPort, msg.Msg, *msg.GasLimit)
 		} else {
 			events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg.Msg)
+		}
+
+		// Log dispatch result
+		totalDataLen := 0
+		for _, d := range data {
+			totalDataLen += len(d)
+		}
+		if err != nil {
+			ctx.Logger().Debug(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] FAILED: %v gasAfter=%d",
+				ctx.BlockHeight(), i, err, ctx.GasMeter().GasConsumed()))
+		} else {
+			ctx.Logger().Debug(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] SUCCESS: events=%d dataChunks=%d totalDataLen=%d gasAfter=%d",
+				ctx.BlockHeight(), i, len(events), len(data), totalDataLen, ctx.GasMeter().GasConsumed()))
 		}
 
 		// if it succeeds, commit state changes from submessage, and pass on events to Event Manager
