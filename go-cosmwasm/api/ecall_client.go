@@ -86,7 +86,8 @@ func (m *QueryEncryptedSeedRequest) ProtoMessage() {}
 
 // QueryEncryptedSeedResponse matches QueryEncryptedSeedResponse proto
 type QueryEncryptedSeedResponse struct {
-	EncryptedSeed []byte `protobuf:"bytes,1,opt,name=encrypted_seed,json=encryptedSeed,proto3" json:"encrypted_seed,omitempty"`
+	EncryptedSeed  []byte `protobuf:"bytes,1,opt,name=encrypted_seed,json=encryptedSeed,proto3" json:"encrypted_seed,omitempty"`
+	MachineBinding []byte `protobuf:"bytes,1,opt,name=machine_binding,json=machineBinding,proto3" json:"machine_binding,omitempty"`
 }
 
 func (m *QueryEncryptedSeedResponse) Reset() { *m = QueryEncryptedSeedResponse{} }
@@ -536,16 +537,16 @@ func (c *EcallClient) FetchEcallRecord(height int64) (*EcallRecordData, error) {
 }
 
 // FetchEncryptedSeed fetches encrypted seed data from a random SGX node
-func (c *EcallClient) FetchEncryptedSeed(height int64, certHashHex string) ([]byte, error) {
+func (c *EcallClient) FetchEncryptedSeed(height int64, certHashHex string) ([]byte, []byte, error) {
 	req := &QueryEncryptedSeedRequest{CertHash: certHashHex, Height: height}
 	resp := &QueryEncryptedSeedResponse{}
 
 	if err := c.invokeWithRetry(methodEncryptedSeed, req, resp); err != nil {
-		return nil, err // Return raw error to preserve gRPC status codes
+		return nil, nil, err // Return raw error to preserve gRPC status codes
 	}
 
 	logInfo("EcallClient", "Fetched encrypted seed (%d bytes) at height %d", len(resp.EncryptedSeed), height)
-	return resp.EncryptedSeed, nil
+	return resp.EncryptedSeed, resp.MachineBinding, nil
 }
 
 // FetchMachineIDProof fetches a machine ID proof for a given height and machine ID from a random SGX node

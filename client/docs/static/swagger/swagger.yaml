@@ -66537,3 +66537,6 @@ definitions:
       encrypted_seed:
         type: string
         format: byte
+      machine_binding:
+        type: string
+        format: byte

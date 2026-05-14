@@ -297,7 +297,7 @@ func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
 	return nodePk, ioPk
 }
 
-func GetEncryptedSeed(cert []byte) ([]byte, error) {
+func GetEncryptedSeed(cert []byte) ([]byte, []byte, error) {
 	recorder := GetRecorder()
 	certHash := sha256.Sum256(cert)
 	certHashHex := hex.EncodeToString(certHash[:])
@@ -308,13 +308,13 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	height := recorder.GetCurrentBlockHeight()
 
 	// Try local DB first
-	if output, errMsg, found := recorder.ReplayGetEncryptedSeed(height, certHash[:]); found {
+	if outp1, outp2, errMsg, found := recorder.ReplayGetEncryptedSeed(height, certHash[:]); found {
 		if errMsg != "" {
 			logInfo("GetEncryptedSeed", "Found CACHED ERROR in local DB for %s: %s", certHashHex, errMsg)
-			return nil, fmt.Errorf("%s", errMsg)
+			return nil, nil, fmt.Errorf("%s", errMsg)
 		}
-		logInfo("GetEncryptedSeed", "Found CACHED SUCCESS in local DB for %s (%d bytes)", certHashHex, len(output))
-		return output, nil
+		logInfo("GetEncryptedSeed", "Found CACHED SUCCESS in local DB for %s (%d bytes)", certHashHex, len(outp1))
+		return outp1, outp2, nil
 	}
 	logInfo("GetEncryptedSeed", "NOT in local DB for %s, will fetch from SGX node via gRPC", certHashHex)
 
@@ -327,15 +327,15 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 
 	var lastErr error
 	for attempt := 0; attempt < maxRetries; attempt++ {
-		output, err := client.FetchEncryptedSeed(height, certHashHex)
+		outp1, outp2, err := client.FetchEncryptedSeed(height, certHashHex)
 		if err == nil {
 			logInfo("GetEncryptedSeed", "Fetched seed from SGX node (attempt %d) for %s (%d bytes)",
-				attempt+1, certHashHex, len(output))
+				attempt+1, certHashHex, len(outp1))
 			// Cache locally
-			if cacheErr := recorder.RecordGetEncryptedSeed(height, certHash[:], output); cacheErr != nil {
+			if cacheErr := recorder.RecordGetEncryptedSeed(height, certHash[:], outp1, outp2); cacheErr != nil {
 				logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
 			}
-			return output, nil
+			return outp1, outp2, nil
 		}
 
 		// Extract gRPC status for logging
@@ -358,7 +358,7 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 			if cacheErr := recorder.RecordGetEncryptedSeedError(height, certHash[:], enclaveErrMsg); cacheErr != nil {
 				logError("GetEncryptedSeed", "Failed to cache error: %v", cacheErr)
 			}
-			return nil, fmt.Errorf("%s", enclaveErrMsg)
+			return nil, nil, fmt.Errorf("%s", enclaveErrMsg)
 		}
 
 		lastErr = err
@@ -386,7 +386,7 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	}
 
 	logError("GetEncryptedSeed", "EXHAUSTED all %d retries for %s. lastErr: %v", maxRetries, certHashHex, lastErr)
-	return nil, fmt.Errorf("GetEncryptedSeed: failed after %d retries for cert hash %s: %v", maxRetries, certHashHex, lastErr)
+	return nil, nil, fmt.Errorf("GetEncryptedSeed: failed after %d retries for cert hash %s: %v", maxRetries, certHashHex, lastErr)
 }
 
 func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
@@ -397,7 +397,7 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	return nil
 }
 
-func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
+func OnApproveMachineID(machineID []byte) error {
 	recorder := GetRecorder()
 	height := recorder.GetCurrentBlockHeight()
 
@@ -418,6 +418,15 @@ func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) err
 
 	for {
 		data, err := client.FetchMachineIDProof(height, machineIDHex)
+		if err == nil && len(data) > 0 {
+			logInfo("OnApproveMachineID", "Fetched proof from SGX node: height=%d (attempt %d)", height, attempt+1)
+			
+			if (data[0] != 0)
+				return nil
+
+			return errors.New("machine not approved")
+		}
+
 		if err == nil && len(data) > 0 {
 			logInfo("OnApproveMachineID", "Fetched proof from SGX node: height=%d (attempt %d)", height, attempt+1)
 			copy(proof[:], data)

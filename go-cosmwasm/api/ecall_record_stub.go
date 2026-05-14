@@ -81,7 +81,7 @@ func (r *EcallRecorder) DeleteRecordsBeforeHeight(height int64) error {
 	return nil
 }
 
-func (r *EcallRecorder) RecordGetEncryptedSeed(height int64, certHash []byte, output []byte) error {
+func (r *EcallRecorder) RecordGetEncryptedSeed(height int64, certHash []byte, outp1 []byte, outp2 []byte) error {
 	return nil
 }
 
@@ -89,8 +89,8 @@ func (r *EcallRecorder) RecordGetEncryptedSeedError(height int64, certHash []byt
 	return nil
 }
 
-func (r *EcallRecorder) ReplayGetEncryptedSeed(height int64, certHash []byte) (output []byte, errMsg string, found bool) {
-	return nil, "", false
+func (r *EcallRecorder) ReplayGetEncryptedSeed(height int64, certHash []byte) (outp1 []byte, outp2 []byte, errMsg string, found bool) {
+	return nil, nil, "", false
 }
 
 func (r *EcallRecorder) RecordMachineIDProof(height int64, machineID []byte, proof []byte) error {

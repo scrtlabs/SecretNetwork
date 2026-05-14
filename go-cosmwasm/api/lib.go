@@ -274,19 +274,25 @@ func OnApproveMachineID(machineID []byte) error {
 	if err != nil {
 		return err
 	}
-	if !ret {
-		return errors.New("onchain_approve_machine_id failed")
-	}
 
 	recorder := GetRecorder()
 	if recorder.IsSGXMode() {
 		height := recorder.GetCurrentBlockHeight()
 		machineIDHex := hex.EncodeToString(machineID)
-		if recErr := recorder.RecordMachineIDProof(height, []byte(machineIDHex), proof[:]); recErr != nil {
+
+		var add_result byte
+		if ret {
+			add_result = 1
+		}
+		if recErr := recorder.RecordMachineIDProof(height, []byte(machineIDHex), []byte{add_result}); recErr != nil {
 			logError("OnApproveMachineID", "Failed to record machine ID proof for replay: %v", recErr)
 		} else {
 			logInfo("OnApproveMachineID", "Recorded MachineIDProof for %s at height %d", machineIDHex, height)
 		}
+	}
+
+	if !ret {
+		return errors.New("onchain_approve_machine_id failed")
 	}
 
 	return nil
@@ -948,26 +954,26 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 	if recorder.IsReplayMode() {
 		// Try local DB first
 		height := recorder.GetCurrentBlockHeight()
-		if output, errMsg, found := recorder.ReplayGetEncryptedSeed(height, certHash[:]); found {
+		if outp1, outp2, errMsg, found := recorder.ReplayGetEncryptedSeed(height, certHash[:]); found {
 			if errMsg != "" {
 				// Replay the exact same error the SGX enclave produced
-				return nil, fmt.Errorf("%s", errMsg)
+				return nil, nil, fmt.Errorf("%s", errMsg)
 			}
-			return output, nil
+			return outp1, outp2, nil
 		}
 
 		// Fetch from remote SGX node
 		client := GetEcallClient()
-		output, err := client.FetchEncryptedSeed(height, certHashHex)
+		outp1, outp2, err := client.FetchEncryptedSeed(height, certHashHex)
 		if err != nil {
-			return nil, fmt.Errorf("GetEncryptedSeed replay failed: %w", err)
+			return nil, nil, fmt.Errorf("GetEncryptedSeed replay failed: %w", err)
 		}
 
 		// Cache locally
-		if cacheErr := recorder.RecordGetEncryptedSeed(height, certHash[:], output); cacheErr != nil {
+		if cacheErr := recorder.RecordGetEncryptedSeed(height, certHash[:], outp1, outp2); cacheErr != nil {
 			logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
 		}
-		return output, nil
+		return outp2, outp2, nil
 	}
 
 	// SGX mode: call enclave and record result
@@ -990,8 +996,8 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 
 	output := receiveVector(res)
 	height := recorder.GetCurrentBlockHeight()
-	logInfo("GetEncryptedSeed", "SGX enclave SUCCESS for %s (%d bytes), recording at height %d...", certHashHex, len(output), height)
-	if err := recorder.RecordGetEncryptedSeed(height, certHash[:], output); err != nil {
+	logInfo("GetEncryptedSeed", "SGX enclave SUCCESS for %s (%d bytes), recording at height %d...", certHashHex, len(output1), height)
+	if err := recorder.RecordGetEncryptedSeed(height, certHash[:], output1, output2); err != nil {
 		logError("GetEncryptedSeed", "Failed to record: %v", err)
 	} else {
 		logInfo("GetEncryptedSeed", "Recorded GetEncryptedSeed for %s OK", certHashHex)
