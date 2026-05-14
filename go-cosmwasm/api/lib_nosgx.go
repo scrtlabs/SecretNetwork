@@ -280,7 +280,7 @@ func KeyGen() ([]byte, error) {
 	return make([]byte, 32), nil
 }
 
-func CreateAttestationReport(is_migration_report bool) (bool, error) {
+func CreateAttestationReport(ext_sk []byte, is_migration_report bool) (bool, error) {
 	logInfo("CreateAttestationReport", "Skipped in replay mode")
 	return true, nil
 }
@@ -297,7 +297,7 @@ func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
 	return nodePk, ioPk
 }
 
-func GetEncryptedSeed(cert []byte) ([]byte, []byte, error) {
+func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, error) {
 	recorder := GetRecorder()
 	certHash := sha256.Sum256(cert)
 	certHashHex := hex.EncodeToString(certHash[:])
@@ -420,16 +420,16 @@ func OnApproveMachineID(machineID []byte) error {
 		data, err := client.FetchMachineIDProof(height, machineIDHex)
 		if err == nil && len(data) > 0 {
 			logInfo("OnApproveMachineID", "Fetched proof from SGX node: height=%d (attempt %d)", height, attempt+1)
-			
-			if (data[0] != 0)
+
+			if data[0] != 0 {
 				return nil
+			}
 
 			return errors.New("machine not approved")
 		}
 
 		if err == nil && len(data) > 0 {
 			logInfo("OnApproveMachineID", "Fetched proof from SGX node: height=%d (attempt %d)", height, attempt+1)
-			copy(proof[:], data)
 			return nil
 		}
 
@@ -439,4 +439,8 @@ func OnApproveMachineID(machineID []byte) error {
 		}
 		time.Sleep(retryDelay)
 	}
+}
+
+func SubmitMachineSwap(index uint32, machineInfo []byte, proof []byte) error {
+	return nil
 }
