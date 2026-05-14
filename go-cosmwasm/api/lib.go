@@ -53,7 +53,7 @@ func HealthCheck() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte, cronMsgs []byte /* valSet []byte, nextValSet []byte */) ([]byte, []byte, error) {
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte /* valSet []byte, nextValSet []byte */) ([]byte, []byte, error) {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
 		return nil, nil, errors.New("submit block signatures not supported on non-SGX node")
@@ -991,10 +991,11 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 		if recErr := recorder.RecordGetEncryptedSeedError(height, certHash[:], enclaveErr.Error()); recErr != nil {
 			logError("GetEncryptedSeed", "Failed to record error: %v", recErr)
 		}
-		return nil, enclaveErr
+		return nil, nil, enclaveErr
 	}
 
-	output := receiveVector(res)
+	output1 := receiveVector(res.buf1)
+	output2 := receiveVector(res.buf2)
 	height := recorder.GetCurrentBlockHeight()
 	logInfo("GetEncryptedSeed", "SGX enclave SUCCESS for %s (%d bytes), recording at height %d...", certHashHex, len(output1), height)
 	if err := recorder.RecordGetEncryptedSeed(height, certHash[:], output1, output2); err != nil {
@@ -1002,7 +1003,7 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 	} else {
 		logInfo("GetEncryptedSeed", "Recorded GetEncryptedSeed for %s OK", certHashHex)
 	}
-	return output, nil
+	return output1, output2, nil
 }
 
 func GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {

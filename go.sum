@@ -1609,8 +1609,8 @@ github.com/sagikazarmark/slog-shim v0.1.0/go.mod h1:SrcSrq8aKtyuqEI1uvTDTK1arOWR
 github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da/go.mod h1:gi+0XIa01GRL2eRQVjQkKGqKF3SF9vZR/HnPullcV2E=
 github.com/sasha-s/go-deadlock v0.3.9 h1:fiaT9rB7g5sr5ddNZvlwheclN9IP86eFW9WgqlEQV+w=
 github.com/sasha-s/go-deadlock v0.3.9/go.mod h1:KuZj51ZFmx42q/mPaYbRk0P1xcwe697zsJKE03vD4/Y=
-github.com/scrtlabs/cosmos-sdk v0.50.14-secret.11 h1:Yl1x19k6jIFXPDX/Rrj1p4z7EsQDVhNJt0gX1/JuJsM=
-github.com/scrtlabs/cosmos-sdk v0.50.14-secret.11/go.mod h1:b7GmzR/8Ic9g6Aswsm3ryLhE5dhgbKTJ6o78mhxjRO4=
+github.com/scrtlabs/cosmos-sdk v0.50.14-secret.12 h1:PWRZGsDaEVGkBleaoKwCcKdFejRFEV3F+P15P/ux0BQ=
+github.com/scrtlabs/cosmos-sdk v0.50.14-secret.12/go.mod h1:oAqAIxM6W1HXLs/Id+58e5tTdtm5OE35AFj+UsgTtGk=
 github.com/scrtlabs/cosmos-sdk-api v0.7.6-secret.0 h1:9IGLySVhC2qSrxT3fZvvqwjKsnXWSSKnywQDzT8y1Gs=
 github.com/scrtlabs/cosmos-sdk-api v0.7.6-secret.0/go.mod h1:IcxpYS5fMemZGqyYtErK7OqvdM0C8kdW3dq8Q/XIG38=
 github.com/scrtlabs/cosmos-sdk-store v1.1.1-secret.1 h1:TELtwBkSg0xBrs2ObFE0pVVWF6E31fPCDX2tk8OiJPo=
