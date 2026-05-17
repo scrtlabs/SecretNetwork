@@ -855,13 +855,9 @@ pub fn verify_quote_sgx(
 
             let is_in_wl = match &machine_id_opt {
                 Some(machine_id_hash) => {
+                    println!("Machine ID: {}", orig_hex::encode(machine_id_hash));
                     let wl = PPID_WHITELIST.lock().unwrap();
-                    if wl.m_to_o.contains_key(machine_id_hash) {
-                        true
-                    } else {
-                        println!("Unknown Machine ID: {}", orig_hex::encode(machine_id_hash));
-                        false
-                    }
+                    wl.m_to_o.contains_key(machine_id_hash)
                 }
                 None => {
                     println!("Machine ID couldn't be extracted");
@@ -880,6 +876,7 @@ pub fn verify_quote_sgx(
             };
 
             if check_ppid_wl && (!is_in_wl && !jwt_token_valid) {
+                println!("Unknown Machine, JWT token not provided");
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
 
