@@ -167,7 +167,7 @@ pub mod allow_list {
                 };
 
                 if x == owner {
-                    return false; // no error, just no effect
+                    return true; // no effect, skip the rest
                 }
 
                 *x = *owner; // replace the owner of
@@ -490,6 +490,7 @@ pub struct AttestationCombined {
     pub quote: Vec<u8>,
     pub coll: Vec<u8>,
     pub jwt_token: Vec<u8>,
+    pub use_machine_id: Option<allow_list::MachineID>,
 }
 
 impl AttestationCombined {
@@ -498,6 +499,7 @@ impl AttestationCombined {
             quote: Vec::new(),
             coll: Vec::new(),
             jwt_token: Vec::new(),
+            use_machine_id: None,
         };
 
         if (blob_len > 0) && (unsafe { *blob_ptr } != 0) {
@@ -845,17 +847,23 @@ pub fn verify_quote_sgx(
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
 
+            let mut machine_id_to_check = attestation.use_machine_id;
+
             let machine_id_opt = if let Some(ppid) = attestation.extract_cpu_cert() {
-                Some(crate::registration::offchain::calculate_truncated_hash(
-                    &ppid,
-                ))
+                let hash = crate::registration::offchain::calculate_truncated_hash(&ppid);
+                println!("Machine ID: {}", orig_hex::encode(&hash));
+
+                if machine_id_to_check == None {
+                    machine_id_to_check = Some(hash);
+                }
+
+                Some(hash)
             } else {
                 None
             };
 
-            let is_in_wl = match &machine_id_opt {
+            let is_in_wl = match &machine_id_to_check {
                 Some(machine_id_hash) => {
-                    println!("Machine ID: {}", orig_hex::encode(machine_id_hash));
                     let wl = PPID_WHITELIST.lock().unwrap();
                     wl.m_to_o.contains_key(machine_id_hash)
                 }
@@ -1017,6 +1025,7 @@ pub fn get_quote_ecdsa_untested(pub_k: &[u8]) -> Result<AttestationCombined, sgx
         quote: vec_quote,
         coll: vec_coll,
         jwt_token: Vec::new(),
+        use_machine_id: None,
     })
 }
 

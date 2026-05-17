@@ -116,17 +116,25 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
 
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
+    let machine_pop: &allow_list::MachineID =
+        slice::from_raw_parts(p_machine_pop, allow_list::MACHINE_ID_LEN)
+            .try_into()
+            .unwrap();
 
     #[cfg(feature = "light-client-validation")]
     if !check_cert_in_current_block(cert_slice) {
         return NodeAuthResult::SignatureInvalid;
     }
 
-    let attestation = AttestationCombined::from_blob(cert, cert_len as usize);
+    let mut attestation = AttestationCombined::from_blob(cert, cert_len as usize);
 
     if attestation.quote.is_empty() || attestation.coll.is_empty() {
         warn!("No valid attestation method provided");
         return NodeAuthResult::InvalidCert;
+    }
+
+    if *machine_pop != [0u8; allow_list::MACHINE_ID_LEN] {
+        attestation.use_machine_id = Some(*machine_pop);
     }
 
     let verified_quote = match verify_attestation_dcap(&attestation) {
@@ -181,22 +189,18 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
                     let owner: &allow_list::Owner =
                         &verified_quote.body.report_data.d[32..].try_into().unwrap();
 
-                    let machine_pop: &allow_list::MachineID =
-                        slice::from_raw_parts(p_machine_pop, allow_list::MACHINE_ID_LEN)
-                            .try_into()
-                            .unwrap();
-
-                    // if swap-res failed - never mind. This is probably because the machine was added with proof-of-cloud
-                    if allow_list.update(&machine_id_hash, owner, machine_pop) {
-                        slice::from_raw_parts_mut(p_machine_info, allow_list::OWNER_LEN)
-                            .copy_from_slice(owner);
-
-                        slice::from_raw_parts_mut(
-                            p_machine_info.add(allow_list::OWNER_LEN),
-                            allow_list::MACHINE_ID_LEN,
-                        )
-                        .copy_from_slice(&machine_id_hash);
+                    if !allow_list.update(&machine_id_hash, owner, machine_pop) {
+                        return NodeAuthResult::InvalidCert;
                     }
+
+                    slice::from_raw_parts_mut(p_machine_info, allow_list::OWNER_LEN)
+                        .copy_from_slice(owner);
+
+                    slice::from_raw_parts_mut(
+                        p_machine_info.add(allow_list::OWNER_LEN),
+                        allow_list::MACHINE_ID_LEN,
+                    )
+                    .copy_from_slice(&machine_id_hash);
                 }
 
                 slice::from_raw_parts_mut(p_seeds, res.len()).copy_from_slice(&res);
