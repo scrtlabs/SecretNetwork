@@ -973,7 +973,7 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 		if cacheErr := recorder.RecordGetEncryptedSeed(height, certHash[:], outp1, outp2); cacheErr != nil {
 			logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
 		}
-		return outp2, outp2, nil
+		return outp1, outp2, nil
 	}
 
 	// SGX mode: call enclave and record result

@@ -87,7 +87,7 @@ func (m *QueryEncryptedSeedRequest) ProtoMessage() {}
 // QueryEncryptedSeedResponse matches QueryEncryptedSeedResponse proto
 type QueryEncryptedSeedResponse struct {
 	EncryptedSeed  []byte `protobuf:"bytes,1,opt,name=encrypted_seed,json=encryptedSeed,proto3" json:"encrypted_seed,omitempty"`
-	MachineBinding []byte `protobuf:"bytes,1,opt,name=machine_binding,json=machineBinding,proto3" json:"machine_binding,omitempty"`
+	MachineBinding []byte `protobuf:"bytes,2,opt,name=machine_binding,json=machineBinding,proto3" json:"machine_binding,omitempty"`
 }
 
 func (m *QueryEncryptedSeedResponse) Reset() { *m = QueryEncryptedSeedResponse{} }

@@ -428,11 +428,6 @@ func OnApproveMachineID(machineID []byte) error {
 			return errors.New("machine not approved")
 		}
 
-		if err == nil && len(data) > 0 {
-			logInfo("OnApproveMachineID", "Fetched proof from SGX node: height=%d (attempt %d)", height, attempt+1)
-			return nil
-		}
-
 		attempt++
 		if attempt%15 == 1 { // Log every ~30 seconds
 			logWarn("OnApproveMachineID", "Waiting for SGX node proof: height=%d machineID=%s attempt=%d err=%v", height, machineIDHex, attempt, err)
