@@ -78,7 +78,7 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 func SubmitValidatorSetEvidence(evidence []byte) error {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
-		logInfo("SubmitValidatorSetEvidence", "Skipped in replay mode")
+		// logInfo("SubmitValidatorSetEvidence", "Skipped in replay mode")
 		return nil
 	}
 	errmsg := C.Buffer{}
@@ -93,7 +93,7 @@ func InitBootstrap() ([]byte, error) {
 	if recorder.IsReplayMode() {
 		// In replay mode, return a dummy 32-byte public key
 		// This function is only called during bootstrap which doesn't happen in replay
-		logInfo("InitBootstrap", "Skipped in replay mode")
+		// logInfo("InitBootstrap", "Skipped in replay mode")
 		return make([]byte, 32), nil
 	}
 	errmsg := C.Buffer{}
@@ -108,7 +108,7 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte) (bool, error) {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
 		// In replay mode, skip loading seed to enclave (no enclave)
-		logInfo("LoadSeedToEnclave", "Skipped in replay mode")
+		// logInfo("LoadSeedToEnclave", "Skipped in replay mode")
 		return true, nil
 	}
 	pkSlice := sendSlice(masterKey)
@@ -127,7 +127,7 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte) (bool, error) {
 func RotateStore(kvs []byte) (bool, error) {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
-		logInfo("RotateStore", "Skipped in replay mode")
+		// logInfo("RotateStore", "Skipped in replay mode")
 		return false, errors.New("rotate store not supported on non-SGX node")
 	}
 	// avoid buffer copy. We need modification in-place
@@ -150,7 +150,7 @@ func RotateStore(kvs []byte) (bool, error) {
 func MigrationOp(op uint32) (bool, error) {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
-		logInfo("MigrationOp", "Skipped in replay mode")
+		// logInfo("MigrationOp", "Skipped in replay mode")
 		return true, nil // no-op success so upgrade handlers don't fail
 	}
 	ret, err := C.migration_op(u32(op))
@@ -229,7 +229,7 @@ func InitEnclaveRuntime(moduleCacheSize uint16) error {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
 		// In replay mode, skip enclave runtime initialization (no enclave)
-		logInfo("InitEnclaveRuntime", "Skipped in replay mode")
+		// logInfo("InitEnclaveRuntime", "Skipped in replay mode")
 		return nil
 	}
 
@@ -249,7 +249,7 @@ func InitEnclaveRuntime(moduleCacheSize uint16) error {
 func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
-		logInfo("OnUpgradeProposalPassed", "Skipped in replay mode")
+		// logInfo("OnUpgradeProposalPassed", "Skipped in replay mode")
 		return nil
 	}
 	msgBuf := sendSlice(mrEnclaveHash)
@@ -287,7 +287,7 @@ func OnApproveMachineID(machineID []byte) error {
 		if recErr := recorder.RecordMachineIDProof(height, []byte(machineIDHex), []byte{add_result}); recErr != nil {
 			logError("OnApproveMachineID", "Failed to record machine ID proof for replay: %v", recErr)
 		} else {
-			logInfo("OnApproveMachineID", "Recorded MachineIDProof for %s at height %d", machineIDHex, height)
+			// logInfo("OnApproveMachineID", "Recorded MachineIDProof for %s at height %d", machineIDHex, height)
 		}
 	}
 
@@ -906,7 +906,7 @@ func KeyGen() ([]byte, error) {
 	if recorder.IsReplayMode() {
 		// In replay mode, return a dummy 32-byte public key
 		// Key generation is only needed for node registration which doesn't happen in replay
-		logInfo("KeyGen", "Skipped in replay mode, returning dummy key")
+		// logInfo("KeyGen", "Skipped in replay mode, returning dummy key")
 		return make([]byte, 32), nil
 	}
 
@@ -923,7 +923,7 @@ func CreateAttestationReport(ext_sk []byte, is_migration_report bool) (bool, err
 	recorder := GetRecorder()
 	if recorder.IsReplayMode() {
 		// In replay mode, skip attestation report creation (no SGX)
-		logInfo("CreateAttestationReport", "Skipped in replay mode")
+		// logInfo("CreateAttestationReport", "Skipped in replay mode")
 		return true, nil
 	}
 	errmsg := C.Buffer{}
@@ -948,8 +948,8 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 	certHash := sha256.Sum256(cert)
 	certHashHex := hex.EncodeToString(certHash[:])
 
-	logInfo("GetEncryptedSeed", "SGX called: certHashHex=%s certLen=%d replayMode=%v",
-		certHashHex, len(cert), recorder.IsReplayMode())
+	// logInfo("GetEncryptedSeed", "SGX called: certHashHex=%s certLen=%d replayMode=%v",
+	// 	certHashHex, len(cert), recorder.IsReplayMode())
 
 	if recorder.IsReplayMode() {
 		// Try local DB first
@@ -985,7 +985,7 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 	res, err := C.get_encrypted_seed(certSlice, replace_machine_slice, &errmsg)
 	if err != nil {
 		enclaveErr := errorWithMessage(err, errmsg)
-		logInfo("GetEncryptedSeed", "SGX enclave FAILED for %s: %v", certHashHex, enclaveErr)
+		// logInfo("GetEncryptedSeed", "SGX enclave FAILED for %s: %v", certHashHex, enclaveErr)
 		// Record the error so non-SGX nodes can replay the exact same message
 		height := recorder.GetCurrentBlockHeight()
 		if recErr := recorder.RecordGetEncryptedSeedError(height, certHash[:], enclaveErr.Error()); recErr != nil {
@@ -997,11 +997,11 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 	output1 := receiveVector(res.buf1)
 	output2 := receiveVector(res.buf2)
 	height := recorder.GetCurrentBlockHeight()
-	logInfo("GetEncryptedSeed", "SGX enclave SUCCESS for %s (%d bytes), recording at height %d...", certHashHex, len(output1), height)
+	// logInfo("GetEncryptedSeed", "SGX enclave SUCCESS for %s (%d bytes), recording at height %d...", certHashHex, len(output1), height)
 	if err := recorder.RecordGetEncryptedSeed(height, certHash[:], output1, output2); err != nil {
 		logError("GetEncryptedSeed", "Failed to record: %v", err)
 	} else {
-		logInfo("GetEncryptedSeed", "Recorded GetEncryptedSeed for %s OK", certHashHex)
+		// logInfo("GetEncryptedSeed", "Recorded GetEncryptedSeed for %s OK", certHashHex)
 	}
 	return output1, output2, nil
 }

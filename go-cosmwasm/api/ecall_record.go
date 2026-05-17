@@ -149,11 +149,11 @@ func GetRecorder() *EcallRecorder {
 			pruneInterval:   pruneInterval,
 			blockTraces:     make(map[int64]*ExecutionTrace),
 		}
-		if mode == NodeModeReplay {
-			logInfo("EcallRecorder", "Initialized in replay mode (no local DB, fetches from remote)")
-		} else {
-			logInfo("EcallRecorder", "Initialized in %s mode (storing disabled)", mode)
-		}
+		// if mode == NodeModeReplay {
+		// 	logInfo("EcallRecorder", "Initialized in replay mode (no local DB, fetches from remote)")
+		// } else {
+		// 	logInfo("EcallRecorder", "Initialized in %s mode (storing disabled)", mode)
+		// }
 		return globalRecorder
 	}
 
@@ -198,11 +198,11 @@ func GetRecorder() *EcallRecorder {
 		blockTraces:     make(map[int64]*ExecutionTrace),
 	}
 
-	if storeSGXData {
-		logInfo("EcallRecorder", "Initialized in %s mode with storing enabled, db dir: %s", mode, dbDir)
-	} else {
-		logInfo("EcallRecorder", "Initialized in %s mode, db dir: %s", mode, dbDir)
-	}
+	// if storeSGXData {
+	// 	logInfo("EcallRecorder", "Initialized in %s mode with storing enabled, db dir: %s", mode, dbDir)
+	// } else {
+	// 	logInfo("EcallRecorder", "Initialized in %s mode, db dir: %s", mode, dbDir)
+	// }
 
 	return globalRecorder
 }
@@ -333,9 +333,9 @@ func (r *EcallRecorder) RecordSubmitBlockSignatures(height int64, random []byte,
 	}
 
 	// Only log every 1000 blocks to reduce noise
-	if height%1000 == 0 {
-		logInfo("EcallRecorder", "Recorded SubmitBlockSignatures for height %d", height)
-	}
+	// if height%1000 == 0 {
+	// 	logInfo("EcallRecorder", "Recorded SubmitBlockSignatures for height %d", height)
+	// }
 	return nil
 }
 
@@ -360,9 +360,9 @@ func (r *EcallRecorder) ReplaySubmitBlockSignatures(height int64) (random []byte
 	copy(evidence, value[32:])
 
 	// Only log every 1000 blocks to reduce noise
-	if height%1000 == 0 {
-		logInfo("EcallRecorder", "Replayed SubmitBlockSignatures for height %d", height)
-	}
+	// if height%1000 == 0 {
+	// 	logInfo("EcallRecorder", "Replayed SubmitBlockSignatures for height %d", height)
+	// }
 	return random, evidence, true
 }
 
@@ -392,7 +392,7 @@ func (r *EcallRecorder) RecordMachineIDProof(height int64, machineID []byte, pro
 		return fmt.Errorf("failed to write machine ID proof to db: %w", err)
 	}
 
-	logInfo("EcallRecorder", "Recorded MachineIDProof for height %d, machineID len=%d", height, len(machineID))
+	// logInfo("EcallRecorder", "Recorded MachineIDProof for height %d, machineID len=%d", height, len(machineID))
 	return nil
 }
 
@@ -411,7 +411,7 @@ func (r *EcallRecorder) ReplayMachineIDProof(height int64, machineID []byte) (pr
 		return nil, false
 	}
 
-	logInfo("EcallRecorder", "Replayed MachineIDProof for height %d (%d bytes)", height, len(value))
+	// logInfo("EcallRecorder", "Replayed MachineIDProof for height %d (%d bytes)", height, len(value))
 	return value, true
 }
 
@@ -447,7 +447,7 @@ func (r *EcallRecorder) RecordGetNetworkPubkey(height int64, iSeed uint32, nodeP
 		return fmt.Errorf("failed to write network pubkey to db: %w", err)
 	}
 
-	logInfo("EcallRecorder", "Recorded GetNetworkPubkey at height %d for i_seed %d", height, iSeed)
+	// logInfo("EcallRecorder", "Recorded GetNetworkPubkey at height %d for i_seed %d", height, iSeed)
 	return nil
 }
 
@@ -474,7 +474,7 @@ func (r *EcallRecorder) ReplayGetNetworkPubkey(height int64, iSeed uint32) (node
 	ioPk = make([]byte, ioPkLen)
 	copy(ioPk, value[offset+2:])
 
-	logInfo("EcallRecorder", "Replayed GetNetworkPubkey at height %d for i_seed %d", height, iSeed)
+	// logInfo("EcallRecorder", "Replayed GetNetworkPubkey at height %d for i_seed %d", height, iSeed)
 	return nodePk, ioPk, true
 }
 
@@ -518,7 +518,7 @@ func (r *EcallRecorder) RecordGetEncryptedSeed(height int64, certHash []byte, ou
 		return fmt.Errorf("failed to write to db: %w", err)
 	}
 
-	logInfo("EcallRecorder", "Recorded GetEncryptedSeed success at height %d (%d bytes)", height, len(outp1))
+	// logInfo("EcallRecorder", "Recorded GetEncryptedSeed success at height %d (%d bytes)", height, len(outp1))
 	return nil
 }
 
@@ -537,7 +537,7 @@ func (r *EcallRecorder) RecordGetEncryptedSeedError(height int64, certHash []byt
 		return fmt.Errorf("failed to write error to db: %w", err)
 	}
 
-	logInfo("EcallRecorder", "Recorded GetEncryptedSeed error at height %d: %s", height, errMsg)
+	// logInfo("EcallRecorder", "Recorded GetEncryptedSeed error at height %d: %s", height, errMsg)
 	return nil
 }
 
@@ -555,7 +555,7 @@ func (r *EcallRecorder) ReplayGetEncryptedSeed(height int64, certHash []byte) (o
 	errKey := makeSeedErrKey(height, certHash)
 	errVal, err := r.db.Get(errKey)
 	if err == nil && errVal != nil && len(errVal) > 0 {
-		logInfo("EcallRecorder", "Replayed GetEncryptedSeed error at height %d", height)
+		// logInfo("EcallRecorder", "Replayed GetEncryptedSeed error at height %d", height)
 		return nil, nil, string(errVal), true
 	}
 
@@ -572,7 +572,7 @@ func (r *EcallRecorder) ReplayGetEncryptedSeed(height int64, certHash []byte) (o
 		return nil, nil, "", false
 	}
 
-	logInfo("EcallRecorder", "Replayed GetEncryptedSeed success at height %d (%d bytes)", height, len(outp1))
+	// logInfo("EcallRecorder", "Replayed GetEncryptedSeed success at height %d (%d bytes)", height, len(outp1))
 	return outp1, outp2, "", true
 }
 
@@ -850,7 +850,7 @@ func (r *EcallRecorder) DeleteRecordsBeforeHeight(height int64) error {
 	}
 
 	if count > 0 {
-		logInfo("EcallRecorder", "Pruned %d records before height %d", count, height)
+		// logInfo("EcallRecorder", "Pruned %d records before height %d", count, height)
 	}
 	return nil
 }
@@ -938,7 +938,7 @@ func (r *EcallRecorder) RecordCreateResult(height int64, wasmHash []byte, codeHa
 		return fmt.Errorf("failed to write Create result to db: %w", err)
 	}
 
-	logInfo("EcallRecorder", "Recorded Create result for height %d, hasError=%v", height, result.HasError)
+	// logInfo("EcallRecorder", "Recorded Create result for height %d, hasError=%v", height, result.HasError)
 	return nil
 }
 

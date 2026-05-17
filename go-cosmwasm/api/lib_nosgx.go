@@ -32,7 +32,7 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 }
 
 func SubmitValidatorSetEvidence(evidence []byte) error {
-	logInfo("SubmitValidatorSetEvidence", "Skipped in replay mode")
+	//logInfo("SubmitValidatorSetEvidence", "Skipped in replay mode")
 	return nil
 }
 
@@ -43,7 +43,7 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte) (bool, error) {
 type Querier = types.Querier
 
 func MigrationOp(op uint32) (bool, error) {
-	logInfo("MigrationOp", "Skipped in replay mode")
+	//logInfo("MigrationOp", "Skipped in replay mode")
 	return true, nil // no-op success so upgrade handlers don't fail
 }
 
@@ -94,7 +94,7 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 					for i, fetchedHash := range wasmHashes {
 						if bytes.Equal(fetchedHash, wasmHash[:]) {
 							r := results[i]
-							logInfo("Create", "Matched Create result from SGX node: height=%d hasError=%v (attempt %d)", height, r.HasError, attempt+1)
+							//logInfo("Create", "Matched Create result from SGX node: height=%d hasError=%v (attempt %d)", height, r.HasError, attempt+1)
 							if r.HasError {
 								return nil, fmt.Errorf("%s", r.ErrorMsg)
 							}
@@ -276,12 +276,12 @@ func AnalyzeCode(
 }
 
 func KeyGen() ([]byte, error) {
-	logInfo("KeyGen", "Skipped in replay mode, returning dummy key")
+	//logInfo("KeyGen", "Skipped in replay mode, returning dummy key")
 	return make([]byte, 32), nil
 }
 
 func CreateAttestationReport(ext_sk []byte, is_migration_report bool) (bool, error) {
-	logInfo("CreateAttestationReport", "Skipped in replay mode")
+	//logInfo("CreateAttestationReport", "Skipped in replay mode")
 	return true, nil
 }
 
@@ -302,21 +302,21 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 	certHash := sha256.Sum256(cert)
 	certHashHex := hex.EncodeToString(certHash[:])
 
-	logInfo("GetEncryptedSeed", "NON-SGX called: certHashHex=%s certLen=%d dbInitialized=%v",
-		certHashHex, len(cert), recorder != nil && recorder.db != nil)
+	//logInfo("GetEncryptedSeed", "NON-SGX called: certHashHex=%s certLen=%d dbInitialized=%v",
+	// 	certHashHex, len(cert), recorder != nil && recorder.db != nil)
 
 	height := recorder.GetCurrentBlockHeight()
 
 	// Try local DB first
 	if outp1, outp2, errMsg, found := recorder.ReplayGetEncryptedSeed(height, certHash[:]); found {
 		if errMsg != "" {
-			logInfo("GetEncryptedSeed", "Found CACHED ERROR in local DB for %s: %s", certHashHex, errMsg)
+			//logInfo("GetEncryptedSeed", "Found CACHED ERROR in local DB for %s: %s", certHashHex, errMsg)
 			return nil, nil, fmt.Errorf("%s", errMsg)
 		}
-		logInfo("GetEncryptedSeed", "Found CACHED SUCCESS in local DB for %s (%d bytes)", certHashHex, len(outp1))
+		//logInfo("GetEncryptedSeed", "Found CACHED SUCCESS in local DB for %s (%d bytes)", certHashHex, len(outp1))
 		return outp1, outp2, nil
 	}
-	logInfo("GetEncryptedSeed", "NOT in local DB for %s, will fetch from SGX node via gRPC", certHashHex)
+	//logInfo("GetEncryptedSeed", "NOT in local DB for %s, will fetch from SGX node via gRPC", certHashHex)
 
 	// Fetch from remote SGX node with retries (the SGX node may still be
 	// processing the same block and recording the seed when we query)
@@ -329,7 +329,7 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		outp1, outp2, err := client.FetchEncryptedSeed(height, certHashHex)
 		if err == nil {
-			logInfo("GetEncryptedSeed", "Fetched seed from SGX node (attempt %d) for %s (%d bytes)",
+			//logInfo("GetEncryptedSeed", "Fetched seed from SGX node (attempt %d) for %s (%d bytes)",
 				attempt+1, certHashHex, len(outp1))
 			// Cache locally
 			if cacheErr := recorder.RecordGetEncryptedSeed(height, certHash[:], outp1, outp2); cacheErr != nil {
@@ -346,14 +346,14 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 			grpcMsg = st.Message()
 		}
 
-		logInfo("GetEncryptedSeed", "gRPC attempt %d/%d for %s: code=%s msg=%s",
+		//logInfo("GetEncryptedSeed", "gRPC attempt %d/%d for %s: code=%s msg=%s",
 			attempt+1, maxRetries, certHashHex, grpcCode, grpcMsg)
 
 		// Check if this is a FailedPrecondition error (recorded error from SGX node)
 		if st, ok := status.FromError(err); ok && st.Code() == codes.FailedPrecondition {
 			// The SGX node recorded the enclave error - cache and replay it
 			enclaveErrMsg := st.Message()
-			logInfo("GetEncryptedSeed", "SGX node returned FailedPrecondition (enclave error) for %s: %s",
+			//logInfo("GetEncryptedSeed", "SGX node returned FailedPrecondition (enclave error) for %s: %s",
 				certHashHex, enclaveErrMsg)
 			if cacheErr := recorder.RecordGetEncryptedSeedError(height, certHash[:], enclaveErrMsg); cacheErr != nil {
 				logError("GetEncryptedSeed", "Failed to cache error: %v", cacheErr)
@@ -407,7 +407,7 @@ func OnApproveMachineID(machineID []byte) error {
 	// On SGX nodes this loads them into the enclave; on non-SGX there's
 	// no enclave, so just skip — the proof already lives in the KV store.
 	if height == 0 {
-		logInfo("OnApproveMachineID", "Skipping at init (height=0, no enclave on non-SGX)")
+		//logInfo("OnApproveMachineID", "Skipping at init (height=0, no enclave on non-SGX)")
 		return nil
 	}
 
@@ -419,7 +419,7 @@ func OnApproveMachineID(machineID []byte) error {
 	for {
 		data, err := client.FetchMachineIDProof(height, machineIDHex)
 		if err == nil && len(data) > 0 {
-			logInfo("OnApproveMachineID", "Fetched proof from SGX node: height=%d (attempt %d)", height, attempt+1)
+			//logInfo("OnApproveMachineID", "Fetched proof from SGX node: height=%d (attempt %d)", height, attempt+1)
 
 			if data[0] != 0 {
 				return nil
