@@ -175,7 +175,7 @@ pub mod allow_list {
                 if let Some(x) = self.m_to_o.get(machine_pop) {
                     if *x != *owner {
                         error!(
-                            "unknown machine {} not owned by this actor",
+                            "machine {} not owned by this actor",
                             hex::encode(machine_pop)
                         );
                         return false;

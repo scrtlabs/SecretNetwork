@@ -982,8 +982,6 @@ pub unsafe extern "C" fn ecall_submit_machine_swap(
             extra.apphash
         };
 
-        //println!("expected apphash: {}", hex::encode(&apphash));
-
         let mut merkle = MerkleProcessor::new(slice::from_raw_parts(p_proof, n_proof as usize));
 
         let proof_parts = Keychain::read_u32(&mut merkle.cursor)?;
@@ -1015,6 +1013,11 @@ pub unsafe extern "C" fn ecall_submit_machine_swap(
         merkle.interpret_sub_path(&mut hash_val)?;
 
         if apphash != hash_val {
+            error!(
+                "Merkle root expected: {}, actual: {}",
+                hex::encode(&apphash),
+                hex::encode(&hash_val)
+            );
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "apphash mismatch",
