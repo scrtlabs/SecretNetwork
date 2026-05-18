@@ -85,7 +85,7 @@ type Keeper struct {
 	bankKeeper       bankkeeper.Keeper
 	portKeeper       portkeeper.Keeper
 	capabilityKeeper capabilitykeeper.ScopedKeeper
-	regKeeper        *registration.Keeper
+	RegKeeper        *registration.Keeper
 	cronKeeper       cronkeeper.Keeper
 	wasmer           wasm.Wasmer
 	queryPlugins     QueryPlugins
@@ -161,7 +161,7 @@ func NewKeeper(
 		cronKeeper:       cronKeeper,
 		portKeeper:       portKeeper,
 		capabilityKeeper: capabilityKeeper,
-		regKeeper:        regKeeper,
+		RegKeeper:        regKeeper,
 		messenger: NewMessageHandler(
 			msgRouter,
 			customEncoders,
@@ -1188,8 +1188,6 @@ func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte, validator_set_evid
 	if err != nil {
 		ctx.Logger().Error("SetRandomSeed:", err.Error())
 	}
-
-	k.regKeeper.MaybeSetEnclaveColdData(ctx)
 }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {

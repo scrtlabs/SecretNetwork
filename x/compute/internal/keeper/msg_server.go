@@ -385,7 +385,7 @@ func (m msgServer) UpdateMachineWhitelist(goCtx context.Context, msg *types.MsgU
 			fmt.Println("Failed to add machine_id: ", id_txt)
 		} else {
 			fmt.Println("Added machine_id: ", id_txt)
-			_ = m.keeper.regKeeper.OnNewMachine(ctx, id)
+			_ = m.keeper.RegKeeper.OnNewMachine(ctx, id)
 		}
 	}
 
