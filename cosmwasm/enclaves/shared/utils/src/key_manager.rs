@@ -43,8 +43,8 @@ pub struct KeychainMutableData {
     pub validator_set_serialized: Vec<u8>,
     pub next_mr_enclave: Option<sgx_measurement_t>,
     pub last_block_seed: u16,
+    pub height_machine_allowed: u64,
     // the following is NOT serialized
-    pub last_submitted_header_height: u64,
     pub machine_allowed: bool,
 }
 
@@ -136,6 +136,10 @@ impl Keychain {
             4_u8
         } else {
             0_u8
+        }) | (if extra.height_machine_allowed != 0 {
+            8_u8
+        } else {
+            0_u8
         });
 
         writer.write_all(&[ex_flag])?;
@@ -150,6 +154,10 @@ impl Keychain {
 
         if ex_flag & 4_u8 != 0 {
             writer.write_all(&extra.apphash)?;
+        }
+
+        if ex_flag & 8_u8 != 0 {
+            writer.write_all(&extra.height_machine_allowed.to_le_bytes())?;
         }
 
         Ok(())
@@ -238,6 +246,12 @@ impl Keychain {
             extra.apphash = [0u8; 32];
         }
 
+        if (flag_bytes[0] & 8_u8) != 0 {
+            extra.height_machine_allowed = Self::read_u64(reader)?;
+        } else {
+            extra.height_machine_allowed = 0;
+        }
+
         Ok(())
     }
 
@@ -305,7 +319,7 @@ impl Keychain {
                 validator_set_serialized: Vec::new(),
                 next_mr_enclave: None,
                 last_block_seed: DEF_LAST_BLOCK_SEED,
-                last_submitted_header_height: 0,
+                height_machine_allowed: 0,
                 machine_allowed: false,
             }),
         }

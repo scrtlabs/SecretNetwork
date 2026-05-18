@@ -63,10 +63,10 @@ pub unsafe fn submit_block_signatures_impl(
     let (validator_set, height) = {
         let mut extra = KEY_MANAGER.extra_data.lock().unwrap();
 
-        if extra.last_submitted_header_height == 0 {
-            extra.last_submitted_header_height = extra.height;
+        if extra.machine_allowed {
+            extra.height_machine_allowed = extra.height;
         } else {
-            if (extra.last_submitted_header_height != extra.height) && !extra.machine_allowed {
+            if (extra.height_machine_allowed > 0) && (extra.height_machine_allowed < extra.height) {
                 error!("This machine isn't allowed to run");
                 return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
             }
