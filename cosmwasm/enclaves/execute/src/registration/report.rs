@@ -727,6 +727,7 @@ pub mod tests {
             quote: vec_quote,
             coll: vec_coll,
             jwt_token: Vec::new(),
+            use_machine_id: None,
         };
 
         let res = verify_quote_sgx(&attestation, time_s, false);
@@ -748,6 +749,7 @@ pub mod tests {
             quote: vec_quote,
             coll: vec_coll,
             jwt_token: Vec::new(),
+            use_machine_id: None,
         };
 
         let res = verify_quote_sgx(&attestation, time_s, false);
