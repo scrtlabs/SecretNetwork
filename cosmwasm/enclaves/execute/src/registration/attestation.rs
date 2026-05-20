@@ -175,8 +175,9 @@ pub mod allow_list {
                 if let Some(x) = self.m_to_o.get(machine_pop) {
                     if *x != *owner {
                         error!(
-                            "machine {} not owned by this actor",
-                            hex::encode(machine_pop)
+                            "Failed to replace MachineID - machine {} not owned by validator key {}",
+                            hex::encode(machine_pop),
+                            hex::encode(owner)
                         );
                         return false;
                     }
@@ -884,7 +885,7 @@ pub fn verify_quote_sgx(
             };
 
             if check_ppid_wl && (!is_in_wl && !jwt_token_valid) {
-                println!("Unknown Machine, JWT token not provided");
+                println!("This machine is not known, and doesn't present a valid JWT token. The machine cannot join the network.");
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
             }
 
