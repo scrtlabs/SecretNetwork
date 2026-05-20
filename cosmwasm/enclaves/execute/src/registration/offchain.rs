@@ -381,7 +381,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     };
 
     let attestation = {
-        let pk_len = 32 as usize;
+        let pk_len = 32_usize;
         report_data[0..pk_len].copy_from_slice(&kp.get_pubkey());
 
         if n_sk == 32 {
@@ -933,7 +933,7 @@ impl<'a> MerkleProcessor<'a> {
         Self::hash_var_uint(&mut hasher, key.len());
         hasher.update(key);
         Self::hash_var_uint(&mut hasher, valhash.len());
-        hasher.update(&valhash);
+        hasher.update(valhash);
 
         Ok(hasher.finalize().into())
     }
@@ -1015,8 +1015,8 @@ pub unsafe extern "C" fn ecall_submit_machine_swap(
         if apphash != hash_val {
             error!(
                 "Merkle root expected: {}, actual: {}",
-                hex::encode(&apphash),
-                hex::encode(&hash_val)
+                hex::encode(apphash),
+                hex::encode(hash_val)
             );
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,

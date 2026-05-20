@@ -448,8 +448,8 @@ lazy_static::lazy_static! {
 
     pub static ref SELF_MACHINE_ID: Option<allow_list::MachineID> = {
         let ppid = SELF_QUOTE_PPID.as_ref()?;
-        let machine_id = crate::registration::offchain::calculate_truncated_hash(&ppid);
-        trace!("Self machine_id = {}", hex::encode(&machine_id));
+        let machine_id = crate::registration::offchain::calculate_truncated_hash(ppid);
+        trace!("Self machine_id = {}", hex::encode(machine_id));
         Some(machine_id)
     };
 
@@ -852,9 +852,9 @@ pub fn verify_quote_sgx(
 
             let machine_id_opt = if let Some(ppid) = attestation.extract_cpu_cert() {
                 let hash = crate::registration::offchain::calculate_truncated_hash(&ppid);
-                println!("Machine ID: {}", orig_hex::encode(&hash));
+                println!("Machine ID: {}", orig_hex::encode(hash));
 
-                if machine_id_to_check == None {
+                if machine_id_to_check.is_none() {
                     machine_id_to_check = Some(hash);
                 }
 
@@ -891,7 +891,7 @@ pub fn verify_quote_sgx(
 
             Ok(VerifiedSgxQuote {
                 body: (*my_p_quote).report_body,
-                qv_result: qv_result,
+                qv_result,
                 machine_id_hash: machine_id_opt,
             })
         }

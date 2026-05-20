@@ -41,7 +41,7 @@ pub unsafe extern "C" fn ecall_check_patch_level(
 unsafe fn check_patch_level_dcap() -> NodeAuthResult {
     match &*SELF_QUOTE_UNTESTED {
         Ok(attestation) => {
-            match verify_quote_sgx(&attestation, 0, false) {
+            match verify_quote_sgx(attestation, 0, false) {
                 Ok(res) => {
                     if res.qv_result != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
                         println!("WARNING: {}", res.qv_result);
