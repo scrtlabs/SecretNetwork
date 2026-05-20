@@ -278,6 +278,9 @@ func (k *Keeper) MaybeSetEnclaveColdData(ctx sdk.Context) error {
 
 	k.coldDataSet = true
 
+	height := ctx.BlockHeight() - 1
+	// fmt.Println("**** Submitting cold data to enclave, for height=", height)
+
 	// on-chain approved machine migrations
 
 	store := k.storeService.OpenKVStore(ctx)
@@ -297,8 +300,6 @@ func (k *Keeper) MaybeSetEnclaveColdData(ctx sdk.Context) error {
 		index := binary.BigEndian.Uint32(key)
 
 		// fmt.Println("Querying the enclave cold evidence")
-
-		height := ctx.BlockHeight() - 1
 
 		key = append(types.RegistrationMachinePrefix, key...)
 		req := &abci.RequestQuery{

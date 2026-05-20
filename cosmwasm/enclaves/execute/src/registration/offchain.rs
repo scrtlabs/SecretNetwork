@@ -996,7 +996,7 @@ pub unsafe extern "C" fn ecall_submit_machine_swap(
         let mut hash_val = {
             let mut k = [0u8; 5];
             k[0] = 0x03; // RegistrationMachinePrefix
-            k[1..5].copy_from_slice(&index.to_le_bytes());
+            k[1..5].copy_from_slice(&index.to_be_bytes());
 
             let v = slice::from_raw_parts(p_machine_info, n_machine_info as usize);
 

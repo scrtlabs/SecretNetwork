@@ -66,8 +66,14 @@ pub unsafe fn submit_block_signatures_impl(
         if extra.machine_allowed {
             extra.height_machine_allowed = extra.height;
         } else {
-            if (extra.height_machine_allowed > 0) && (extra.height_machine_allowed < extra.height) {
-                error!("This machine isn't allowed to run");
+            // allow the machine to work even if initially disallowed. Stop it only after it was allowed on-chain, and then disallowed
+            if (extra.height_machine_allowed > 0)
+                && (extra.height_machine_allowed + 1 < extra.height)
+            {
+                error!(
+                    "This machine isn't allowed to run. Last allowed_height={}, current_height={}",
+                    extra.height_machine_allowed, extra.height
+                );
                 return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
             }
         }
