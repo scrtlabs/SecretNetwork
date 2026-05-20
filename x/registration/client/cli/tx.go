@@ -28,10 +28,11 @@ func GetTxCmd() *cobra.Command {
 
 // AuthenticateNodeCmd will upload code to be reused.
 func AuthenticateNodeCmd() *cobra.Command {
+	var replaceMachineID string
 	cmd := &cobra.Command{
-		Use:   "auth attestation_file [replace_machine_id]",
+		Use:   "auth attestation_file [--replace-machine-id machine_id]",
 		Short: "Upload a certificate to authenticate the node",
-		Args:  cobra.RangeArgs(1, 2),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// clientCtx := client.GetClientContextFromCmd(cmd)
 			clientCtx, err := client.GetClientTxContext(cmd)
@@ -44,17 +45,11 @@ func AuthenticateNodeCmd() *cobra.Command {
 				return err
 			}
 
-			replace_machine_id := ""
-
-			if len(args) > 1 {
-				replace_machine_id = args[1]
-			}
-
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := types.RaAuthenticate{
 				Sender:           clientCtx.GetFromAddress(),
 				Certificate:      cert,
-				ReplaceMachineId: replace_machine_id,
+				ReplaceMachineId: replaceMachineID,
 			}
 			err = msg.ValidateBasic()
 			if err != nil {
@@ -64,6 +59,13 @@ func AuthenticateNodeCmd() *cobra.Command {
 		},
 	}
 	flags.AddTxFlagsToCmd(cmd)
+
+	cmd.Flags().StringVar(
+		&replaceMachineID,
+		"replace-machine-id",
+		"",
+		"machine to replace",
+	)
 
 	return cmd
 }
