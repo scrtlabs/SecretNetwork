@@ -87,6 +87,6 @@ func TestKeeper_RegisterNode(t *testing.T) {
 
 	regKeeper.SetRegistrationInfo(ctx, regInfo)
 
-	_, err = regKeeper.RegisterNode(ctx, cert)
+	_, err = regKeeper.RegisterNode(ctx, cert, "")
 	require.NoError(t, err)
 }
