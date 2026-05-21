@@ -5,28 +5,38 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
 // EcallClient fetches ecall records from remote SGX nodes via gRPC
 // It maintains connections to multiple nodes and selects randomly for load distribution
 type EcallClient struct {
-	mu      sync.RWMutex
-	nodes   []*nodeConn // Pool of node connections
-	timeout time.Duration
-	rng     *rand.Rand
+	mu         sync.RWMutex
+	nodes      []*nodeConn // Pool of node connections
+	timeout    time.Duration
+	rng        *rand.Rand
+	kr         keyring.Keyring
+	billingKey string
 }
 
 // nodeConn represents a connection to a single SGX node
@@ -323,10 +333,38 @@ func GetEcallClient() *EcallClient {
 			nodes[i] = &nodeConn{addr: addr}
 		}
 
+		billingKey := os.Getenv("SECRET_BILLING_KEY_NAME")
+		var kr keyring.Keyring
+		if billingKey != "" {
+			backend := os.Getenv("SECRET_BILLING_KEYRING_BACKEND")
+			if backend == "" {
+				backend = "test"
+			}
+			krDir := os.Getenv("SECRET_BILLING_KEYRING_DIR")
+			if krDir == "" {
+				homeDir := os.Getenv("HOME")
+				krDir = filepath.Join(homeDir, ".secretd")
+			}
+
+			registry := types.NewInterfaceRegistry()
+			cdc := codec.NewProtoCodec(registry)
+
+			var krErr error
+			kr, krErr = keyring.New("secretd", backend, krDir, os.Stdin, cdc)
+			if krErr != nil {
+				logWarn("EcallClient", "Failed to init keyring for billing: %v", krErr)
+				billingKey = ""
+			} else {
+				logInfo("EcallClient", "Initialized billing keyring with backend %s in %s for key %s", backend, krDir, billingKey)
+			}
+		}
+
 		globalClient = &EcallClient{
-			nodes:   nodes,
-			timeout: 30 * time.Second,
-			rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
+			nodes:      nodes,
+			timeout:    30 * time.Second,
+			rng:        rand.New(rand.NewSource(time.Now().UnixNano())),
+			kr:         kr,
+			billingKey: billingKey,
 		}
 
 		logInfo("EcallClient", "Initialized with %d SGX nodes", len(addrs))
@@ -420,11 +458,18 @@ func (c *EcallClient) ensureConnection(node *nodeConn) (*grpc.ClientConn, error)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	dialOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	}
+	if c.billingKey != "" && c.kr != nil {
+		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(c.billingAuthInterceptor()))
+	}
+
 	conn, err := grpc.DialContext(
 		ctx,
 		node.addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
+		dialOpts...,
 	)
 	if err != nil {
 		node.failed = true
@@ -686,4 +731,40 @@ func (c *EcallClient) FetchNetworkPubkey(height int64, iSeed uint32) ([]byte, []
 
 	logInfo("EcallClient", "Fetched NetworkPubkey for height %d seed %d", height, iSeed)
 	return resp.NodePubkey, resp.IoPubkey, nil
+}
+
+// billingAuthInterceptor automatically signs the request payload using the configured Cosmos Keyring.
+// The signature allows the billing sidecar to authenticate the client and debit their subscription balance.
+func (c *EcallClient) billingAuthInterceptor() grpc.UnaryClientInterceptor {
+	return func(
+		ctx context.Context,
+		method string,
+		req, reply interface{},
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
+		if c.billingKey != "" && c.kr != nil {
+			timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+			payload := timestamp + "|" + method
+			hash := sha256.Sum256([]byte(payload))
+
+			// Sign with Cosmos SDK Keyring using SIGN_MODE_DIRECT
+			sigBytes, pubKey, err := c.kr.Sign(c.billingKey, hash[:], signing.SignMode_SIGN_MODE_DIRECT)
+			if err != nil {
+				return fmt.Errorf("failed to sign billing request: %w", err)
+			}
+
+			pubKeyBytes := pubKey.Bytes() // For secp256k1 this returns 33-byte compressed pubkey.
+
+			md := metadata.Pairs(
+				"x-sub-timestamp", timestamp,
+				"x-sub-pubkey", hex.EncodeToString(pubKeyBytes),
+				"x-sub-signature", hex.EncodeToString(sigBytes),
+			)
+			ctx = metadata.NewOutgoingContext(ctx, md)
+		}
+
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }
