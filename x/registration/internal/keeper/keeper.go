@@ -264,7 +264,7 @@ func SerializeMerkleProof(ops []cmtcrypto.ProofOp) (error, []byte) {
 			}
 
 		default:
-			return fmt.Errorf("unknown ICS23 proof type in CommitmentProof: %w", p), nil
+			return fmt.Errorf("unknown ICS23 proof type in CommitmentProof: %v", p), nil
 		}
 	}
 
