@@ -457,7 +457,6 @@ func (c *EcallClient) ensureConnection(node *nodeConn) (*grpc.ClientConn, error)
 
 	dialOpts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
 	}
 	if c.billingPrivKey != nil {
 		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(c.billingAuthInterceptor()))
