@@ -156,7 +156,7 @@ void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
-bool create_attestation_report(uint32_t flags, Buffer *err);
+bool create_attestation_report(Buffer sk, uint32_t flags, Buffer *err);
 
 bool emergency_approve_upgrade(Buffer data_dir, Buffer msg);
 
@@ -166,7 +166,7 @@ Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
 
 Buffer get_encrypted_genesis_seed(Buffer pk, Buffer *err);
 
-Buffer get_encrypted_seed(Buffer cert, Buffer *err);
+TwoBuffers get_encrypted_seed(Buffer cert, Buffer replace_machine, Buffer *err);
 
 Buffer get_health_check(Buffer *err);
 
@@ -222,7 +222,7 @@ Buffer migrate(cache_t *cache,
 
 bool migration_op(uint32_t opcode);
 
-bool onchain_approve_machine_id(Buffer machine_id, uint8_t *proof, bool is_on_chain);
+bool onchain_approve_machine_id(Buffer machine_id);
 
 bool onchain_approve_upgrade(Buffer msg);
 
@@ -254,6 +254,8 @@ TwoBuffers submit_block_signatures(Buffer header,
                                    Buffer txs,
                                    Buffer random,
                                    Buffer *err);
+
+bool submit_machine_swap(uint32_t index, Buffer machine_info, Buffer proof);
 
 void submit_validator_set_evidence(Buffer evidence, Buffer *err);
 

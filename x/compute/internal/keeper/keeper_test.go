@@ -39,7 +39,7 @@ func init() {
 	config.SetBech32PrefixForConsensusNode(eng.Bech32PrefixConsAddr, eng.Bech32PrefixConsPub)
 	config.Seal()
 
-	_, err = api.InitBootstrap()
+	_, err := api.InitBootstrap()
 	if err != nil {
 		panic(fmt.Sprintf("Error initializing the enclave: %v", err))
 	}

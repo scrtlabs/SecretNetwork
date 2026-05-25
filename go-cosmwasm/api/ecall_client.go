@@ -86,7 +86,8 @@ func (m *QueryEncryptedSeedRequest) ProtoMessage() {}
 
 // QueryEncryptedSeedResponse matches QueryEncryptedSeedResponse proto
 type QueryEncryptedSeedResponse struct {
-	EncryptedSeed []byte `protobuf:"bytes,1,opt,name=encrypted_seed,json=encryptedSeed,proto3" json:"encrypted_seed,omitempty"`
+	EncryptedSeed  []byte `protobuf:"bytes,1,opt,name=encrypted_seed,json=encryptedSeed,proto3" json:"encrypted_seed,omitempty"`
+	MachineBinding []byte `protobuf:"bytes,2,opt,name=machine_binding,json=machineBinding,proto3" json:"machine_binding,omitempty"`
 }
 
 func (m *QueryEncryptedSeedResponse) Reset() { *m = QueryEncryptedSeedResponse{} }
@@ -307,7 +308,7 @@ func GetEcallClient() *EcallClient {
 
 		if addrsFromFile := loadNodesFromJSON(configPath); len(addrsFromFile) > 0 {
 			addrs = addrsFromFile
-			logInfo("EcallClient", "Loaded %d nodes from config file: %s", len(addrs), configPath)
+			// logInfo("EcallClient", "Loaded %d nodes from config file: %s", len(addrs), configPath)
 		} else {
 			// Fallback to env var
 			grpcAddr := os.Getenv("SECRET_SGX_NODE_GRPC")
@@ -315,7 +316,7 @@ func GetEcallClient() *EcallClient {
 				grpcAddr = "localhost:9090"
 			}
 			addrs = []string{grpcAddr}
-			logInfo("EcallClient", "Using single node from env: %s", grpcAddr)
+			// logInfo("EcallClient", "Using single node from env: %s", grpcAddr)
 		}
 
 		nodes := make([]*nodeConn, len(addrs))
@@ -329,7 +330,7 @@ func GetEcallClient() *EcallClient {
 			rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		}
 
-		logInfo("EcallClient", "Initialized with %d SGX nodes", len(addrs))
+		// logInfo("EcallClient", "Initialized with %d SGX nodes", len(addrs))
 	})
 	return globalClient
 }
@@ -525,7 +526,7 @@ func (c *EcallClient) FetchEcallRecord(height int64) (*EcallRecordData, error) {
 	}
 
 	if height%1000 == 0 {
-		logInfo("EcallClient", "Fetched ecall record for height %d", height)
+		// logInfo("EcallClient", "Fetched ecall record for height %d", height)
 	}
 
 	return &EcallRecordData{
@@ -536,16 +537,16 @@ func (c *EcallClient) FetchEcallRecord(height int64) (*EcallRecordData, error) {
 }
 
 // FetchEncryptedSeed fetches encrypted seed data from a random SGX node
-func (c *EcallClient) FetchEncryptedSeed(height int64, certHashHex string) ([]byte, error) {
+func (c *EcallClient) FetchEncryptedSeed(height int64, certHashHex string) ([]byte, []byte, error) {
 	req := &QueryEncryptedSeedRequest{CertHash: certHashHex, Height: height}
 	resp := &QueryEncryptedSeedResponse{}
 
 	if err := c.invokeWithRetry(methodEncryptedSeed, req, resp); err != nil {
-		return nil, err // Return raw error to preserve gRPC status codes
+		return nil, nil, err // Return raw error to preserve gRPC status codes
 	}
 
-	logInfo("EcallClient", "Fetched encrypted seed (%d bytes) at height %d", len(resp.EncryptedSeed), height)
-	return resp.EncryptedSeed, nil
+	// logInfo("EcallClient", "Fetched encrypted seed (%d bytes) at height %d", len(resp.EncryptedSeed), height)
+	return resp.EncryptedSeed, resp.MachineBinding, nil
 }
 
 // FetchMachineIDProof fetches a machine ID proof for a given height and machine ID from a random SGX node
@@ -557,7 +558,7 @@ func (c *EcallClient) FetchMachineIDProof(height int64, machineIDHex string) ([]
 		return nil, fmt.Errorf("gRPC MachineIDProof failed for height %d: %w", height, err)
 	}
 
-	logInfo("EcallClient", "Fetched machine ID proof (%d bytes) for height %d", len(resp.Proof), height)
+	// logInfo("EcallClient", "Fetched machine ID proof (%d bytes) for height %d", len(resp.Proof), height)
 	return resp.Proof, nil
 }
 
@@ -615,7 +616,7 @@ func (c *EcallClient) FetchBlockTraces(height int64) ([]*ExecutionTrace, error) 
 				height, t.Index, len(t.Ops), len(t.Result), t.GasUsed, t.CallbackGas, t.HasError)
 		}
 	} else if height%1000 == 0 {
-		logInfo("EcallClient", "Fetched %d traces for block %d", len(traces), height)
+		// logInfo("EcallClient", "Fetched %d traces for block %d", len(traces), height)
 	}
 	return traces, nil
 }
@@ -629,7 +630,7 @@ func (c *EcallClient) FetchAnalyzeCode(codeHash []byte) (bool, string, error) {
 		return false, "", fmt.Errorf("gRPC AnalyzeCode failed for code hash %x: %w", codeHash, err)
 	}
 
-	logInfo("EcallClient", "Fetched AnalyzeCode for %x: hasIBC=%v features=%s", codeHash, resp.HasIBCEntryPoints, resp.RequiredFeatures)
+	// logInfo("EcallClient", "Fetched AnalyzeCode for %x: hasIBC=%v features=%s", codeHash, resp.HasIBCEntryPoints, resp.RequiredFeatures)
 	return resp.HasIBCEntryPoints, resp.RequiredFeatures, nil
 }
 
@@ -670,7 +671,7 @@ func (c *EcallClient) FetchBlockCreateResults(height int64) ([]*CreateResult, []
 	}
 
 	if len(results) > 0 {
-		logInfo("EcallClient", "Fetched %d Create results for block %d", len(results), height)
+		// logInfo("EcallClient", "Fetched %d Create results for block %d", len(results), height)
 	}
 	return results, wasmHashes, nil
 }
@@ -684,6 +685,6 @@ func (c *EcallClient) FetchNetworkPubkey(height int64, iSeed uint32) ([]byte, []
 		return nil, nil, fmt.Errorf("gRPC NetworkPubkey failed for height %d seed %d: %w", height, iSeed, err)
 	}
 
-	logInfo("EcallClient", "Fetched NetworkPubkey for height %d seed %d", height, iSeed)
+	// logInfo("EcallClient", "Fetched NetworkPubkey for height %d seed %d", height, iSeed)
 	return resp.NodePubkey, resp.IoPubkey, nil
 }

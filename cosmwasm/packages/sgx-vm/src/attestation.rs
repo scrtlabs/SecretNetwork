@@ -10,6 +10,8 @@ extern "C" {
     pub fn ecall_get_attestation_report(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
+        p_sk: *const u8,
+        n_sk: u32,
         flags: u32,
     ) -> sgx_status_t;
     pub fn ecall_authenticate_new_node(
@@ -20,6 +22,8 @@ extern "C" {
         p_seeds: *mut u8,
         n_seeds: u32,
         p_seeds_size: *mut u32,
+        p_machine_pop: *const u8,
+        machine_info: *mut u8,
     ) -> sgx_status_t;
     pub fn ecall_get_genesis_seed(
         eid: sgx_enclave_id_t,
@@ -30,7 +34,7 @@ extern "C" {
     ) -> sgx_status_t;
 }
 
-pub fn create_attestation_report_u(flags: u32) -> SgxResult<()> {
+pub fn create_attestation_report_u(p_sk: *const u8, n_sk: u32, flags: u32) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -40,7 +44,7 @@ pub fn create_attestation_report_u(flags: u32) -> SgxResult<()> {
 
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
-    let status = unsafe { ecall_get_attestation_report(eid, &mut retval, flags) };
+    let status = unsafe { ecall_get_attestation_report(eid, &mut retval, p_sk, n_sk, flags) };
 
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
@@ -53,7 +57,10 @@ pub fn create_attestation_report_u(flags: u32) -> SgxResult<()> {
     Ok(())
 }
 
-pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<Result<Vec<u8>, NodeAuthResult>> {
+pub fn untrusted_get_encrypted_seed(
+    cert: &[u8],
+    replace_machine: &[u8],
+) -> SgxResult<Result<(Vec<u8>, Vec<u8>), NodeAuthResult>> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -67,6 +74,7 @@ pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<Result<Vec<u8>, No
     seed_buffer.resize(SINGLE_ENCRYPTED_SEED_SIZE * 100, 0); // should be enough. Resize in later version, when approaching the limit
 
     let mut seeds_size: u32 = 0;
+    let mut machine_info = [0_u8; 52];
 
     let status = unsafe {
         ecall_authenticate_new_node(
@@ -77,6 +85,8 @@ pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<Result<Vec<u8>, No
             seed_buffer.as_mut_ptr(),
             seed_buffer.len() as u32,
             &mut seeds_size,
+            replace_machine.as_ptr(),
+            machine_info.as_mut_ptr(),
         )
     };
 
@@ -96,10 +106,16 @@ pub fn untrusted_get_encrypted_seed(cert: &[u8]) -> SgxResult<Result<Vec<u8>, No
     }
 
     seed_buffer.resize(seeds_size as usize, 0);
-
     debug!("Done auth, got seed: {}", hex::encode(&seed_buffer));
 
-    Ok(Ok(seed_buffer))
+    let is_machine_data_zero = machine_info.iter().all(|&x| x == 0);
+    let machine_data_arr = if is_machine_data_zero {
+        Vec::new()
+    } else {
+        machine_info.to_vec()
+    };
+
+    Ok(Ok((seed_buffer, machine_data_arr)))
 }
 
 pub fn untrusted_get_encrypted_genesis_seed(

@@ -231,6 +231,8 @@ func (am AppModule) BeginBlock(c context.Context) error {
 				return err
 			}
 
+			am.keeper.RegKeeper.MaybeSetEnclaveColdData(ctx)
+
 			// Record the result for non-SGX nodes
 			if err := recorder.RecordSubmitBlockSignatures(height, random, validator_set_evidence); err != nil {
 				ctx.Logger().Error("Failed to record SubmitBlockSignatures", "error", err)

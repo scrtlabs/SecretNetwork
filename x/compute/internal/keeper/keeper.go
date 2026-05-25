@@ -56,6 +56,7 @@ import (
 	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
 	cronkeeper "github.com/scrtlabs/SecretNetwork/x/cron/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/registration"
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
@@ -84,6 +85,7 @@ type Keeper struct {
 	bankKeeper       bankkeeper.Keeper
 	portKeeper       portkeeper.Keeper
 	capabilityKeeper capabilitykeeper.ScopedKeeper
+	RegKeeper        *registration.Keeper
 	cronKeeper       cronkeeper.Keeper
 	wasmer           wasm.Wasmer
 	queryPlugins     QueryPlugins
@@ -133,6 +135,7 @@ func NewKeeper(
 	portSource types.ICS20TransferPortSource,
 	channelKeeper channelkeeper.Keeper,
 	ics4Wrapper porttypes.ICS4Wrapper,
+	regKeeper *registration.Keeper,
 	msgRouter MessageRouter,
 	queryRouter GRPCQueryRouter,
 	homeDir string,
@@ -158,6 +161,7 @@ func NewKeeper(
 		cronKeeper:       cronKeeper,
 		portKeeper:       portKeeper,
 		capabilityKeeper: capabilityKeeper,
+		RegKeeper:        regKeeper,
 		messenger: NewMessageHandler(
 			msgRouter,
 			customEncoders,
@@ -327,33 +331,6 @@ func (k Keeper) SetEnclaveColdEvidences(ctx sdk.Context) error {
 	validator_set_evidence, err := store.Get(types.ValidatorSetEvidencePrefix)
 	if err == nil {
 		_ = api.SubmitValidatorSetEvidence(validator_set_evidence)
-	}
-
-	// on-chain approved machines
-
-	prefixKey := types.MachineIDEvidencePrefix
-
-	iterator, _ := store.Iterator(prefixKey, nil)
-	defer iterator.Close()
-
-	for ; iterator.Valid(); iterator.Next() {
-		key := iterator.Key()
-		if !bytes.HasPrefix(key, prefixKey) {
-			break
-		}
-		value := iterator.Value()
-
-		if len(value) == 32 {
-			var proof [32]byte
-			copy(proof[:], value)
-
-			id := key[len(prefixKey):]
-
-			err := api.OnApproveMachineID(id, &proof, false)
-			if err != nil {
-				fmt.Println("Couldn't approve machine-id ", id)
-			}
-		}
 	}
 
 	return nil

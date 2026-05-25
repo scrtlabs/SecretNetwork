@@ -20,6 +20,8 @@ const (
 var (
 	RegistrationStorePrefix     = []byte{0x01}
 	RegistrationMasterKeyPrefix = []byte{0x02}
+	RegistrationMachinePrefix   = []byte{0x03}
+	RegistrationMachineIndex    = []byte{0x04}
 )
 
 func RegistrationKeyPrefix(key []byte) []byte {

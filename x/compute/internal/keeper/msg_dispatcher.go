@@ -246,8 +246,8 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		} else if msg.Msg.Stargate != nil {
 			msgType = "stargate"
 		}
-		ctx.Logger().Debug(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] id=%s type=%s replyOn=%s gasLimit=%v detail=%s gasBefore=%d",
-			ctx.BlockHeight(), i, string(msg.ID), msgType, msg.ReplyOn, msg.GasLimit, msgDetail, ctx.GasMeter().GasConsumed()))
+		ctx.Logger().Debug(fmt.Sprintf("[DispatchSubmessages] height=%d msg[%d] id=%d type=%s replyOn=%s gasLimit=%v detail=%s gasBefore=%d",
+			ctx.BlockHeight(), i, msg.ID, msgType, msg.ReplyOn, msg.GasLimit, msgDetail, ctx.GasMeter().GasConsumed()))
 
 		if d.keeper.GetLastMsgMarkerContainer().GetMarker() {
 			return nil, sdkerrors.ErrLastTx.Wrap("Cannot send messages or submessages after last tx marker was set")

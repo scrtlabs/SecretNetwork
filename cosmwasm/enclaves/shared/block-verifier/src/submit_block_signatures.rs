@@ -16,8 +16,6 @@ macro_rules! unwrap_or_return {
 use crate::txs::tx_from_bytes;
 use crate::wasm_messages::VERIFIED_BLOCK_MESSAGES;
 
-use sha2::{Digest, Sha256};
-
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
 const MAX_BLOCK_DATA_LENGTH: u32 = 22_020_096; // 21 MiB = max block size
 const RANDOM_PROOF_LEN: u32 = 80;
@@ -63,12 +61,28 @@ pub unsafe fn submit_block_signatures_impl(
     };
 
     let (validator_set, height) = {
-        let extra = KEY_MANAGER.extra_data.lock().unwrap();
+        let mut extra = KEY_MANAGER.extra_data.lock().unwrap();
+
+        if extra.machine_allowed {
+            extra.height_machine_allowed = extra.height;
+        } else {
+            // allow the machine to work even if initially disallowed. Stop it only after it was allowed on-chain, and then disallowed
+            if (extra.height_machine_allowed > 0)
+                && (extra.height_machine_allowed + 1 < extra.height)
+            {
+                error!(
+                    "This machine isn't allowed to run. Last allowed_height={}, current_height={}",
+                    extra.height_machine_allowed, extra.height
+                );
+                return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+            }
+        }
+
         let validator_set = match extra.decode_validator_set() {
             Some(set) => set,
             None => {
                 error!("Error parsing validator set from proto");
-                return sgx_status_t::SGX_SUCCESS;
+                return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
             }
         };
 
@@ -131,6 +145,17 @@ pub unsafe fn submit_block_signatures_impl(
         message_verifier
             .next_validators_evidence
             .copy_from_slice(validator_set_evidence.as_slice());
+    }
+
+    let apphash = header.header().app_hash.as_bytes();
+    if apphash.len() == 32 {
+        //println!("saving apphash: {}", hex::encode(apphash));
+
+        {
+            let mut extra = KEY_MANAGER.extra_data.lock().unwrap();
+            extra.apphash.copy_from_slice(apphash);
+        }
+        KEY_MANAGER.save();
     }
 
     debug!(

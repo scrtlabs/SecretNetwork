@@ -51,12 +51,20 @@ enclave {
 
         public sgx_status_t ecall_onchain_approve_machine_id(
             [in, count=n_id] const uint8_t* p_id,
-            uint32_t n_id,
-            [in, out, count=32] uint8_t* p_proof,
-            bool is_on_chain
+            uint32_t n_id
+        );
+
+        public sgx_status_t ecall_submit_machine_swap(
+            uint32_t index,
+            [in, count=n_machine_info] const uint8_t* p_machine_info,
+            uint32_t n_machine_info,
+            [in, count=n_proof] const uint8_t* p_proof,
+            uint32_t n_proof
         );
 
         public sgx_status_t ecall_get_attestation_report(
+            [in, count=n_sk] const uint8_t* p_sk,
+            uint32_t n_sk,
             uint32_t flags
         );
 
@@ -65,7 +73,9 @@ enclave {
             uintptr_t cert_len,
             [out, count=n_seeds] uint8_t* p_seeds,
             uintptr_t n_seeds,
-            [out] uintptr_t* p_seeds_size
+            [out] uintptr_t* p_seeds_size,
+            [in, count=20] const uint8_t* p_machine_pop,
+            [out, count=52] uint8_t* p_machine_info
         );
 
         public NodeAuthResult ecall_check_patch_level(

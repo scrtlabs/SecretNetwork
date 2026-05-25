@@ -407,7 +407,7 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 	}
 
 	recorder := api.GetRecorder()
-	encryptedSeed, errMsg, found := recorder.ReplayGetEncryptedSeed(req.Height, certHash)
+	outp1, outp2, errMsg, found := recorder.ReplayGetEncryptedSeed(req.Height, certHash)
 	if !found {
 		fmt.Printf("[INFO] gRPC EncryptedSeed: NOT FOUND in DB for certHash=%s height=%d\n", req.CertHash, req.Height)
 		return nil, status.Error(codes.NotFound, "no encrypted seed found for the given certificate hash")
@@ -418,10 +418,11 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 		return nil, status.Error(codes.FailedPrecondition, errMsg)
 	}
 
-	fmt.Printf("[INFO] gRPC EncryptedSeed: found SUCCESS for certHash=%s height=%d seedLen=%d\n", req.CertHash, req.Height, len(encryptedSeed))
+	fmt.Printf("[INFO] gRPC EncryptedSeed: found SUCCESS for certHash=%s height=%d seedLen=%d\n", req.CertHash, req.Height, len(outp1))
 
 	return &types.QueryEncryptedSeedResponse{
-		EncryptedSeed: encryptedSeed,
+		EncryptedSeed:  outp1,
+		MachineBinding: outp2,
 	}, nil
 }
 

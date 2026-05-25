@@ -35,6 +35,7 @@ const (
 	flag_no_epid                  = "no-epid"
 	flag_no_dcap                  = "no-dcap"
 	flag_is_migration_report      = "migration"
+	flag_unbound_attestation      = "unbound-attestation"
 )
 
 const (
@@ -46,6 +47,47 @@ const (
 	mainnetRegistrationService = "https://mainnet-register.scrtlabs.com/api/registernode"
 	pulsarRegistrationService  = "https://registration-service-testnet.azurewebsites.net/api/registernode"
 )
+
+type PrivValidatorKey struct {
+	PrivKey struct {
+		Value string `json:"value"`
+	} `json:"priv_key"`
+}
+
+func CreateAttestationReportEx(cmd *cobra.Command, is_migration_report bool) error {
+	var ext_sk []byte
+
+	unbound_attestation, _ := cmd.Flags().GetBool(flag_unbound_attestation)
+	if !unbound_attestation {
+		path := app.DefaultNodeHome + "/config/priv_validator_key.json"
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			fmt.Errorf("couldn't read the validator key: %w", err)
+			return err
+		}
+
+		var key PrivValidatorKey
+		if err := json.Unmarshal(data, &key); err != nil {
+			fmt.Errorf("couldn't decode the validator key: %w", err)
+			return err
+		}
+
+		decoded, err := base64.StdEncoding.DecodeString(key.PrivKey.Value)
+		if err != nil {
+			fmt.Errorf("couldn't decode the validator key: %w", err)
+			return err
+		}
+
+		ext_sk = decoded[:32]
+	}
+
+	_, err := api.CreateAttestationReport(ext_sk, is_migration_report)
+	if err != nil {
+		return fmt.Errorf("failed to create attestation report: %w", err)
+	}
+	return err
+}
 
 func InitAttestation() *cobra.Command {
 	cmd := &cobra.Command{
@@ -96,8 +138,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 			}
 
 			is_migration_report, _ := cmd.Flags().GetBool(flag_is_migration_report)
-
-			_, err = api.CreateAttestationReport(is_migration_report)
+			err = CreateAttestationReportEx(cmd, is_migration_report)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
@@ -108,6 +149,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 	cmd.Flags().Bool(flag_no_epid, false, "Optional flag to disable EPID attestation")
 	cmd.Flags().Bool(flag_no_dcap, false, "Optional flag to disable DCAP attestation")
 	cmd.Flags().Bool(flag_is_migration_report, false, "Create migration report rather then attestation")
+	cmd.Flags().Bool(flag_unbound_attestation, false, "Optional flag to disable attestation to user binding")
 
 	return cmd
 }
@@ -490,7 +532,7 @@ Please report any issues with this command
 				}
 			}
 
-			_, err = api.CreateAttestationReport(false)
+			err = CreateAttestationReportEx(cmd, false)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
@@ -638,6 +680,7 @@ Please report any issues with this command
 
 	cmd.Flags().Bool(flag_no_epid, false, "Optional flag to disable EPID attestation")
 	cmd.Flags().Bool(flag_no_dcap, false, "Optional flag to disable DCAP attestation")
+	cmd.Flags().Bool(flag_unbound_attestation, false, "Optional flag to disable attestation to user binding")
 
 	return cmd
 }

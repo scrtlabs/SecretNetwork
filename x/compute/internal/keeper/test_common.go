@@ -581,6 +581,16 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// stakingtypes.RegisterMsgServer(serviceRouter, stakingMsgServer)
 	// distrtypes.RegisterMsgServer(serviceRouter, distrMsgServer)
 
+	regKeeper := registration.NewKeeper(
+		encodingConfig.Codec,
+		runtime.NewKVStoreService(keys[registration.StoreKey]),
+		msgRouter,
+		registration.EnclaveApi{},
+		tempDir,
+		false,
+		&baseapp.BaseApp{},
+	)
+
 	bappTxMngr := baseapp.LastMsgMarkerContainer{}
 
 	keeper := NewKeeper(
@@ -600,6 +610,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		MockIBCTransferKeeper{},
 		ibcKeeper.ChannelKeeper,
 		nil,
+		&regKeeper,
 		msgRouter,
 		queryRouter,
 		tempDir,

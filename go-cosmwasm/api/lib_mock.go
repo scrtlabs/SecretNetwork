@@ -272,7 +272,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // KeyGen Seng KeyGen request to enclave
-func CreateAttestationReport(is_migration_report bool) (bool, error) {
+func CreateAttestationReport(ext_sk []byte, is_migration_report bool) (bool, error) {
 	//errmsg := C.Buffer{}
 	//_, err := C.create_attestation_report(&errmsg)
 	//if err != nil {
@@ -285,7 +285,7 @@ func GetNetworkPubkey(i_seed uint32) ([]byte, []byte) {
 	return nil, nil
 }
 
-func GetEncryptedSeed(cert []byte) ([]byte, error) {
+func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, error) {
 	//errmsg := C.Buffer{}
 	//certSlice := sendSlice(cert)
 	//defer freeAfterSend(certSlice)
@@ -294,7 +294,7 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	//	return nil, errorWithMessage(err, errmsg)
 	//}
 	//return receiveVector(res), nil
-	return nil, nil
+	return nil, nil, nil
 }
 
 func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
@@ -316,6 +316,10 @@ func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
 	return nil
 }
 
-func OnApproveMachineID(machineID []byte, proof *[32]byte, is_on_chain bool) error {
+func OnApproveMachineID(machineID []byte) error {
+	return nil
+}
+
+func SubmitMachineSwap(index uint32, machineInfo []byte, proof []byte) error {
 	return nil
 }

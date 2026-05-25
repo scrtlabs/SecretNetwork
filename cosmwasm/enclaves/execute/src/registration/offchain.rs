@@ -1,6 +1,8 @@
 //!
 use super::attestation::get_quote_ecdsa;
-use crate::registration::attestation::{verify_quote_sgx, AttestationCombined};
+use crate::registration::attestation::{
+    allow_list, verify_quote_sgx, AttestationCombined, PPID_WHITELIST,
+};
 #[cfg(feature = "verify-validator-whitelist")]
 use block_verifier::validator_whitelist;
 use core::convert::TryInto;
@@ -10,7 +12,6 @@ use enclave_crypto::consts::{
     FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_CONSENSUS, FILE_MIGRATION_DATA,
     FILE_MIGRATION_TARGET_INFO, FILE_PUBKEY,
 };
-use enclave_crypto::HASH_SIZE;
 #[cfg(feature = "random")]
 use enclave_crypto::{
     consts::SELF_REPORT_BODY, AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE,
@@ -33,6 +34,7 @@ use sgx_types::{
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs::File;
+use std::io;
 use std::io::prelude::*;
 use std::panic;
 use std::sgxfs::SgxFile;
@@ -45,6 +47,9 @@ use super::seed_exchange::{decrypt_seed, encrypt_seed};
 #[cfg(feature = "light-client-validation")]
 use block_verifier::VERIFIED_BLOCK_MESSAGES;
 
+fn enforce_allow_list_init() {
+    let _ = &*PPID_WHITELIST;
+}
 ///
 /// `ecall_init_bootstrap`
 ///
@@ -119,6 +124,8 @@ pub unsafe extern "C" fn ecall_get_network_pubkey(
     } else {
         *p_seeds = 0;
     }
+
+    enforce_allow_list_init();
 
     sgx_status_t::SGX_SUCCESS
 }
@@ -312,8 +319,8 @@ fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_repo
         let attestation = AttestationCombined::from_blob(cert.as_ptr(), cert.len());
 
         match verify_quote_sgx(&attestation, 0, check_ppid_wl) {
-            Ok((body, _)) => {
-                return Ok(body);
+            Ok(res) => {
+                return Ok(res.body);
             }
             Err(e) => {
                 error!("Can't verify remote quote: {}", e);
@@ -339,8 +346,12 @@ fn get_verified_migration_report_body(check_ppid_wl: bool) -> SgxResult<sgx_repo
  * # Safety
  * Something should go here
 */
-pub unsafe extern "C" fn ecall_get_attestation_report(flags: u32) -> sgx_status_t {
-    let mut report_data: [u8; 48] = [0; 48];
+pub unsafe extern "C" fn ecall_get_attestation_report(
+    p_sk: *const u8,
+    n_sk: u32,
+    flags: u32,
+) -> sgx_status_t {
+    let mut report_data = [0_u8; sgx_types::SGX_REPORT_DATA_SIZE];
 
     let (kp, is_migration_report) = match 0x10 & flags {
         0x10 => {
@@ -370,7 +381,19 @@ pub unsafe extern "C" fn ecall_get_attestation_report(flags: u32) -> sgx_status_
     };
 
     let attestation = {
-        report_data[0..32].copy_from_slice(&kp.get_pubkey());
+        let pk_len = 32_usize;
+        report_data[0..pk_len].copy_from_slice(&kp.get_pubkey());
+
+        if n_sk == 32 {
+            let sk = ed25519_dalek::SecretKey::from_bytes(std::slice::from_raw_parts(
+                p_sk,
+                n_sk as usize,
+            ))
+            .unwrap();
+
+            let pk = ed25519_dalek::PublicKey::from(&sk);
+            report_data[pk_len..pk_len + pk_len].copy_from_slice(&pk.to_bytes());
+        }
 
         match get_attestation_report_dcap(&report_data) {
             Ok(x) => x,
@@ -474,7 +497,7 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
         );
 
         let seeds = KEY_MANAGER.get_consensus_seed().unwrap();
-        let res: Vec<u8> = encrypt_seed(target_public_key, &seeds.arr[0], true)
+        let res: Vec<u8> = encrypt_seed(&target_public_key, &seeds.arr[0], true)
             .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
 
         Ok(res)
@@ -555,7 +578,7 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
             println!("Create self migration report");
 
             export_local_migration_report();
-            ecall_get_attestation_report(0x10) // migration
+            ecall_get_attestation_report(core::ptr::null(), 0, 0x10) // migration
         }
         2 => {
             println!("Export encrypted data to the next aurhorized enclave");
@@ -677,20 +700,6 @@ pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
     );
 
     sgx_types::sgx_status_t::SGX_SUCCESS
-}
-
-fn calculate_machine_id_evidence(machine_id: &[u8]) -> [u8; HASH_SIZE] {
-    let mut hasher = Sha256::new();
-
-    let magic = [b'm', b'i', b'd'];
-    hasher.update(magic);
-
-    hasher.update(SELF_REPORT_BODY.mr_enclave.m);
-    hasher.update(machine_id);
-
-    let mut ret = [0_u8; HASH_SIZE];
-    ret.copy_from_slice(&hasher.finalize());
-    ret
 }
 
 struct ProtobufParser<'a> {
@@ -837,48 +846,233 @@ fn check_machine_id_in_block(_msg_slice: &[u8]) -> bool {
 pub unsafe extern "C" fn ecall_onchain_approve_machine_id(
     p_id: *const u8,
     n_id: u32,
-    p_proof: *mut u8,
-    is_on_chain: bool,
 ) -> sgx_types::sgx_status_t {
     validate_const_ptr!(p_id, n_id as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    validate_mut_ptr!(p_proof, 32, sgx_status_t::SGX_ERROR_UNEXPECTED);
 
-    if n_id != 20 {
+    if n_id as usize != allow_list::MACHINE_ID_LEN {
         println!("machine_id wrong len");
         return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
     let machine_id = slice::from_raw_parts(p_id, n_id as usize);
-    let proof = calculate_machine_id_evidence(machine_id);
+    let machine_id_str = hex::encode(machine_id);
 
-    if is_on_chain {
-        let machine_id_str = hex::encode(machine_id);
-
-        if !check_machine_id_in_block(machine_id_str.as_bytes()) {
-            error!("machine ID not approved");
-            return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-
-        // TODO: ensure message was in the signed block
-        slice::from_raw_parts_mut(p_proof, HASH_SIZE).copy_from_slice(&proof);
-    } else {
-        // compare
-        if proof != slice::from_raw_parts(p_proof, HASH_SIZE) {
-            error!("machine ID not approved earlier");
-            return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
+    if !check_machine_id_in_block(machine_id_str.as_bytes()) {
+        error!("machine ID not approved");
+        return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
     {
-        let mut set = crate::registration::attestation::PPID_WHITELIST
-            .lock()
+        let mut allow_list = PPID_WHITELIST.lock().unwrap();
+
+        let machine_id: &allow_list::MachineID = machine_id.try_into().unwrap();
+
+        allow_list.add_new(*machine_id, false);
+    }
+
+    sgx_types::sgx_status_t::SGX_SUCCESS
+}
+
+struct MerkleProcessor<'a> {
+    cursor: io::Cursor<&'a [u8]>,
+}
+
+impl<'a> MerkleProcessor<'a> {
+    fn new(data: &'a [u8]) -> Self {
+        Self {
+            cursor: io::Cursor::new(data),
+        }
+    }
+
+    fn read_slice_n(&mut self, n: usize) -> io::Result<&'a [u8]> {
+        let pos = self.cursor.position() as usize;
+        let buf = self.cursor.get_ref();
+
+        if pos + n > buf.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "not enough bytes",
+            ));
+        }
+
+        let out = &buf[pos..pos + n];
+        self.cursor.set_position((pos + n) as u64);
+        Ok(out)
+    }
+
+    fn read_slice(&mut self) -> io::Result<&'a [u8]> {
+        let n = Keychain::read_u32(&mut self.cursor)? as usize;
+        self.read_slice_n(n)
+    }
+
+    fn hash_var_uint(hasher: &mut Sha256, mut x: usize) {
+        loop {
+            if x < 0x80 {
+                let b = x as u8;
+                hasher.update([b]);
+                break;
+            }
+
+            let b = 0x80 | ((x & 0x7f) as u8);
+            hasher.update([b]);
+            x >>= 7;
+        }
+    }
+
+    fn hash_leaf_iavl(&mut self, key: &[u8], val: &[u8]) -> io::Result<[u8; 32]> {
+        let prefix = self.read_slice()?;
+
+        let valhash: [u8; 32] = {
+            let mut hasher = Sha256::new();
+            hasher.update(val);
+            hasher.finalize().into()
+        };
+
+        let mut hasher = Sha256::new();
+        hasher.update(prefix); // prefix len isn't required
+        Self::hash_var_uint(&mut hasher, key.len());
+        hasher.update(key);
+        Self::hash_var_uint(&mut hasher, valhash.len());
+        hasher.update(valhash);
+
+        Ok(hasher.finalize().into())
+    }
+
+    fn interpret_sub_path(&mut self, hash_value: &mut [u8; 32]) -> io::Result<()> {
+        //println!("*** leaf hash: {}", hex::encode(&hash_value));
+
+        let n = Keychain::read_u32(&mut self.cursor)?;
+        for _i in 0..n {
+            let mut hasher = Sha256::new();
+            hasher.update(self.read_slice()?); // prefix
+            hasher.update(&hash_value);
+            hasher.update(self.read_slice()?); // suffix
+            *hash_value = hasher.finalize().into();
+            //println!("*** next hash: {}", hex::encode(&hash_value));
+        }
+
+        Ok(())
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ecall_submit_machine_swap(
+    index: u32,
+    p_machine_info: *const u8,
+    n_machine_info: u32,
+    p_proof: *const u8,
+    n_proof: u32,
+) -> sgx_types::sgx_status_t {
+    validate_const_ptr!(
+        p_machine_info,
+        n_machine_info as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
+    validate_const_ptr!(
+        p_proof,
+        n_proof as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
+
+    let merkle_proof_result = (|| -> io::Result<()> {
+        // verify merkle proof
+
+        let apphash = {
+            let extra = KEY_MANAGER.extra_data.lock().unwrap();
+            extra.apphash
+        };
+
+        let mut merkle = MerkleProcessor::new(slice::from_raw_parts(p_proof, n_proof as usize));
+
+        let proof_parts = Keychain::read_u32(&mut merkle.cursor)?;
+        if proof_parts != 2 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "proof wrong len",
+            ));
+        }
+
+        // leaf
+        let mut hash_val = {
+            let mut k = [0u8; 5];
+            k[0] = 0x03; // RegistrationMachinePrefix
+            k[1..5].copy_from_slice(&index.to_be_bytes());
+
+            let v = slice::from_raw_parts(p_machine_info, n_machine_info as usize);
+
+            merkle.hash_leaf_iavl(&k, v)?
+        };
+
+        merkle.interpret_sub_path(&mut hash_val)?;
+
+        hash_val = {
+            let k = b"register";
+            merkle.hash_leaf_iavl(k, &hash_val)?
+        };
+
+        merkle.interpret_sub_path(&mut hash_val)?;
+
+        if apphash != hash_val {
+            error!(
+                "Merkle root expected: {}, actual: {}",
+                hex::encode(apphash),
+                hex::encode(hash_val)
+            );
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "apphash mismatch",
+            ));
+        }
+
+        Ok(())
+    })();
+
+    if let Err(e) = merkle_proof_result {
+        println!("Merkle proof failed: {}", e);
+        return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    const MACHINE_SWAP_INFO_LEN: usize =
+        allow_list::OWNER_LEN + allow_list::MACHINE_ID_LEN + allow_list::MACHINE_ID_LEN;
+
+    let (swap_info_opt, p_machine_id) = match n_machine_info as usize {
+        MACHINE_SWAP_INFO_LEN => {
+            let owner: &allow_list::Owner =
+                slice::from_raw_parts(p_machine_info, allow_list::OWNER_LEN)
+                    .try_into()
+                    .unwrap();
+
+            let machine_id_pop: &allow_list::MachineID = slice::from_raw_parts(
+                p_machine_info.add(allow_list::OWNER_LEN + allow_list::MACHINE_ID_LEN),
+                allow_list::MACHINE_ID_LEN,
+            )
+            .try_into()
             .unwrap();
 
-        let arg: &[u8; 20] = machine_id.try_into().unwrap();
+            (
+                Some((owner, machine_id_pop)),
+                p_machine_info.add(allow_list::OWNER_LEN),
+            )
+        }
+        allow_list::MACHINE_ID_LEN => (None, p_machine_info),
+        _ => {
+            println!("machine_info wrong len");
+            return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
 
-        if !set.contains(arg) {
-            println!("Onchain added machine ID: {}", hex::encode(arg));
-            set.insert(*arg);
+    let machine_id: &allow_list::MachineID =
+        slice::from_raw_parts(p_machine_id, allow_list::MACHINE_ID_LEN)
+            .try_into()
+            .unwrap();
+
+    {
+        let mut allow_list = PPID_WHITELIST.lock().unwrap();
+
+        if let Some(swap_info) = swap_info_opt {
+            allow_list.update(machine_id, swap_info.0, swap_info.1);
+        } else {
+            allow_list.add_new(*machine_id, false);
         }
     }
 
