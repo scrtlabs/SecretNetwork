@@ -982,11 +982,10 @@ func (r *EcallRecorder) GetAllCreateResultsForBlock(height int64) ([]*CreateResu
 	var results []*CreateResult
 	var wasmHashes [][]byte
 
-	// Build end key: increment the last byte of the height to get next height prefix
-	// IMPORTANT: Must copy to avoid mutating iterPrefix via shared backing array
-	iterEnd := make([]byte, len(iterPrefix))
-	copy(iterEnd, iterPrefix)
-	iterEnd[len(iterEnd)-1]++
+	// Build end key: use height + 1 instead of byte increment to prevent 0xFF overflow
+	iterEnd := make([]byte, len(prefixCreateResult)+8)
+	copy(iterEnd, prefixCreateResult)
+	binary.BigEndian.PutUint64(iterEnd[len(prefixCreateResult):], uint64(height+1))
 
 	iter, err := r.db.Iterator(iterPrefix, iterEnd)
 	if err != nil {
