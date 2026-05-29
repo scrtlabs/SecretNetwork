@@ -175,8 +175,8 @@ func GetRecorder() *EcallRecorder {
 		logWarn("EcallRecorder", "Could not create db directory: %v", err)
 	}
 
-	// Open LevelDB database
-	db, err := dbm.NewDB("ecall_records", dbm.GoLevelDBBackend, dbDir)
+	// Open RocksDB database for secondary read access compatibility
+	db, err := dbm.NewDB("ecall_records", dbm.RocksDBBackend, dbDir)
 	if err != nil {
 		logError("EcallRecorder", "Error opening database: %v", err)
 		// Create a nil recorder that will skip recording
