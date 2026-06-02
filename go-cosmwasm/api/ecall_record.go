@@ -176,7 +176,7 @@ func GetRecorder() *EcallRecorder {
 	}
 
 	// Open LevelDB database
-	db, err := dbm.NewDB("ecall_records", dbm.GoLevelDBBackend, dbDir)
+	db, err := dbm.NewDB("ecall_records", dbm.PebbleDBBackend, dbDir)
 	if err != nil {
 		logError("EcallRecorder", "Error opening database: %v", err)
 		// Create a nil recorder that will skip recording
