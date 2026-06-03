@@ -5,28 +5,36 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+	dcrdecdsa "github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
 // EcallClient fetches ecall records from remote SGX nodes via gRPC
 // It maintains connections to multiple nodes and selects randomly for load distribution
 type EcallClient struct {
-	mu      sync.RWMutex
-	nodes   []*nodeConn // Pool of node connections
-	timeout time.Duration
-	rng     *rand.Rand
+	mu             sync.RWMutex
+	nodes          []*nodeConn // Pool of node connections
+	timeout        time.Duration
+	rng            *rand.Rand
+	billingPrivKey *secp256k1.PrivateKey // loaded from hex file for billing sidecar auth
 }
 
 // nodeConn represents a connection to a single SGX node
@@ -324,10 +332,37 @@ func GetEcallClient() *EcallClient {
 			nodes[i] = &nodeConn{addr: addr}
 		}
 
+		// Load billing key from hex file
+		var billingPrivKey *secp256k1.PrivateKey
+		keyFile := os.Getenv("SECRET_BILLING_KEY_FILE")
+		if keyFile == "" {
+			homeDir := os.Getenv("HOME")
+			defaultPath := filepath.Join(homeDir, ".secretd-billing", "key.hex")
+			if _, err := os.Stat(defaultPath); err == nil {
+				keyFile = defaultPath
+			}
+		}
+		if keyFile != "" {
+			data, err := os.ReadFile(keyFile)
+			if err != nil {
+				logWarn("EcallClient", "Failed to read billing key file %s: %v", keyFile, err)
+			} else {
+				keyHex := strings.TrimSpace(string(data))
+				keyBytes, err := hex.DecodeString(keyHex)
+				if err != nil {
+					logWarn("EcallClient", "Invalid hex in billing key file %s: %v", keyFile, err)
+				} else {
+					billingPrivKey = secp256k1.PrivKeyFromBytes(keyBytes)
+					logInfo("EcallClient", "Loaded billing key from %s", keyFile)
+				}
+			}
+		}
+
 		globalClient = &EcallClient{
-			nodes:   nodes,
-			timeout: 30 * time.Second,
-			rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
+			nodes:          nodes,
+			timeout:        30 * time.Second,
+			rng:            rand.New(rand.NewSource(time.Now().UnixNano())),
+			billingPrivKey: billingPrivKey,
 		}
 
 		// logInfo("EcallClient", "Initialized with %d SGX nodes", len(addrs))
@@ -421,11 +456,17 @@ func (c *EcallClient) ensureConnection(node *nodeConn) (*grpc.ClientConn, error)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	dialOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+	if c.billingPrivKey != nil {
+		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(c.billingAuthInterceptor()))
+	}
+
 	conn, err := grpc.DialContext(
 		ctx,
 		node.addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
+		dialOpts...,
 	)
 	if err != nil {
 		node.failed = true
@@ -687,4 +728,48 @@ func (c *EcallClient) FetchNetworkPubkey(height int64, iSeed uint32) ([]byte, []
 
 	// logInfo("EcallClient", "Fetched NetworkPubkey for height %d seed %d", height, iSeed)
 	return resp.NodePubkey, resp.IoPubkey, nil
+}
+
+// billingAuthInterceptor automatically signs the request payload using the loaded private key.
+// The signature allows the billing sidecar to authenticate the client and debit their subscription balance.
+func (c *EcallClient) billingAuthInterceptor() grpc.UnaryClientInterceptor {
+	return func(
+		ctx context.Context,
+		method string,
+		req, reply interface{},
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
+		if c.billingPrivKey != nil {
+			timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+			payload := timestamp + "|" + method
+			hash := sha256.Sum256([]byte(payload))
+
+			// Sign with secp256k1
+			sig := dcrdecdsa.Sign(c.billingPrivKey, hash[:])
+
+			// 64-byte compact R || S format
+			var sigBytes [64]byte
+			r := sig.R()
+			s := sig.S()
+			rBytes := r.Bytes()
+			sBytes := s.Bytes()
+			copy(sigBytes[0:32], rBytes[:])
+			copy(sigBytes[32:64], sBytes[:])
+
+			// 33-byte compressed pubkey
+			pubKey := c.billingPrivKey.PubKey()
+			pubKeyBytes := pubKey.SerializeCompressed()
+
+			md := metadata.Pairs(
+				"x-sub-timestamp", timestamp,
+				"x-sub-pubkey", hex.EncodeToString(pubKeyBytes),
+				"x-sub-signature", hex.EncodeToString(sigBytes[:]),
+			)
+			ctx = metadata.NewOutgoingContext(ctx, md)
+		}
+
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }

@@ -208,7 +208,7 @@ func (am AppModule) BeginBlock(c context.Context) error {
 					if err == nil {
 						break
 					}
-					ctx.Logger().Info("Waiting for SGX node ecall record, retrying...", "height", height, "error", err)
+					ctx.Logger().Debug("Waiting for SGX node ecall record, retrying...", "height", height, "error", err)
 					time.Sleep(retryInterval)
 				}
 				random = record.RandomSeed

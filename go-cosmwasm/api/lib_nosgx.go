@@ -330,7 +330,7 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 		outp1, outp2, err := client.FetchEncryptedSeed(height, certHashHex)
 		if err == nil {
 			//logInfo("GetEncryptedSeed", "Fetched seed from SGX node (attempt %d) for %s (%d bytes)",
-				attempt+1, certHashHex, len(outp1))
+			//	attempt+1, certHashHex, len(outp1))
 			// Cache locally
 			if cacheErr := recorder.RecordGetEncryptedSeed(height, certHash[:], outp1, outp2); cacheErr != nil {
 				logError("GetEncryptedSeed", "Failed to cache: %v", cacheErr)
@@ -339,22 +339,22 @@ func GetEncryptedSeed(cert []byte, replace_machine_id []byte) ([]byte, []byte, e
 		}
 
 		// Extract gRPC status for logging
-		grpcCode := "unknown"
-		grpcMsg := err.Error()
-		if st, ok := status.FromError(err); ok {
-			grpcCode = st.Code().String()
-			grpcMsg = st.Message()
-		}
+		//grpcCode := "unknown"
+		//grpcMsg := err.Error()
+		//if st, ok := status.FromError(err); ok {
+		//	grpcCode = st.Code().String()
+		//	grpcMsg = st.Message()
+		//}
 
 		//logInfo("GetEncryptedSeed", "gRPC attempt %d/%d for %s: code=%s msg=%s",
-			attempt+1, maxRetries, certHashHex, grpcCode, grpcMsg)
+		//	attempt+1, maxRetries, certHashHex, grpcCode, grpcMsg)
 
 		// Check if this is a FailedPrecondition error (recorded error from SGX node)
 		if st, ok := status.FromError(err); ok && st.Code() == codes.FailedPrecondition {
 			// The SGX node recorded the enclave error - cache and replay it
 			enclaveErrMsg := st.Message()
 			//logInfo("GetEncryptedSeed", "SGX node returned FailedPrecondition (enclave error) for %s: %s",
-				certHashHex, enclaveErrMsg)
+			//	certHashHex, enclaveErrMsg)
 			if cacheErr := recorder.RecordGetEncryptedSeedError(height, certHash[:], enclaveErrMsg); cacheErr != nil {
 				logError("GetEncryptedSeed", "Failed to cache error: %v", cacheErr)
 			}
