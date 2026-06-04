@@ -1687,17 +1687,10 @@ func TestCodeHashExecCallExecAfterMigrate(t *testing.T) {
 				_, _, _, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr, newCodeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1After, defaultGasForTests, 0)
 
 				require.NotEmpty(t, err)
-				if testContract.IsCosmWasmV1After {
-					require.Contains(t,
-						err.Error(),
-						"Expected to parse either a `true`, `false`, or a `null`.",
-					)
-				} else {
-					require.Contains(t,
-						err.Error(),
-						"Expected to parse either a `true`, `false`, or a `null`.",
-					)
-				}
+				require.Contains(t,
+					err.Error(),
+					"Expected to parse either a `true`, `false`, or a `null`.",
+				)			
 			})
 			t.Run("TooSmallCodeHash", func(t *testing.T) {
 				_, _, _, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, newCodeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, testContract.IsCosmWasmV1After, defaultGasForTests, 0)
