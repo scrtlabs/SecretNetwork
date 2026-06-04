@@ -89,7 +89,7 @@ Patch against SGX Downfall vulnerability. See [v1.10 proposal](./docs/proposals/
 
 # 1.9.1
 
-- An atempt to fix the v1.9.0 upgrade
+- An attempt to fix the v1.9.0 upgrade
 
 # 1.9.0
 
@@ -97,7 +97,7 @@ Patch against SGX Downfall vulnerability. See [v1.10 proposal](./docs/proposals/
   - Eliminates the need for contracts to bootstrap their own entropy pool.
   - Unique for every contract call.
   - Useful in lotteries, gaming, secure authentication protocols, protocols where unpredictable outcomes are essential for fairness and security, and much more.
-    For more infomation on how to use this feature, see the documentation
+    For more information on how to use this feature, see the documentation
 - New Feature: FinalizeTx.
   - Contracts can force the transaction to finalize at a certain point, otherwise revert.
   - Example: protect against sandwich attacks and potential transaction rollbacks.
@@ -127,7 +127,7 @@ Fixed a critical bug in 1.7.0 that prevented new nodes from joining the network 
   - Initial params (can be amended with a param change proposal):
     - Minimum deposit: 750 SCRT
     - Voting time: 24 hours
-    - Voting treshhold: 2/3 yes to pass
+    - Voting threshold: 2/3 yes to pass
   - If an expedited proposal fails to meet the threshold within the scope of shorter voting duration, the expedited proposal is then converted to a regular proposal and restarts voting under regular voting conditions.
 - Added auto-restaking - an opt-in feature that enables automatic compounding of staking rewards
 - Added light-client validation for blocks
@@ -207,7 +207,7 @@ concurrency = true
 
 # 1.4.1-patch.3
 
-- Patch againt the IBC Dragonberry vulnerability
+- Patch against the IBC Dragonberry vulnerability
 - Update cosmos-sdk from v0.45.5 to v0.45.9
 - Update Tendermint from v0.34.19 to v0.34.21
 
@@ -253,7 +253,7 @@ concurrency = true
   - `ed25519_sign()`
   - `secp256k1_sign()`
 
-- Registeration service has been reworked. Registering a new node automatically now no longer requires a node to function properly. It also includes built-in support for the pulsar-2 testnet with the --pulsar flag.
+- Registration service has been reworked. Registering a new node automatically now no longer requires a node to function properly. It also includes built-in support for the pulsar-2 testnet with the --pulsar flag.
 
 - Secretcli now automatically appends either port 80 or port 443 when not providing any port using `secretcli config` if the node address starts with `http://` or `https://`
 
@@ -358,12 +358,12 @@ Version 0.17.3 has been released!
 SecretJS has been upgraded to support the Supernova upgrade.
 All APIs remain unchanged, although the versions are NOT backwards compatible.
 
-For compatiblity with 1.2.0+, use SecretJS 0.17.x.
-For compatiblity with 1.0.x (legacy), use SecretJS 0.16.x
+For compatibility with 1.2.0+, use SecretJS 0.17.x.
+For compatibility with 1.0.x (legacy), use SecretJS 0.16.x
 
 ## CosmWasm
 
-Secret-CosmWasm remains in a version that is compatabile with the v0.10 of vanilla CosmWasm, and previous versions compatible with secret-2 will still work with this upgrade.
+Secret-CosmWasm remains in a version that is compatible with the v0.10 of vanilla CosmWasm, and previous versions compatible with secret-2 will still work with this upgrade.
 
 A new feature has been added - plaintext logs. To send an unencrypted log (contract output), use `plaintext_log` instead of `log`.
 This allows contracts to emit public events, and attach websockets to listen to specific events. To take advantage of this feature, compile contracts with
