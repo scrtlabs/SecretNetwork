@@ -171,7 +171,7 @@ source /opt/sgxsdk/environment && RUST_BACKTRACE=1 LOG_LEVEL="trace" secretd sta
 
 ```
 
-You should see `INF applying upgrade "v1.9" at height` in the logs, following by blocks continute to stream.
+You should see `INF applying upgrade "v1.9" at height` in the logs, following by blocks continue to stream.
 
 ## Test that the contract is still there
 
