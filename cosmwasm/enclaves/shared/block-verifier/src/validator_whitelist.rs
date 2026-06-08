@@ -20,7 +20,7 @@ pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 2;
 #[cfg(feature = "production")]
 pub const VALIDATOR_THRESHOLD: usize = 5;
 #[cfg(feature = "production")]
-pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 11;
+pub const VALIDATOR_THRESHOLD_EMERGENCY: usize = 7;
 
 lazy_static::lazy_static! {
 
