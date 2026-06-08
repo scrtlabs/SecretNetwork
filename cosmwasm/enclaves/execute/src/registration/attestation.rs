@@ -338,6 +338,7 @@ lazy_static::lazy_static! {
         add_machine!(set, "98cb371d43682eb87d6fb1ac1c9589d79fcd69ce");
         add_machine!(set, "9ace47eacbe6ab5112bd6d8ebc555b0fef9f2332");
         add_machine!(set, "9c80bc6bf4586edb2689c3093a9a0aeca3014805");
+        add_machine!(set, "9cdd34f26417a5077241ac5ab0fa30d57b074092");
         add_machine!(set, "9d08171ec1cae6ce1ea0ce3f3674fa5d01f6f1b3");
         add_machine!(set, "9d3f1160d215e9438a601c8771a972bcebe097f0");
         add_machine!(set, "9e8320462733ed8a124fc97d7fdf33840b6e3a2c");
@@ -405,6 +406,7 @@ lazy_static::lazy_static! {
         add_machine!(set, "fbeb136909163a115f423ef4c35d4cdcccfe336d");
         add_machine!(set, "fc2c11c95a5aadfd3500891ece06651c0b4ee0e5");
         add_machine!(set, "fec9342e9ee4186453f8a7e027fac8c24e7c0c60");
+        add_machine!(set, "fedea170c8efa7533172b273001f3bb3efae615b");
         add_machine!(set, "fff4fe67c52b8d0d425d2b9772e7a4ffcd9dacf3");
 
         SgxMutex::new(set)
