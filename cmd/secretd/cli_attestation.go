@@ -13,7 +13,7 @@ func InitAttestation() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init-enclave [output-file]",
 		Short: "Perform remote attestation of the enclave",
-		Long: `Create attestation report, signed by Intel which is used in the registation process of
+		Long: `Create attestation report, signed by Intel which is used in the registration process of
 the node to the chain. This process, if successful, will output a certificate which is used to authenticate with the 
 blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
@@ -96,7 +96,7 @@ func MigrationOp() *cobra.Command {
 func EmergencyApproveUpgrade() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "emergency_approve_upgrade",
-		Short: "Emergency enclave upgade approval",
+		Short: "Emergency enclave upgrade approval",
 		Long:  "Approve enclave upgrade in an offline mode. Need to reach consensus among network validators",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
