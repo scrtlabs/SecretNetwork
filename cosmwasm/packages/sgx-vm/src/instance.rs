@@ -104,7 +104,7 @@ where
         let api = deps.api;
         import_obj.extend(imports! {
             "env" => {
-                // Reads the database entry at the given key into the the value.
+                // Reads the database entry at the given key into the value.
                 // Returns 0 if key does not exist and pointer to result region otherwise.
                 // Ownership of the key pointer is not transferred to the host.
                 // Ownership of the value pointer is transferred to the contract.
