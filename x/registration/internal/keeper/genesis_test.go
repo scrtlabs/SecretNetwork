@@ -10,9 +10,7 @@ import (
 )
 
 func TestInitGenesisNoMaster(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	data := types.GenesisState{
@@ -25,9 +23,7 @@ func TestInitGenesisNoMaster(t *testing.T) {
 }
 
 func TestInitGenesis(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
@@ -46,9 +42,7 @@ func TestInitGenesis(t *testing.T) {
 }
 
 func TestExportGenesis(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
