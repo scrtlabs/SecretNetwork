@@ -30,14 +30,14 @@ var (
 	wasmIdent = []byte("\x00\x61\x73\x6D")
 )
 
-// IsGzip returns checks if the file contents are gzip compressed
+// IsGzip checks if the file contents are gzip compressed
 func IsGzip(input []byte) bool {
-	return bytes.Equal(input[:3], gzipIdent)
+	return len(input) >= len(gzipIdent) && bytes.Equal(input[:len(gzipIdent)], gzipIdent)
 }
 
 // IsWasm checks if the file contents are of wasm binary
 func IsWasm(input []byte) bool {
-	return bytes.Equal(input[:4], wasmIdent)
+	return len(input) >= len(wasmIdent) && bytes.Equal(input[:len(wasmIdent)], wasmIdent)
 }
 
 // GzipIt compresses the input ([]byte)
