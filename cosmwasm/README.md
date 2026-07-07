@@ -365,7 +365,151 @@ You may want to compare how long the contract takes to run inside the Wasm VM
 compared to in native rust code, especially for computationally intensive code,
 like hashing or signature verification.
 
-**TODO** add instructions
+Here's how to benchmark your CosmWasm contracts:
+
+### Native Rust Benchmarking
+
+1. Add the `criterion` crate to your `dev-dependencies` in `Cargo.toml`:
+   ```toml
+   [dev-dependencies]
+   criterion = "0.4"
+   ```
+
+2. Create a `benches` directory in your project root and add a benchmark file (e.g., `benches/my_benchmark.rs`):
+   ```rust
+   use criterion::{black_box, criterion_group, criterion_main, Criterion};
+   use your_contract::contract::{execute, instantiate}; // Import your contract functions
+   use your_contract::msg::{ExecuteMsg, InstantiateMsg};
+   use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+
+   fn instantiate_benchmark(c: &mut Criterion) {
+       let mut deps = mock_dependencies();
+       let env = mock_env();
+       let info = mock_info("creator", &[]);
+       let msg = InstantiateMsg { /* your params here */ };
+
+       c.bench_function("instantiate", |b| {
+           b.iter(|| instantiate(black_box(&mut deps), black_box(env.clone()), black_box(info.clone()), black_box(msg.clone())))
+       });
+   }
+
+   fn execute_benchmark(c: &mut Criterion) {
+       // Set up contract state first by instantiating
+       let mut deps = mock_dependencies();
+       let env = mock_env();
+       let info = mock_info("creator", &[]);
+       let init_msg = InstantiateMsg { /* your params here */ };
+       let _ = instantiate(&mut deps, env.clone(), info.clone(), init_msg).unwrap();
+
+       // Now benchmark execute
+       let exec_msg = ExecuteMsg::YourAction { /* params */ };
+       c.bench_function("execute_your_action", |b| {
+           b.iter(|| execute(black_box(&mut deps), black_box(env.clone()), black_box(info.clone()), black_box(exec_msg.clone())))
+       });
+   }
+
+   criterion_group!(benches, instantiate_benchmark, execute_benchmark);
+   criterion_main!(benches);
+   ```
+
+3. Run the benchmarks with:
+   ```sh
+   cargo bench
+   ```
+
+### Wasm VM Benchmarking
+
+To benchmark in the Wasm VM environment:
+
+1. Add `cosmwasm-vm` to your `dev-dependencies`:
+   ```toml
+   [dev-dependencies]
+   cosmwasm-vm = { version = "1.3", features = ["stargate"] }
+   ```
+
+2. Create a benchmark file in your `tests` directory:
+   ```rust
+   #[cfg(test)]
+   mod vm_benchmarks {
+       use cosmwasm_std::{Addr, Coin, Empty};
+       use cosmwasm_vm::{
+           testing::{mock_backend, mock_env, mock_info, MockApi, MockQuerier, MockStorage},
+           Instance, InstanceOptions, Module,
+       };
+       use std::time::Instant;
+
+       #[test]
+       fn benchmark_wasm_execution() {
+           // Compile contract
+           let wasm = std::fs::read("./target/wasm32-unknown-unknown/release/your_contract.wasm")
+               .expect("Failed to read Wasm file");
+
+           // Create VM instance
+           let backend = mock_backend(&[]);
+           let options = InstanceOptions {
+               gas_limit: 100_000_000,
+               print_debug: false,
+           };
+           let module = Module::from_code(&wasm).unwrap();
+           let mut instance = Instance::from_module(
+               &module,
+               backend,
+               options,
+               MockStorage::default(),
+               MockApi::default(),
+               MockQuerier::default(),
+           )
+           .unwrap();
+
+           // Prepare instantiate message
+           let info = mock_info("creator", &[]);
+           let instantiate_msg = r#"{"your_param": "value"}"#;
+
+           // Benchmark instantiate
+           let start = Instant::now();
+           let _res = instance.instantiate(
+               &mock_env("creator", &[]),
+               &info,
+               instantiate_msg.as_bytes(),
+           ).unwrap();
+           let duration = start.elapsed();
+           println!("Instantiate execution time: {:?}", duration);
+
+           // Prepare execute message
+           let execute_msg = r#"{"your_action": {"param": "value"}}"#;
+
+           // Benchmark execute
+           let start = Instant::now();
+           let _res = instance.execute(
+               &mock_env("user", &[]),
+               &info,
+               execute_msg.as_bytes(),
+           ).unwrap();
+           let duration = start.elapsed();
+           println!("Execute execution time: {:?}", duration);
+       }
+   }
+   ```
+
+3. Build your Wasm contract:
+   ```sh
+   RUSTFLAGS='-C link-arg=-s' cargo wasm --release
+   ```
+
+4. Run the benchmark:
+   ```sh
+   cargo test vm_benchmarks --release -- --nocapture
+   ```
+
+### Comparing Results
+
+When comparing the results, keep in mind:
+
+1. The Wasm VM adds overhead for serialization/deserialization of data
+2. The VM has gas metering which adds additional overhead
+3. The compilation flags used for Wasm optimization can significantly affect performance
+
+For a comprehensive comparison, record multiple runs for each benchmark to account for variance.
 
 ## Developing
 
