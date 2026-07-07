@@ -34,7 +34,7 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 }
 
 func GetPacketKey(channel string, packetSequence uint64) []byte {
-	return []byte(fmt.Sprintf("%s::%d", channel, packetSequence))
+	return fmt.Appendf(nil, "%s::%d", channel, packetSequence)
 }
 
 // StorePacketCallback stores which contract will be listening for the ack or timeout of a packet
