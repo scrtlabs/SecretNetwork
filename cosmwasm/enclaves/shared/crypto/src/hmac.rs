@@ -36,3 +36,56 @@ impl Hmac for AESKey {
 //         assert_eq!(kdf2, b"SOME VALUE");
 //     }
 // }
+
+#[cfg(feature = "test")]
+pub mod tests {
+    use crate::hmac;
+    use crate::keys::AESKey;
+    use crate::HMAC_SIGNATURE_SIZE;
+
+    pub fn test_hmac_sha256() {
+        // Create a key for HMAC
+        let key_data = [
+            0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+            0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+            0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+            0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+        ];
+        
+        let key = AESKey::new_from_slice(&key_data);
+        
+        // Test data: "Hi There"
+        let data = b"Hi There";
+        
+        // Compute HMAC
+        let hmac_result = key.sign_sha_256(data);
+        
+        // Ensure the result is the expected size
+        assert_eq!(hmac_result.len(), HMAC_SIGNATURE_SIZE);
+        
+        // Verify HMAC for different messages produces different results
+        let data2 = b"Different message";
+        let hmac_result2 = key.sign_sha_256(data2);
+        
+        // Should not be equal
+        assert_ne!(hmac_result, hmac_result2);
+        
+        // Verify HMAC with same key and same message produces the same result
+        let hmac_result_repeat = key.sign_sha_256(data);
+        assert_eq!(hmac_result, hmac_result_repeat);
+        
+        // Verify different keys produce different HMACs for the same message
+        let key_data2 = [
+            0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c,
+            0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c,
+            0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c,
+            0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c,
+        ];
+        
+        let key2 = AESKey::new_from_slice(&key_data2);
+        let hmac_result3 = key2.sign_sha_256(data);
+        
+        // Different key should produce different HMAC
+        assert_ne!(hmac_result, hmac_result3);
+    }
+}

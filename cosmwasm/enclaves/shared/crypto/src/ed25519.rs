@@ -94,3 +94,65 @@ impl<T: AlignedMemory + ExportECKey> From<T> for KeyPair {
         Self::from_sk(secret_key)
     }
 }
+
+#[cfg(feature = "test")]
+pub mod tests {
+    use super::*;
+    use cosmos_proto::tx::signing::SignMode;
+
+    pub fn test_keypair_generation() {
+        // Generate a keypair
+        let keypair = KeyPair::new().unwrap();
+        
+        // Verify the public key is not all zeros
+        let public_key = keypair.public_key();
+        let is_nonzero = public_key.iter().any(|&byte| byte != 0);
+        assert!(is_nonzero, "Public key should not be all zeros");
+        
+        // Verify the secret key is not all zeros
+        let secret_key = keypair.secret_key();
+        let is_nonzero = secret_key.iter().any(|&byte| byte != 0);
+        assert!(is_nonzero, "Secret key should not be all zeros");
+        
+        // Verify that creating a keypair from bytes results in the same keypair
+        let secret_key_bytes = keypair.secret_key();
+        let recreated_keypair = KeyPair::from_secret(&secret_key_bytes).unwrap();
+        
+        // Public keys should match
+        assert_eq!(keypair.public_key(), recreated_keypair.public_key());
+    }
+    
+    pub fn test_signing_and_verification() {
+        // Generate a keypair
+        let keypair = KeyPair::new().unwrap();
+        
+        // Message to sign
+        let message = b"This is a test message to sign";
+        
+        // Sign the message
+        let signature = keypair.sign(message).unwrap();
+        
+        // Verify the signature size is correct
+        assert_eq!(signature.len(), 64); // Ed25519 signatures are 64 bytes
+        
+        // Get the public key
+        let public_key = Ed25519PublicKey::from_slice(&keypair.public_key()).unwrap();
+        
+        // Verify the signature with the public key
+        let result = public_key.verify_bytes(message, &signature, SignMode::SIGN_MODE_UNSPECIFIED);
+        assert!(result.is_ok(), "Signature verification should succeed");
+        
+        // Modify the message and verify that verification fails
+        let modified_message = b"This is a modified test message";
+        let result = public_key.verify_bytes(modified_message, &signature, SignMode::SIGN_MODE_UNSPECIFIED);
+        assert!(result.is_err(), "Signature verification should fail with modified message");
+        
+        // Test with a different keypair
+        let different_keypair = KeyPair::new().unwrap();
+        let different_public_key = Ed25519PublicKey::from_slice(&different_keypair.public_key()).unwrap();
+        
+        // Verify that different key fails to verify
+        let result = different_public_key.verify_bytes(message, &signature, SignMode::SIGN_MODE_UNSPECIFIED);
+        assert!(result.is_err(), "Signature verification should fail with different key");
+    }
+}
