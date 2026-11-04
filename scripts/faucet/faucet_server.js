@@ -1,6 +1,6 @@
 const http = require("http");
 const querystring = require("querystring");
-const exec = require("child_process").exec;
+const execFile = require("child_process").execFile;
 
 const FAUCET_WALLET_NAME = process.env.FAUCET_WALLET_NAME || "a";
 const FAUCET_AMOUNT = process.env.FAUCET_AMOUNT || "1000000000";
@@ -9,20 +9,22 @@ const DENOM = process.env.DENOM || "uscrt";
 let faucet_address;
 
 /**
- * Execute a shell command and return it as a Promise.
- * @param cmd {string}
+ * Execute a program directly (no shell) and return its JSON output as a Promise.
+ * Arguments are passed as an array so user-controlled values are never
+ * interpreted by a shell.
+ * @param cmd {string} program to run
+ * @param args {string[]} arguments to pass to the program
  * @return {Promise<string>}
  */
-function execShellCommand(cmd) {
+function execShellCommand(cmd, args = []) {
   return new Promise((resolve, reject) => {
-    exec(cmd, (error, stdout, stderr) => {
+    execFile(cmd, args, (error, stdout) => {
       if (error) {
         console.error("error in execShellCommand", error);
         reject(error);
-      } else if (stderr) {
-        console.error("stderr in execShellCommand", stderr);
-        reject(stderr);
       } else {
+        // stderr is ignored: the original commands suppressed it with
+        // "2> /dev/null", and execFile does not use a shell for redirection.
         resolve(JSON.parse(stdout));
       }
     });
@@ -38,10 +40,20 @@ function execShellCommand(cmd) {
  * @returns result of executing the command.
  */
 async function send_command(src_key_name, src_address, dest_address, amount) {
-  const send_message = `secretd tx bank send ${src_address} ${dest_address} ${amount}${DENOM} --from ${src_key_name} --gas-prices 0.25uscrt -y 2> /dev/null`;
-  console.log(`send_message: \n ${send_message}`);
+  // Build the argument list explicitly. `dest_address` is passed as a single,
+  // literal argument, so it cannot be interpreted as shell syntax.
+  const send_args = [
+    "tx", "bank", "send",
+    src_address,
+    dest_address,
+    `${amount}${DENOM}`,
+    "--from", src_key_name,
+    "--gas-prices", "0.25uscrt",
+    "-y",
+  ];
+  console.log(`send_message: \n secretd ${send_args.join(" ")}`);
 
-  const result = await execShellCommand(send_message);
+  const result = await execShellCommand("secretd", send_args);
   console.log(`Sent tokens with txhash: ${result.txhash}`);
   return result.txhash;
 }
@@ -57,8 +69,7 @@ async function get_address(key_name) {
     return faucet_address;
   }
 
-  const list_keys = "secretd keys list --output json 2> /dev/null";
-  const result = await execShellCommand(list_keys);
+  const result = await execShellCommand("secretd", ["keys", "list", "--output", "json"]);
 
   for (index in result) {
     const key = result[index];
